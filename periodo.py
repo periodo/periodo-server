@@ -1,6 +1,10 @@
+import datetime
 import sqlite3
+from time import mktime
+from wsgiref.handlers import format_date_time
 
-from flask import Flask, g
+from flask import Flask, abort, g
+from flask.ext.restful import Api, Resource, fields, marshal_with, reqparse
 
 __all__ = ['init_db']
 
@@ -15,6 +19,58 @@ app = Flask(__name__)
 app.config.update(
     DEBUG=True
 )
+
+api = Api(app)
+
+
+###############
+# API Helpers #
+###############
+
+def iso_to_http_time(iso_timestr, fmt='%Y-%m-%d %H:%M:%S'):
+    dt = datetime.datetime.strptime(iso_timestr, fmt)
+    stamp = mktime(dt.timetuple())
+    return format_date_time(stamp)
+
+dataset_parser = reqparse.RequestParser()
+dataset_parser.add_argument('If-None-Match', dest='etag_match',
+                            location='headers', type=int)
+
+
+#################
+# API Resources #
+#################
+
+index_fields = {
+    'dataset': fields.Url('dataset', absolute=True)
+}
+class Index(Resource):
+    @marshal_with(index_fields)
+    def get(self):
+        return {}
+
+class Dataset(Resource):
+    def get(self):
+        args = dataset_parser.parse_args()
+        dataset = query_db('select * from dataset order by created desc', one=True)
+
+        if not dataset:
+            abort(501)
+
+        if args['etag_match'] and args['etag_match'] == dataset['id']:
+            return None, 304
+
+        return dataset['data'], 200, {
+            'Last-Modified': iso_to_http_time(dataset['created']),
+            'ETag': dataset['id']
+        }
+
+###############
+# API Routing #
+###############
+
+api.add_resource(Index, '/', endpoint='index')
+api.add_resource(Dataset, '/dataset/', endpoint='dataset')
 
 
 ######################
