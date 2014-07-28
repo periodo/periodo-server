@@ -1,4 +1,5 @@
 import datetime
+import json
 import sqlite3
 from time import mktime
 from wsgiref.handlers import format_date_time
@@ -60,7 +61,7 @@ class Dataset(Resource):
         if args['etag_match'] and args['etag_match'] == dataset['id']:
             return None, 304
 
-        return dataset['data'], 200, {
+        return json.loads(dataset['data']), 200, {
             'Last-Modified': iso_to_http_time(dataset['created']),
             'ETag': dataset['id']
         }
