@@ -1,0 +1,10 @@
+*.pyc
+*.pyo
+*.swp
+
+bin/*
+build/*
+include/*
+lib/*
+local
+local/*
