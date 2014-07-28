@@ -8,3 +8,5 @@ include/*
 lib/*
 local
 local/*
+
+db.sqlite
