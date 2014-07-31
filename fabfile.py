@@ -10,12 +10,12 @@ def setup():
 
 @task
 def install_deps():
-    local('virtualenv .')
-    local('./bin/pip install -r requirements.txt')
+    local('virtualenv . -p python3')
+    local('./bin/pip3 install -r requirements.txt')
 
 @task
 def init_db():
-    local('bin/python -c "from periodo import init_db; init_db()"')
+    local('bin/python3 -c "from periodo import init_db; init_db()"')
 
 @task
 def load_data(datafile):
