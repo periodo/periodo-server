@@ -7,7 +7,7 @@ from wsgiref.handlers import format_date_time
 from flask import Flask, abort, g
 from flask.ext.restful import Api, Resource, fields, marshal_with, reqparse
 
-__all__ = ['init_db']
+__all__ = ['init_db', 'app']
 
 DATABASE = './db.sqlite'
 
