@@ -1,4 +1,5 @@
 import datetime
+from email.utils import parsedate
 import json
 import sqlite3
 from time import mktime
@@ -26,8 +27,8 @@ api = Api(app)
 @app.after_request
 def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'If-None-Match')
-    response.headers.add('Access-Control-Expose-Headers', 'ETag')
+    response.headers.add('Access-Control-Allow-Headers', 'If-Modified-Since')
+    response.headers.add('Access-Control-Expose-Headers', 'Last-Modified')
     return response
 
 
@@ -35,14 +36,14 @@ def add_cors_headers(response):
 # API Helpers #
 ###############
 
-def iso_to_http_time(iso_timestr, fmt='%Y-%m-%d %H:%M:%S'):
+ISO_TIME_FMT = '%Y-%m-%d %H:%M:%S'
+
+def iso_to_timestamp(iso_timestr, fmt=ISO_TIME_FMT):
     dt = datetime.datetime.strptime(iso_timestr, fmt)
-    stamp = mktime(dt.timetuple())
-    return format_date_time(stamp)
+    return mktime(dt.timetuple())
 
 dataset_parser = reqparse.RequestParser()
-dataset_parser.add_argument('If-None-Match', dest='etag_match',
-                            location='headers', type=int)
+dataset_parser.add_argument('If-Modified-Since', dest='modified', location='headers')
 
 
 #################
@@ -65,12 +66,14 @@ class Dataset(Resource):
         if not dataset:
             abort(501)
 
-        if args['etag_match'] and args['etag_match'] == dataset['id']:
+        last_modified = iso_to_timestamp(dataset['created'])
+        modified_check = mktime(parsedate(args['modified'])) if args['modified'] else 0
+
+        if modified_check > last_modified:
             return None, 304
 
         return json.loads(dataset['data']), 200, {
-            'Last-Modified': iso_to_http_time(dataset['created']),
-            'ETag': dataset['id']
+            'Last-Modified': format_date_time(last_modified),
         }
 
 ###############
