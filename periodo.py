@@ -72,6 +72,8 @@ def validate_patch(patch, dataset=None):
     except JsonPointerException:
         raise InvalidPatchException('Could not apply JSON patch to dataset.')
 
+patch_parser = reqparse.RequestParser()
+
 class JsonField(fields.Raw):
     def format(self, value):
         return json.loads(value)
@@ -89,18 +91,39 @@ class Index(Resource):
     def get(self):
         return {}
 
+dataset_parser = reqparse.RequestParser()
+dataset_parser.add_argument('If-Modified-Since', dest='modified', location='headers')
+dataset_parser.add_argument('version', type=int, location='args',
+                            help='Invalid version number')
+
 class Dataset(Resource):
+    def _get_latest_dataset(self):
+        "Returns the latest row in the dataset table."
+        return query_db('select * from dataset order by created desc', one=True)
     def get(self):
         args = dataset_parser.parse_args()
-        dataset = query_db('select * from dataset order by created desc', one=True)
+
+        query = 'select * from dataset '
+        query_args = ()
+
+        if args['version']:
+            query += ' where id = (?) '
+            query_args += (args['version'],)
+        else:
+            query += 'order by created desc'
+
+        dataset = query_db(query, query_args, one=True)
 
         if not dataset:
-            abort(501)
+            if args['version']:
+                return { 'status': 404, 'message': 'Could not find given version.' }, 404
+            else:
+                return { 'status': 501, 'message': 'No dataset loaded yet.' }, 501
 
         last_modified = iso_to_timestamp(dataset['created'])
         modified_check = mktime(parsedate(args['modified'])) if args['modified'] else 0
 
-        if modified_check > last_modified:
+        if modified_check >= last_modified:
             return None, 304
 
         return json.loads(dataset['data']), 200, {
