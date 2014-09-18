@@ -195,10 +195,45 @@ def process_patch_row(row):
     d['applied_to'] = make_dataset_url(row['created_from']) if row['applied_to'] else None
     return d
 
+patch_list_parser = reqparse.RequestParser()
+patch_list_parser.add_argument(
+    'sort', location='args', type=str, choices=('created_at', 'updated_at'),
+    default='updated_at')
+patch_list_parser.add_argument(
+    'order', location='args', type=str, choices=('asc', 'desc'),
+    default='desc')
+patch_list_parser.add_argument('open', type=str, choices=('true', 'false'))
+patch_list_parser.add_argument('merged', type=str, choices=('true', 'false'))
+patch_list_parser.add_argument('limit', type=int, default=25)
+patch_list_parser.add_argument('from', type=int, default=0)
+
 class PatchList(Resource):
     def get(self):
+        args = patch_list_parser.parse_args()
         query = PATCH_QUERY
-        rows = query_db(PATCH_QUERY)
+        params = ()
+
+        where = []
+        if args['open'] is not None:
+            where.append('open = ?')
+            params += (True if args['open'] == 'true' else False,)
+        if args['merged'] is not None:
+            where.append('merged = ?')
+            params += (True if args['merged'] == 'true' else False,)
+        if where:
+            query += ' where ' + ' AND '.join(where)
+
+        query += ' order by ' + args['sort'] + ' ' + args['order']
+
+        limit = args['limit']
+        if limit < 0: limit = 25
+        if limit > 250: limit = 250
+
+        offset = args['from']
+        if offset < 0: offset = 0
+        query += ' limit ' + str(limit) + ' offset ' + str(offset)
+
+        rows = query_db(query, params)
         data = [process_patch_row(row) for row in rows]
         return marshal(data, patch_list_fields)
 
