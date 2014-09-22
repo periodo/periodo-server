@@ -189,6 +189,18 @@ patch_list_fields = OrderedDict((
 def make_dataset_url(version):
     return api.url_for(Dataset, _external=True) + '?version=' + str(version)
 
+def is_mergeable(patch_text, dataset=None):
+    if dataset is None:
+        dataset = query_db('select * from dataset order by created desc', one=True)
+    patch = patch_from_text(patch_text)
+    mergeable = True
+    try:
+        patch.apply(json.loads(dataset['data']))
+    except (JsonPatchException, JsonPointerException):
+        mergeable = False
+    return mergeable
+
+
 def process_patch_row(row):
     d = dict(row)
     d['created_from'] = make_dataset_url(row['created_from'])
@@ -241,24 +253,14 @@ patch_fields = patch_list_fields.copy()
 patch_fields.update((
     ('mergeable', fields.Boolean),
 ))
+
 class PatchRequest(Resource):
     def get(self, id):
         row = query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
         if not row:
             abort(404)
-
         data = process_patch_row(row)
-        data['mergeable'] = True
-
-        dataset = query_db('select * from dataset order by created desc', one=True)
-        patch = patch_from_text(data['text'])
-        try:
-            patch.apply(json.loads(dataset['data']))
-        except JsonPatchException:
-            data['mergeable'] = False
-        except JsonPointerException:
-            data['mergeable'] = False
-
+        data['mergeable'] = is_mergeable(data['text'])
         return marshal(data, patch_fields)
 
 class Patch(Resource):
@@ -281,6 +283,48 @@ class Patch(Resource):
         )
         db.commit()
 
+class PatchMerge(Resource):
+    def post(self, id):
+        row = query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
+
+        if not row:
+            abort(404)
+        if row['merged']:
+            return { 'message': 'Patch is already merged.' }, 404
+        if not row['open']:
+            return { 'message': 'Closed patches cannot be merged.' }, 404
+
+        dataset = query_db('select * from dataset order by created desc', one=True)
+        mergeable = is_mergeable(row['text'], dataset)
+
+        if not mergeable:
+            return { 'message': 'Patch is not mergeable.' }, 400
+
+        patch = patch_from_text(row['text'])
+
+        # Should this be ordered?
+        new_data = patch.apply(json.loads(dataset['data']))
+
+        db = get_db()
+        curs = db.cursor()
+        curs.execute('insert into dataset (data) values (?);', (json.dumps(new_data),))
+        curs.execute(
+            '''
+            update patch_request
+            set merged = 1,
+                open = 0,
+                merged_at = CURRENT_TIMESTAMP,
+                merged_by = ?,
+                applied_to = ?
+                resulted_in = ?
+            where id = ?;
+            ''',
+            ('THE MERGER', dataset['id'], curs.lastrowid, row['id'])
+        )
+        db.commit()
+
+        return None, 204
+
 
 ###############
 # API Routing #
@@ -291,6 +335,7 @@ api.add_resource(Dataset, '/dataset/')
 api.add_resource(PatchList, '/patches/')
 api.add_resource(PatchRequest, '/patches/<int:id>/')
 api.add_resource(Patch, '/patches/<int:id>/patch.jsonpatch')
+api.add_resource(PatchMerge, '/patches/<int:id>/merge')
 
 
 ######################

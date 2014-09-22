@@ -18,9 +18,11 @@ CREATE TABLE patch_request (
 
 	created_from INTEGER NOT NULL,
 	applied_to INTEGER,
+	resulted_in INTEGER,
 
 	FOREIGN KEY(created_from) REFERENCES dataset(id),
 	FOREIGN KEY(applied_to) REFERENCES dataset(id)
+	FOREIGN KEY(resulted_in) REFERENCES dataset(id)
 );
 
 DROP TABLE IF EXISTS patch_text;
