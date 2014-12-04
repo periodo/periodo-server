@@ -15,8 +15,6 @@ from flask.ext.restful import (Api, Resource, fields, marshal, marshal_with,
 
 __all__ = ['init_db', 'app']
 
-DATABASE = './db.sqlite'
-
 
 #########
 # Setup #
@@ -24,7 +22,8 @@ DATABASE = './db.sqlite'
 
 app = Flask(__name__)
 app.config.update(
-    DEBUG=True
+    DEBUG=True,
+    DATABASE='./db.sqlite'
 )
 
 api = Api(app)
@@ -352,7 +351,7 @@ def init_db():
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
+        db = g._database = sqlite3.connect(app.config['DATABASE'])
         db.row_factory = sqlite3.Row
     return db
 
