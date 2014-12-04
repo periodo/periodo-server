@@ -13,7 +13,7 @@ from flask import Flask, abort, g, request
 from flask.ext.restful import (Api, Resource, fields, marshal, marshal_with,
                                reqparse)
 
-__all__ = ['init_db', 'app']
+__all__ = ['init_db', 'load_data', 'app']
 
 
 #########
@@ -348,6 +348,15 @@ def init_db():
             db.cursor().executescript(schema_file.read())
         db.commit()
 
+def load_data(datafile):
+    with app.app_context():
+        db = get_db()
+        with open(datafile) as f:
+            data = json.load(f)
+            db.execute(u'insert into dataset (data) values (?)',
+                       (json.dumps(data),))
+        db.commit()
+        
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:

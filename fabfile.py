@@ -19,10 +19,5 @@ def init_db():
 
 @task
 def load_data(datafile):
-    db = sqlite3.connect('./db.sqlite')
-
-    with open(datafile) as f, db:
-        data = json.load(f)
-        db.execute(u'insert into dataset (data) values (?)', (json.dumps(data),))
-
+    local('./bin/python3 -c "from periodo import load_data; load_data(\'{}\')"'.format(datafile))
     print('Data loaded from {}.'.format(datafile))
