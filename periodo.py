@@ -12,6 +12,7 @@ from jsonpointer import JsonPointerException
 from flask import Flask, abort, g, request
 from flask.ext.restful import (Api, Resource, fields, marshal, marshal_with,
                                reqparse)
+from flask.ext.principal import Principal, Permission, ActionNeed
 
 __all__ = ['init_db', 'load_data', 'app']
 
@@ -26,7 +27,14 @@ app.config.update(
     DATABASE='./db.sqlite'
 )
 
-api = Api(app)
+class PeriodOApi(Api):
+    def unauthorized(self, response):
+        response.headers['WWW-Authenticate'] = 'Bearer realm="PeriodO"'
+        return response
+
+api = PeriodOApi(app)
+
+principals = Principal(app)
 
 @app.after_request
 def add_cors_headers(response):
@@ -76,6 +84,8 @@ patch_parser = reqparse.RequestParser()
 class JsonField(fields.Raw):
     def format(self, value):
         return json.loads(value)
+
+submit_patch_permission = Permission(ActionNeed('submit-patch'))
 
 #################
 # API Resources #
@@ -128,6 +138,7 @@ class Dataset(Resource):
         return json.loads(dataset['data']), 200, {
             'Last-Modified': format_date_time(last_modified),
         }
+    @submit_patch_permission.require(http_exception=401)
     def patch(self):
         try:
             dataset = self._get_latest_dataset()
