@@ -100,19 +100,21 @@ def handle_auth_error(e):
                              {'WWW-Authenticate': ', '.join(parts)})
     return None
 
-def add_user(credentials):
+def add_user(credentials, extra_permissions=()):
     with app.app_context():
         b64token = b64encode(credentials['access_token'].encode())
+        permissions = (ActionNeed('submit-patch'),) + extra_permissions
         db = get_db()
         curs = db.cursor()
         curs.execute(
 '''
-INSERT INTO user (id, name, b64token, token_expires_at_unixtime, credentials)
-VALUES (?, ?, ?, strftime('%s','now') + ?, ?)
+INSERT INTO user 
+(id, name, permissions, b64token, token_expires_at_unixtime, credentials)
+VALUES (?, ?, ?, ?, strftime('%s','now') + ?, ?)
 ''',
             ('http://orcid.org/{}'.format(credentials['orcid']),
-             credentials['name'], b64token, credentials['expires_in'],
-             json.dumps(credentials)))
+             credentials['name'], json.dumps(permissions), b64token,
+             credentials['expires_in'], json.dumps(credentials)))
         db.commit()
         return get_identity(b64token)
 

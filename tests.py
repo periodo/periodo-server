@@ -3,6 +3,7 @@ import periodo
 import tempfile
 import unittest
 import http.client
+from flask.ext.principal import ActionNeed
 
 class TestAuthentication(unittest.TestCase):
 
@@ -93,6 +94,39 @@ class TestAuthentication(unittest.TestCase):
             'Bearer realm="PeriodO", error="invalid_token", '
             + 'error_description="The access token expired", '
             + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.2"')
+
+class TestAuthorization(unittest.TestCase):
+
+    def setUp(self):
+        self.db_fd, periodo.app.config['DATABASE'] = tempfile.mkstemp()
+        periodo.app.config['TESTING'] = True
+        self.app = periodo.app.test_client()
+        periodo.init_db()
+        self.user_identity = periodo.add_user({
+            'name': 'Regular Gal',
+            'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
+            'expires_in': 631138518,
+            'orcid': '1234-5678-9101-112X',
+        })
+        self.admin_identity = periodo.add_user({
+            'name': 'Super Admin',
+            'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
+            'expires_in': 3600,
+            'orcid': '1211-1098-7654-321X',
+        }, (ActionNeed('accept-patch'),))
+
+    def tearDown(self):
+        os.close(self.db_fd)
+        os.unlink(periodo.app.config['DATABASE'])
+
+    def test_add_admin_user(self):
+        with periodo.app.app_context():
+            row = periodo.query_db(
+                'SELECT permissions FROM user WHERE id = ?',
+                (self.admin_identity.id,), one=True)
+            self.assertEqual(
+                row['permissions'],
+                '[["action", "submit-patch"], ["action", "accept-patch"]]')
 
 if __name__ == '__main__':
     unittest.main()
