@@ -5,14 +5,19 @@ import json
 import sqlite3
 from time import mktime
 from wsgiref.handlers import format_date_time
+from base64 import b64encode
+import re
 
 from jsonpatch import JsonPatch, JsonPatchException
 from jsonpointer import JsonPointerException
 
-from flask import Flask, abort, g, request
+from flask import Flask, abort, g, request, make_response
 from flask.ext.restful import (Api, Resource, fields, marshal, marshal_with,
                                reqparse)
-from flask.ext.principal import Principal, Permission, ActionNeed
+from flask.ext.principal import (Principal, Permission, PermissionDenied,
+                                 ActionNeed, Identity, AnonymousIdentity)
+
+from werkzeug.exceptions import Unauthorized
 
 __all__ = ['init_db', 'load_data', 'app']
 
@@ -28,13 +33,14 @@ app.config.update(
 )
 
 class PeriodOApi(Api):
-    def unauthorized(self, response):
-        response.headers['WWW-Authenticate'] = 'Bearer realm="PeriodO"'
-        return response
+    def handle_error(self, e):
+        response = handle_auth_error(e)
+        if response is None:
+            return super().handle_error(e)
+        else:
+            return response
 
 api = PeriodOApi(app)
-
-principals = Principal(app)
 
 @app.after_request
 def add_cors_headers(response):
@@ -42,6 +48,93 @@ def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Headers', 'If-Modified-Since')
     response.headers.add('Access-Control-Expose-Headers', 'Last-Modified')
     return response
+
+
+##################################
+# Authentication & Authorization #
+##################################
+
+principals = Principal(app, use_sessions=False)
+
+ERROR_URIS = {
+    'invalid_request': 'http://tools.ietf.org/html/rfc6750#section-6.2.1',
+    'invalid_token': 'http://tools.ietf.org/html/rfc6750#section-6.2.2',
+    'insufficient_scope': 'http://tools.ietf.org/html/rfc6750#section-6.2.3',
+}
+
+class AuthenticationFailed(Unauthorized):
+    def __init__(self, error=None, description=None):
+        self.error = error
+        self.error_description = description
+        self.error_uri = ERROR_URIS.get(error, None)
+        super().__init__()
+
+class UnauthenticatedIdentity(AnonymousIdentity):
+    def __init__(self, *args, **kwargs):
+        self.exception = AuthenticationFailed(*args, **kwargs)
+        super().__init__()
+    def can(self, permission):
+        raise self.exception
+
+@principals.identity_loader
+def load_identity_from_authorization_header():
+    auth = request.headers.get('Authorization', None)
+    if auth is None or not auth.startswith('Bearer '):
+        return UnauthenticatedIdentity()
+    match = re.match(r'Bearer ([\w\-\.~\+/]+=*)$', auth, re.ASCII)
+    if not match:
+        return UnauthenticatedIdentity(
+            'invalid_token', 'The access token is malformed')
+    return get_identity(match.group(1).encode())
+
+def handle_auth_error(e):
+    if isinstance(e, AuthenticationFailed):
+        parts = ['Bearer realm="PeriodO"']
+        if e.error:
+            parts.append('error="{}"'.format(e.error))
+        if e.error_description:
+            parts.append('error_description="{}"'.format(e.error_description))
+        if e.error_uri:
+            parts.append('error_uri="{}"'.format(e.error_uri))
+        return make_response(e.error_description or '', 401,
+                             {'WWW-Authenticate': ', '.join(parts)})
+    return None
+
+def add_user(credentials):
+    with app.app_context():
+        b64token = b64encode(credentials['access_token'].encode())
+        db = get_db()
+        curs = db.cursor()
+        curs.execute(
+'''
+INSERT INTO user (id, name, b64token, token_expires_at_unixtime, credentials)
+VALUES (?, ?, ?, strftime('%s','now') + ?, ?)
+''',
+            ('http://orcid.org/{}'.format(credentials['orcid']),
+             credentials['name'], b64token, credentials['expires_in'],
+             json.dumps(credentials)))
+        db.commit()
+        return get_identity(b64token)
+
+def get_identity(b64token):
+    user = query_db(
+'''
+SELECT id, permissions,
+strftime("%s","now") > token_expires_at_unixtime AS expired
+FROM user
+WHERE b64token = ?
+''',
+        (b64token,), one=True)
+    if user is None:
+        return UnauthenticatedIdentity(
+            'invalid_token', 'The access token is invalid')
+    if user['expired']:
+        return UnauthenticatedIdentity(
+            'invalid_token', 'The access token expired')
+    identity = Identity(user['id'], auth_type='bearer')
+    for p in json.loads(user['permissions']):
+        identity.provides.add(tuple(p))
+    return identity
 
 
 ###############
