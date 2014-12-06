@@ -55,6 +55,8 @@ def add_cors_headers(response):
 ##################################
 
 principals = Principal(app, use_sessions=False)
+submit_patch_permission = Permission(ActionNeed('submit-patch'))
+accept_patch_permission = Permission(ActionNeed('accept-patch'))
 
 ERROR_URIS = {
     'invalid_request': 'http://tools.ietf.org/html/rfc6750#section-6.2.1',
@@ -98,6 +100,13 @@ def handle_auth_error(e):
             parts.append('error_uri="{}"'.format(e.error_uri))
         return make_response(e.error_description or '', 401,
                              {'WWW-Authenticate': ', '.join(parts)})
+    if isinstance(e, PermissionDenied):
+        description = 'The access token does not provide sufficient privileges'
+        return make_response(
+            description, 403,
+            {'WWW-Authenticate': 'Bearer realm="PeriodO", error="insufficient_scope", '
+             + 'error_description="The access token does not provide sufficient privileges", '
+             + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"'})
     return None
 
 def add_user(credentials, extra_permissions=()):
@@ -180,8 +189,6 @@ class JsonField(fields.Raw):
     def format(self, value):
         return json.loads(value)
 
-submit_patch_permission = Permission(ActionNeed('submit-patch'))
-
 #################
 # API Resources #
 #################
@@ -233,7 +240,7 @@ class Dataset(Resource):
         return json.loads(dataset['data']), 200, {
             'Last-Modified': format_date_time(last_modified),
         }
-    @submit_patch_permission.require(http_exception=401)
+    @submit_patch_permission.require()
     def patch(self):
         try:
             dataset = self._get_latest_dataset()
@@ -242,19 +249,16 @@ class Dataset(Resource):
         except InvalidPatchException as e:
             return { 'status': 400, 'message': str(e) }, 400
 
-        FIGURE_OUT_USERNAME = 'someone'
-        username = FIGURE_OUT_USERNAME
-
         db = get_db()
         curs = db.cursor()
         curs.execute(
             'insert into patch_request (created_by, created_from) values (?, ?);',
-            (username, dataset['id'])
+            (g.identity.id, dataset['id'])
         )
         patch_id = curs.lastrowid
         curs.execute(
             'insert into patch_text (created_by, patch_request, text) values(?, ?, ?);',
-            (username, patch_id, patch.to_string())
+            (g.identity.id, patch_id, patch.to_string())
         )
         db.commit()
 
@@ -389,6 +393,7 @@ class Patch(Resource):
         db.commit()
 
 class PatchMerge(Resource):
+    @accept_patch_permission.require()
     def post(self, id):
         row = query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
 
@@ -420,11 +425,11 @@ class PatchMerge(Resource):
                 open = 0,
                 merged_at = CURRENT_TIMESTAMP,
                 merged_by = ?,
-                applied_to = ?
+                applied_to = ?,
                 resulted_in = ?
             where id = ?;
             ''',
-            ('THE MERGER', dataset['id'], curs.lastrowid, row['id'])
+            (g.identity.id, dataset['id'], curs.lastrowid, row['id'])
         )
         db.commit()
 
