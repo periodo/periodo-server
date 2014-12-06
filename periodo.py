@@ -7,6 +7,7 @@ from time import mktime
 from wsgiref.handlers import format_date_time
 from base64 import b64encode
 import re
+from functools import partial
 
 from jsonpatch import JsonPatch, JsonPatchException
 from jsonpointer import JsonPointerException
@@ -15,7 +16,8 @@ from flask import Flask, abort, g, request, make_response
 from flask.ext.restful import (Api, Resource, fields, marshal, marshal_with,
                                reqparse)
 from flask.ext.principal import (Principal, Permission, PermissionDenied,
-                                 ActionNeed, Identity, AnonymousIdentity)
+                                 ActionNeed, ItemNeed,
+                                 Identity, AnonymousIdentity)
 
 from werkzeug.exceptions import Unauthorized
 
@@ -78,6 +80,12 @@ class UnauthenticatedIdentity(AnonymousIdentity):
     def can(self, permission):
         raise self.exception
 
+UpdatePatchNeed = partial(ItemNeed, type='patch_request', method='update')
+
+class UpdatePatchPermission(Permission):
+    def __init__(self, patch_request_id):
+        super().__init__(UpdatePatchNeed(value=patch_request_id))
+
 @principals.identity_loader
 def load_identity_from_authorization_header():
     auth = request.headers.get('Authorization', None)
@@ -128,23 +136,30 @@ VALUES (?, ?, ?, ?, strftime('%s','now') + ?, ?)
         return get_identity(b64token)
 
 def get_identity(b64token):
-    user = query_db(
+    rows = query_db(
 '''
-SELECT id, permissions,
-strftime("%s","now") > token_expires_at_unixtime AS expired
-FROM user
-WHERE b64token = ?
+SELECT 
+user.id AS user_id, 
+user.permissions AS user_permissions, 
+patch_request.id AS patch_request_id,
+strftime("%s","now") > token_expires_at_unixtime AS token_expired
+FROM user LEFT JOIN patch_request
+ON user.id = patch_request.created_by AND patch_request.open = 1
+WHERE user.b64token = ?
 ''',
-        (b64token,), one=True)
-    if user is None:
+        (b64token,))
+    if not rows:
         return UnauthenticatedIdentity(
             'invalid_token', 'The access token is invalid')
-    if user['expired']:
+    if rows[0]['token_expired']:
         return UnauthenticatedIdentity(
             'invalid_token', 'The access token expired')
-    identity = Identity(user['id'], auth_type='bearer')
-    for p in json.loads(user['permissions']):
+    identity = Identity(rows[0]['user_id'], auth_type='bearer')
+    for p in json.loads(rows[0]['user_permissions']):
         identity.provides.add(tuple(p))
+    for r in rows:
+        if r['patch_request_id'] is not None:
+            identity.provides.add(UpdatePatchNeed(value=r['patch_request_id']))
     return identity
 
 
@@ -377,6 +392,8 @@ class Patch(Resource):
         row = query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
         return json.loads(row['text']), 200
     def put(self, id):
+        permission = UpdatePatchPermission(id)
+        if not permission.can(): raise PermissionDenied(permission)
         try:
             patch = patch_from_text(request.data)
             validate_patch(patch)
@@ -388,7 +405,7 @@ class Patch(Resource):
         curs = db.cursor()
         curs.execute(
             'insert into patch_text (created_by, patch_request, text) values(?, ?, ?);',
-            ('SOMEONE', id, patch.to_string())
+            (g.identity.id, id, patch.to_string())
         )
         db.commit()
 

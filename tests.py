@@ -202,6 +202,38 @@ class TestAuthorization(unittest.TestCase):
                 (patch_id,), one=True)['merged_by']
             self.assertEqual(merger, 'http://orcid.org/1211-1098-7654-321X')
 
+    def test_noncreator_patch_update(self):
+        res = self.app.patch(
+            '/dataset/',
+            data=self.patch,
+            content_type='application/json',
+            headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
+        res = self.app.put(
+            urlparse(res.headers['Location']).path + 'patch.jsonpatch',
+            data=self.patch,
+            content_type='application/json',
+            headers={ 'Authorization': 'Bearer ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4' } )
+        self.assertEqual(res.status_code, http.client.FORBIDDEN)
+        self.assertEqual(
+            res.headers['WWW-Authenticate'],
+            'Bearer realm="PeriodO", error="insufficient_scope", '
+            + 'error_description="The access token does not provide sufficient privileges", '
+            + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"')
+
+    def test_creator_patch_update(self):
+        with self.app as client:
+            res = client.patch(
+                '/dataset/',
+                data=self.patch,
+                content_type='application/json',
+                headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
+            res = client.put(
+                urlparse(res.headers['Location']).path + 'patch.jsonpatch',
+                data=self.patch,
+                content_type='application/json',
+                headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
+            self.assertEqual(res.status_code, http.client.OK)
+
 if __name__ == '__main__':
     unittest.main()
 
