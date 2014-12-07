@@ -1,8 +1,10 @@
 import os
+import json
 import periodo
 import tempfile
 import unittest
 import http.client
+from time import sleep
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
 
@@ -256,6 +258,52 @@ class TestAuthorization(unittest.TestCase):
             'Bearer realm="PeriodO", error="insufficient_scope", '
             + 'error_description="The access token does not provide sufficient privileges", '
             + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"')
+
+class TestPatchMethods(unittest.TestCase):
+
+    def setUp(self):
+        self.db_fd, periodo.app.config['DATABASE'] = tempfile.mkstemp()
+        periodo.app.config['TESTING'] = True
+        self.app = periodo.app.test_client()
+        periodo.init_db()
+        periodo.load_data('test-data.json')
+        self.user_identity = periodo.add_user_or_update_credentials({
+            'name': 'Regular Gal',
+            'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
+            'expires_in': 631138518,
+            'orcid': '1234-5678-9101-112X',
+        })
+        with open('test-patch.json') as f:
+            self.patch = f.read()
+
+    def tearDown(self):
+        os.close(self.db_fd)
+        os.unlink(periodo.app.config['DATABASE'])
+
+    def test_update_patch(self):
+        res = self.app.patch(
+            '/dataset/',
+            data=self.patch,
+            content_type='application/json',
+            headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
+        patch_url = urlparse(res.headers['Location']).path + 'patch.jsonpatch'
+        res = self.app.get(patch_url)
+        res = self.app.get(patch_url)
+        self.assertEqual(json.loads(self.patch),
+                         json.loads(res.get_data(as_text=True)))
+        sleep(2)
+        with open('test-patch-2.json') as f:
+            self.patch2 = f.read()
+        res = self.app.put(
+            patch_url,
+            data=self.patch2,
+            content_type='application/json',
+            headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
+        self.assertEqual(res.status_code, http.client.OK)
+        res = self.app.get(patch_url)
+        res = self.app.get(patch_url)
+        self.assertEqual(json.loads(self.patch2),
+                         json.loads(res.get_data(as_text=True)))
 
 if __name__ == '__main__':
     unittest.main()
