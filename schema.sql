@@ -54,6 +54,6 @@ CREATE TABLE user (
 DROP TRIGGER IF EXISTS update_user_credentials;
 CREATE TRIGGER update_user_credentials UPDATE OF credentials ON user
 BEGIN
-  UPDATE user SET credentials = CURRENT_TIMESTAMP WHERE id = old.id;
+  UPDATE user SET credentials_updated_at = CURRENT_TIMESTAMP WHERE id = old.id;
 END;
 
