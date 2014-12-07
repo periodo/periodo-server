@@ -13,13 +13,13 @@ class TestAuthentication(unittest.TestCase):
         periodo.app.config['TESTING'] = True
         self.app = periodo.app.test_client()
         periodo.init_db()
-        self.identity = periodo.add_user({
+        self.identity = periodo.add_user_or_update_credentials({
             'name': 'Testy Testerson',
             'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
             'expires_in': 631138518,
             'orcid': '1234-5678-9101-112X',
         })
-        self.expired_identity = periodo.add_user({
+        self.expired_identity = periodo.add_user_or_update_credentials({
             'name': 'Eric Expired',
             'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
             'expires_in': -3600,
@@ -104,7 +104,7 @@ class TestAuthorization(unittest.TestCase):
         self.app = periodo.app.test_client()
         periodo.init_db()
         periodo.load_data('test-data.json')
-        self.unauthorized_identity = periodo.add_user({
+        self.unauthorized_identity = periodo.add_user_or_update_credentials({
             'name': 'Dangerous Dan',
             'access_token': 'f7e00c02-6f97-4636-8499-037446d95446',
             'expires_in': 631138518,
@@ -116,13 +116,13 @@ class TestAuthorization(unittest.TestCase):
             curs.execute('UPDATE user SET permissions = ? WHERE name = ?',
                          ('[]', 'Dangerous Dan'))
             db.commit()
-        self.user_identity = periodo.add_user({
+        self.user_identity = periodo.add_user_or_update_credentials({
             'name': 'Regular Gal',
             'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
             'expires_in': 631138518,
             'orcid': '1234-5678-9101-112X',
         })
-        self.admin_identity = periodo.add_user({
+        self.admin_identity = periodo.add_user_or_update_credentials({
             'name': 'Super Admin',
             'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
             'expires_in': 3600,

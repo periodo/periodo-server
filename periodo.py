@@ -8,11 +8,16 @@ from wsgiref.handlers import format_date_time
 from base64 import b64encode
 import re
 from functools import partial
+import random
+import string
+from urllib.parse import urlencode
+
+import requests
 
 from jsonpatch import JsonPatch, JsonPatchException
 from jsonpointer import JsonPointerException
 
-from flask import Flask, abort, g, request, make_response
+from flask import Flask, abort, g, request, make_response, redirect, session
 from flask.ext.restful import (Api, Resource, fields, marshal, marshal_with,
                                reqparse)
 from flask.ext.principal import (Principal, Permission, PermissionDenied,
@@ -20,6 +25,8 @@ from flask.ext.principal import (Principal, Permission, PermissionDenied,
                                  Identity, AnonymousIdentity)
 
 from werkzeug.exceptions import Unauthorized
+
+from secrets import SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET
 
 __all__ = ['init_db', 'load_data', 'app']
 
@@ -33,6 +40,7 @@ app.config.update(
     DEBUG=True,
     DATABASE='./db.sqlite'
 )
+app.secret_key = SECRET_KEY
 
 class PeriodOApi(Api):
     def handle_error(self, e):
@@ -117,21 +125,33 @@ def handle_auth_error(e):
              + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"'})
     return None
 
-def add_user(credentials, extra_permissions=()):
+def add_user_or_update_credentials(credentials, extra_permissions=()):
     with app.app_context():
+        orcid = 'http://orcid.org/{}'.format(credentials['orcid'])
         b64token = b64encode(credentials['access_token'].encode())
         permissions = (ActionNeed('submit-patch'),) + extra_permissions
         db = get_db()
         curs = db.cursor()
         curs.execute(
 '''
-INSERT INTO user 
+INSERT OR IGNORE INTO user
 (id, name, permissions, b64token, token_expires_at_unixtime, credentials)
 VALUES (?, ?, ?, ?, strftime('%s','now') + ?, ?)
 ''',
-            ('http://orcid.org/{}'.format(credentials['orcid']),
-             credentials['name'], json.dumps(permissions), b64token,
+            (orcid, credentials['name'], json.dumps(permissions), b64token,
              credentials['expires_in'], json.dumps(credentials)))
+        if not curs.lastrowid: # user with this id already in DB
+            curs.execute(
+'''
+UPDATE user SET
+name = ?,
+b64token = ?,
+token_expires_at_unixtime = strftime('%s','now') + ?,
+credentials = ?
+WHERE id = ?
+''',
+                (credentials['name'], b64token, credentials['expires_in'],
+                 json.dumps(credentials), orcid))
         db.commit()
         return get_identity(b64token)
 
@@ -155,6 +175,7 @@ WHERE user.b64token = ?
         return UnauthenticatedIdentity(
             'invalid_token', 'The access token expired')
     identity = Identity(rows[0]['user_id'], auth_type='bearer')
+    identity.b64token = b64token
     for p in json.loads(rows[0]['user_permissions']):
         identity.provides.add(tuple(p))
     for r in rows:
@@ -210,7 +231,8 @@ class JsonField(fields.Raw):
 
 index_fields = {
     'dataset': fields.Url('dataset', absolute=True),
-    'patches': fields.Url('patchlist', absolute=True)
+    'patches': fields.Url('patchlist', absolute=True),
+    'register': fields.Url('register', absolute=True),
 }
 class Index(Resource):
     @marshal_with(index_fields)
@@ -452,6 +474,44 @@ class PatchMerge(Resource):
 
         return None, 204
 
+def generate_state_token():
+    return ''.join(random.choice(string.ascii_uppercase + string.digits)
+                   for x in range(32))
+
+class Register(Resource):
+    def get(self):
+        state_token = generate_state_token()
+        session['state_token'] = state_token
+        params = {
+            'client_id': ORCID_CLIENT_ID,
+            'redirect_uri': api.url_for(Registered, _external=True),
+            'response_type': 'code',
+            'scope': '/authenticate',
+            'state': state_token,
+        }
+        return redirect(
+            'https://orcid.org/oauth/authorize?{}'.format(urlencode(params)))
+
+class Registered(Resource):
+    def get(self):
+        if not request.args['state'] == session.pop('state_token'):
+            abort(403)
+        data = {
+            'client_id': ORCID_CLIENT_ID,
+            'client_secret': ORCID_CLIENT_SECRET,
+            'code': request.args['code'],
+            'grant_type': 'authorization_code',
+            'redirect_uri': api.url_for(Registered, _external=True),
+            'scope': '/authenticate',
+        }
+        response = requests.post(
+            'https://pub.orcid.org/oauth/token',
+            headers={'Accept': 'application/json'},
+            allow_redirects=True, data=data)
+        credentials = response.json()
+        print(credentials)
+        identity = add_user_or_update_credentials(credentials)
+        return { 'access_token': identity.b64token.decode() }
 
 ###############
 # API Routing #
@@ -463,7 +523,8 @@ api.add_resource(PatchList, '/patches/')
 api.add_resource(PatchRequest, '/patches/<int:id>/')
 api.add_resource(Patch, '/patches/<int:id>/patch.jsonpatch')
 api.add_resource(PatchMerge, '/patches/<int:id>/merge')
-
+api.add_resource(Register, '/register')
+api.add_resource(Registered, '/registered')
 
 ######################
 #  Database handling #
