@@ -289,34 +289,22 @@ class Dataset(Resource):
         db = get_db()
         curs = db.cursor()
         curs.execute(
-            'insert into patch_request (created_by, created_from) values (?, ?);',
-            (g.identity.id, dataset['id'])
-        )
-        patch_id = curs.lastrowid
-        curs.execute(
-            'insert into patch_text (created_by, patch_request, text) values(?, ?, ?);',
-            (g.identity.id, patch_id, patch.to_string())
+'''
+INSERT INTO patch_request
+(created_by, updated_by, created_from, original_patch)
+VALUES (?, ?, ?, ?)
+''',
+            (g.identity.id, g.identity.id, dataset['id'], patch.to_string())
         )
         db.commit()
 
         return None, 202, {
-            'Location': api.url_for(PatchRequest, id=patch_id)
+            'Location': api.url_for(PatchRequest, id=curs.lastrowid)
         }
 
 PATCH_QUERY = """
-select * 
-from patch_request
-left join (
-    select
-        id as current_text,
-        max(created_at) as updated_at,
-        created_by as updated_by,
-        text,
-        patch_request
-    from patch_text
-    group by patch_request
-) as subq
-on patch_request.id = subq.patch_request
+SELECT *
+FROM patch_request
 """
 
 patch_list_fields = OrderedDict((
@@ -412,7 +400,8 @@ class PatchRequest(Resource):
 class Patch(Resource):
     def get(self, id):
         row = query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
-        return json.loads(row['text']), 200
+        patch = row['applied_patch'] if row['merged'] else row['original_patch']
+        return json.loads(patch), 200
     def put(self, id):
         permission = UpdatePatchPermission(id)
         if not permission.can(): raise PermissionDenied(permission)
@@ -426,8 +415,13 @@ class Patch(Resource):
         db = get_db()
         curs = db.cursor()
         curs.execute(
-            'insert into patch_text (created_by, patch_request, text) values(?, ?, ?);',
-            (g.identity.id, id, patch.to_string())
+'''
+UPDATE patch_request SET
+original_patch = ?,
+updated_by = ?
+WHERE id = ?
+''',
+            (patch.to_string(), g.identity.id, id)
         )
         db.commit()
 
@@ -444,12 +438,12 @@ class PatchMerge(Resource):
             return { 'message': 'Closed patches cannot be merged.' }, 404
 
         dataset = query_db('select * from dataset order by created desc', one=True)
-        mergeable = is_mergeable(row['text'], dataset)
+        mergeable = is_mergeable(row['original_patch'], dataset)
 
         if not mergeable:
             return { 'message': 'Patch is not mergeable.' }, 400
 
-        patch = patch_from_text(row['text'])
+        patch = patch_from_text(row['original_patch'])
 
         # Should this be ordered?
         new_data = patch.apply(json.loads(dataset['data']))
