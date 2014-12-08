@@ -291,7 +291,6 @@ class TestPatchMethods(unittest.TestCase):
         res = self.app.get(patch_url)
         self.assertEqual(json.loads(self.patch),
                          json.loads(res.get_data(as_text=True)))
-        sleep(2)
         with open('test-patch-2.json') as f:
             self.patch2 = f.read()
         res = self.app.put(
