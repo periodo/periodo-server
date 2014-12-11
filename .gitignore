@@ -11,3 +11,4 @@ local
 local/*
 
 db.sqlite
+secrets.py

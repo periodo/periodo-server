@@ -20,6 +20,9 @@ CREATE TABLE patch_request (
 	applied_to INTEGER,
 	resulted_in INTEGER,
 
+  FOREIGN KEY(created_by) REFERENCES user(id),
+  FOREIGN KEY(merged_by) REFERENCES user(id),
+
 	FOREIGN KEY(created_from) REFERENCES dataset(id),
 	FOREIGN KEY(applied_to) REFERENCES dataset(id)
 	FOREIGN KEY(resulted_in) REFERENCES dataset(id)
@@ -33,6 +36,24 @@ CREATE TABLE patch_text (
 	patch_request INTEGER NOT NULL,
 	text TEXT NOT NULL,
 
+  FOREIGN KEY(created_by) REFERENCES user(id),
 	FOREIGN KEY(patch_request) REFERENCES patch_request(id)
 );
+
+DROP TABLE IF EXISTS user;
+CREATE TABLE user (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  permissions TEXT NOT NULL DEFAULT '[["action", "submit-patch"]]',
+  b64token TEXT UNIQUE NOT NULL,
+  token_expires_at_unixtime INTEGER NOT NULL,
+  credentials TEXT NOT NULL,
+  credentials_updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_user_credentials;
+CREATE TRIGGER update_user_credentials UPDATE OF credentials ON user
+BEGIN
+  UPDATE user SET credentials_updated_at = CURRENT_TIMESTAMP WHERE id = old.id;
+END;
 

@@ -5,17 +5,30 @@ import json
 import sqlite3
 from time import mktime
 from wsgiref.handlers import format_date_time
+from base64 import b64encode
+import re
+from functools import partial
+import random
+import string
+from urllib.parse import urlencode
+
+import requests
 
 from jsonpatch import JsonPatch, JsonPatchException
 from jsonpointer import JsonPointerException
 
-from flask import Flask, abort, g, request
+from flask import Flask, abort, g, request, make_response, redirect, session
 from flask.ext.restful import (Api, Resource, fields, marshal, marshal_with,
                                reqparse)
+from flask.ext.principal import (Principal, Permission, PermissionDenied,
+                                 ActionNeed, ItemNeed,
+                                 Identity, AnonymousIdentity)
 
-__all__ = ['init_db', 'app']
+from werkzeug.exceptions import Unauthorized
 
-DATABASE = './db.sqlite'
+from secrets import SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET
+
+__all__ = ['init_db', 'load_data', 'app']
 
 
 #########
@@ -24,10 +37,20 @@ DATABASE = './db.sqlite'
 
 app = Flask(__name__)
 app.config.update(
-    DEBUG=True
+    DEBUG=True,
+    DATABASE='./db.sqlite'
 )
+app.secret_key = SECRET_KEY
 
-api = Api(app)
+class PeriodOApi(Api):
+    def handle_error(self, e):
+        response = handle_auth_error(e)
+        if response is None:
+            return super().handle_error(e)
+        else:
+            return response
+
+api = PeriodOApi(app)
 
 @app.after_request
 def add_cors_headers(response):
@@ -35,6 +58,130 @@ def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Headers', 'If-Modified-Since')
     response.headers.add('Access-Control-Expose-Headers', 'Last-Modified')
     return response
+
+
+##################################
+# Authentication & Authorization #
+##################################
+
+principals = Principal(app, use_sessions=False)
+submit_patch_permission = Permission(ActionNeed('submit-patch'))
+accept_patch_permission = Permission(ActionNeed('accept-patch'))
+
+ERROR_URIS = {
+    'invalid_request': 'http://tools.ietf.org/html/rfc6750#section-6.2.1',
+    'invalid_token': 'http://tools.ietf.org/html/rfc6750#section-6.2.2',
+    'insufficient_scope': 'http://tools.ietf.org/html/rfc6750#section-6.2.3',
+}
+
+class AuthenticationFailed(Unauthorized):
+    def __init__(self, error=None, description=None):
+        self.error = error
+        self.error_description = description
+        self.error_uri = ERROR_URIS.get(error, None)
+        super().__init__()
+
+class UnauthenticatedIdentity(AnonymousIdentity):
+    def __init__(self, *args, **kwargs):
+        self.exception = AuthenticationFailed(*args, **kwargs)
+        super().__init__()
+    def can(self, permission):
+        raise self.exception
+
+UpdatePatchNeed = partial(ItemNeed, type='patch_request', method='update')
+
+class UpdatePatchPermission(Permission):
+    def __init__(self, patch_request_id):
+        super().__init__(UpdatePatchNeed(value=patch_request_id))
+
+@principals.identity_loader
+def load_identity_from_authorization_header():
+    auth = request.headers.get('Authorization', None)
+    if auth is None or not auth.startswith('Bearer '):
+        return UnauthenticatedIdentity()
+    match = re.match(r'Bearer ([\w\-\.~\+/]+=*)$', auth, re.ASCII)
+    if not match:
+        return UnauthenticatedIdentity(
+            'invalid_token', 'The access token is malformed')
+    return get_identity(match.group(1).encode())
+
+def handle_auth_error(e):
+    if isinstance(e, AuthenticationFailed):
+        parts = ['Bearer realm="PeriodO"']
+        if e.error:
+            parts.append('error="{}"'.format(e.error))
+        if e.error_description:
+            parts.append('error_description="{}"'.format(e.error_description))
+        if e.error_uri:
+            parts.append('error_uri="{}"'.format(e.error_uri))
+        return make_response(e.error_description or '', 401,
+                             {'WWW-Authenticate': ', '.join(parts)})
+    if isinstance(e, PermissionDenied):
+        description = 'The access token does not provide sufficient privileges'
+        return make_response(
+            description, 403,
+            {'WWW-Authenticate': 'Bearer realm="PeriodO", error="insufficient_scope", '
+             + 'error_description="The access token does not provide sufficient privileges", '
+             + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"'})
+    return None
+
+def add_user_or_update_credentials(credentials, extra_permissions=()):
+    with app.app_context():
+        orcid = 'http://orcid.org/{}'.format(credentials['orcid'])
+        b64token = b64encode(credentials['access_token'].encode())
+        permissions = (ActionNeed('submit-patch'),) + extra_permissions
+        db = get_db()
+        curs = db.cursor()
+        curs.execute(
+'''
+INSERT OR IGNORE INTO user
+(id, name, permissions, b64token, token_expires_at_unixtime, credentials)
+VALUES (?, ?, ?, ?, strftime('%s','now') + ?, ?)
+''',
+            (orcid, credentials['name'], json.dumps(permissions), b64token,
+             credentials['expires_in'], json.dumps(credentials)))
+        if not curs.lastrowid: # user with this id already in DB
+            curs.execute(
+'''
+UPDATE user SET
+name = ?,
+b64token = ?,
+token_expires_at_unixtime = strftime('%s','now') + ?,
+credentials = ?
+WHERE id = ?
+''',
+                (credentials['name'], b64token, credentials['expires_in'],
+                 json.dumps(credentials), orcid))
+        db.commit()
+        return get_identity(b64token)
+
+def get_identity(b64token):
+    rows = query_db(
+'''
+SELECT 
+user.id AS user_id, 
+user.permissions AS user_permissions, 
+patch_request.id AS patch_request_id,
+strftime("%s","now") > token_expires_at_unixtime AS token_expired
+FROM user LEFT JOIN patch_request
+ON user.id = patch_request.created_by AND patch_request.open = 1
+WHERE user.b64token = ?
+''',
+        (b64token,))
+    if not rows:
+        return UnauthenticatedIdentity(
+            'invalid_token', 'The access token is invalid')
+    if rows[0]['token_expired']:
+        return UnauthenticatedIdentity(
+            'invalid_token', 'The access token expired')
+    identity = Identity(rows[0]['user_id'], auth_type='bearer')
+    identity.b64token = b64token
+    for p in json.loads(rows[0]['user_permissions']):
+        identity.provides.add(tuple(p))
+    for r in rows:
+        if r['patch_request_id'] is not None:
+            identity.provides.add(UpdatePatchNeed(value=r['patch_request_id']))
+    return identity
 
 
 ###############
@@ -84,7 +231,8 @@ class JsonField(fields.Raw):
 
 index_fields = {
     'dataset': fields.Url('dataset', absolute=True),
-    'patches': fields.Url('patchlist', absolute=True)
+    'patches': fields.Url('patchlist', absolute=True),
+    'register': fields.Url('register', absolute=True),
 }
 class Index(Resource):
     @marshal_with(index_fields)
@@ -129,6 +277,7 @@ class Dataset(Resource):
         return json.loads(dataset['data']), 200, {
             'Last-Modified': format_date_time(last_modified),
         }
+    @submit_patch_permission.require()
     def patch(self):
         try:
             dataset = self._get_latest_dataset()
@@ -137,19 +286,16 @@ class Dataset(Resource):
         except InvalidPatchException as e:
             return { 'status': 400, 'message': str(e) }, 400
 
-        FIGURE_OUT_USERNAME = 'someone'
-        username = FIGURE_OUT_USERNAME
-
         db = get_db()
         curs = db.cursor()
         curs.execute(
             'insert into patch_request (created_by, created_from) values (?, ?);',
-            (username, dataset['id'])
+            (g.identity.id, dataset['id'])
         )
         patch_id = curs.lastrowid
         curs.execute(
             'insert into patch_text (created_by, patch_request, text) values(?, ?, ?);',
-            (username, patch_id, patch.to_string())
+            (g.identity.id, patch_id, patch.to_string())
         )
         db.commit()
 
@@ -268,6 +414,8 @@ class Patch(Resource):
         row = query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
         return json.loads(row['text']), 200
     def put(self, id):
+        permission = UpdatePatchPermission(id)
+        if not permission.can(): raise PermissionDenied(permission)
         try:
             patch = patch_from_text(request.data)
             validate_patch(patch)
@@ -279,11 +427,12 @@ class Patch(Resource):
         curs = db.cursor()
         curs.execute(
             'insert into patch_text (created_by, patch_request, text) values(?, ?, ?);',
-            ('SOMEONE', id, patch.to_string())
+            (g.identity.id, id, patch.to_string())
         )
         db.commit()
 
 class PatchMerge(Resource):
+    @accept_patch_permission.require()
     def post(self, id):
         row = query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
 
@@ -315,16 +464,54 @@ class PatchMerge(Resource):
                 open = 0,
                 merged_at = CURRENT_TIMESTAMP,
                 merged_by = ?,
-                applied_to = ?
+                applied_to = ?,
                 resulted_in = ?
             where id = ?;
             ''',
-            ('THE MERGER', dataset['id'], curs.lastrowid, row['id'])
+            (g.identity.id, dataset['id'], curs.lastrowid, row['id'])
         )
         db.commit()
 
         return None, 204
 
+def generate_state_token():
+    return ''.join(random.choice(string.ascii_uppercase + string.digits)
+                   for x in range(32))
+
+class Register(Resource):
+    def get(self):
+        state_token = generate_state_token()
+        session['state_token'] = state_token
+        params = {
+            'client_id': ORCID_CLIENT_ID,
+            'redirect_uri': api.url_for(Registered, _external=True),
+            'response_type': 'code',
+            'scope': '/authenticate',
+            'state': state_token,
+        }
+        return redirect(
+            'https://orcid.org/oauth/authorize?{}'.format(urlencode(params)))
+
+class Registered(Resource):
+    def get(self):
+        if not request.args['state'] == session.pop('state_token'):
+            abort(403)
+        data = {
+            'client_id': ORCID_CLIENT_ID,
+            'client_secret': ORCID_CLIENT_SECRET,
+            'code': request.args['code'],
+            'grant_type': 'authorization_code',
+            'redirect_uri': api.url_for(Registered, _external=True),
+            'scope': '/authenticate',
+        }
+        response = requests.post(
+            'https://pub.orcid.org/oauth/token',
+            headers={'Accept': 'application/json'},
+            allow_redirects=True, data=data)
+        credentials = response.json()
+        print(credentials)
+        identity = add_user_or_update_credentials(credentials)
+        return { 'access_token': identity.b64token.decode() }
 
 ###############
 # API Routing #
@@ -336,7 +523,8 @@ api.add_resource(PatchList, '/patches/')
 api.add_resource(PatchRequest, '/patches/<int:id>/')
 api.add_resource(Patch, '/patches/<int:id>/patch.jsonpatch')
 api.add_resource(PatchMerge, '/patches/<int:id>/merge')
-
+api.add_resource(Register, '/register')
+api.add_resource(Registered, '/registered')
 
 ######################
 #  Database handling #
@@ -349,10 +537,19 @@ def init_db():
             db.cursor().executescript(schema_file.read())
         db.commit()
 
+def load_data(datafile):
+    with app.app_context():
+        db = get_db()
+        with open(datafile) as f:
+            data = json.load(f)
+            db.execute(u'insert into dataset (data) values (?)',
+                       (json.dumps(data),))
+        db.commit()
+        
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
+        db = g._database = sqlite3.connect(app.config['DATABASE'])
         db.row_factory = sqlite3.Row
     return db
 
