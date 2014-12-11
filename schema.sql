@@ -10,6 +10,8 @@ CREATE TABLE patch_request (
 	id integer PRIMARY KEY AUTOINCREMENT,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by TEXT NOT NULL,
+	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_by TEXT NOT NULL,
 
 	open BOOLEAN NOT NULL DEFAULT 1,
 	merged BOOLEAN NOT NULL DEFAULT 0,
@@ -20,6 +22,9 @@ CREATE TABLE patch_request (
 	applied_to INTEGER,
 	resulted_in INTEGER,
 
+  original_patch TEXT NOT NULL,
+  applied_patch TEXT,
+
   FOREIGN KEY(created_by) REFERENCES user(id),
   FOREIGN KEY(merged_by) REFERENCES user(id),
 
@@ -28,17 +33,11 @@ CREATE TABLE patch_request (
 	FOREIGN KEY(resulted_in) REFERENCES dataset(id)
 );
 
-DROP TABLE IF EXISTS patch_text;
-CREATE TABLE patch_text (
-	id integer PRIMARY KEY AUTOINCREMENT,
-	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	created_by TEXT NOT NULL,
-	patch_request INTEGER NOT NULL,
-	text TEXT NOT NULL,
-
-  FOREIGN KEY(created_by) REFERENCES user(id),
-	FOREIGN KEY(patch_request) REFERENCES patch_request(id)
-);
+DROP TRIGGER IF EXISTS update_patch;
+CREATE TRIGGER update_patch UPDATE OF original_patch ON patch_request
+BEGIN
+  UPDATE patch_request SET updated_at = CURRENT_TIMESTAMP WHERE id = old.id;
+END;
 
 DROP TABLE IF EXISTS user;
 CREATE TABLE user (
