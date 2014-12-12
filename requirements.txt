@@ -1,5 +1,5 @@
 flask==0.10.1
-flask-restful==0.2.12
+flask-restful==0.3.0
 flask-principal==0.4.0
 jsonpatch==1.7
 requests==2.3.0

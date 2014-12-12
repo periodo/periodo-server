@@ -234,6 +234,8 @@ index_fields = {
     'patches': fields.Url('patchlist', absolute=True),
     'register': fields.Url('register', absolute=True),
 }
+
+@api.resource('/')
 class Index(Resource):
     @marshal_with(index_fields)
     def get(self):
@@ -244,6 +246,7 @@ dataset_parser.add_argument('If-Modified-Since', dest='modified', location='head
 dataset_parser.add_argument('version', type=int, location='args',
                             help='Invalid version number')
 
+@api.resource('/dataset/')
 class Dataset(Resource):
     def _get_latest_dataset(self):
         "Returns the latest row in the dataset table."
@@ -365,6 +368,8 @@ patch_list_parser.add_argument('merged', type=str, choices=('true', 'false'))
 patch_list_parser.add_argument('limit', type=int, default=25)
 patch_list_parser.add_argument('from', type=int, default=0)
 
+
+@api.resource('/patches/')
 class PatchList(Resource):
     def get(self):
         args = patch_list_parser.parse_args()
@@ -400,6 +405,7 @@ patch_fields.update((
     ('mergeable', fields.Boolean),
 ))
 
+@api.resource('/patches/<int:id>/')
 class PatchRequest(Resource):
     def get(self, id):
         row = query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
@@ -409,6 +415,7 @@ class PatchRequest(Resource):
         data['mergeable'] = is_mergeable(data['text'])
         return marshal(data, patch_fields)
 
+@api.resource('/patches/<int:id>/patch.jsonpatch')
 class Patch(Resource):
     def get(self, id):
         row = query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
@@ -431,6 +438,7 @@ class Patch(Resource):
         )
         db.commit()
 
+@api.resource('/patches/<int:id>/merge')
 class PatchMerge(Resource):
     @accept_patch_permission.require()
     def post(self, id):
@@ -478,6 +486,7 @@ def generate_state_token():
     return ''.join(random.choice(string.ascii_uppercase + string.digits)
                    for x in range(32))
 
+@api.resource('/register')
 class Register(Resource):
     def get(self):
         state_token = generate_state_token()
@@ -492,6 +501,7 @@ class Register(Resource):
         return redirect(
             'https://orcid.org/oauth/authorize?{}'.format(urlencode(params)))
 
+@api.resource('/registered')
 class Registered(Resource):
     def get(self):
         if not request.args['state'] == session.pop('state_token'):
@@ -512,19 +522,6 @@ class Registered(Resource):
         print(credentials)
         identity = add_user_or_update_credentials(credentials)
         return { 'access_token': identity.b64token.decode() }
-
-###############
-# API Routing #
-###############
-
-api.add_resource(Index, '/')
-api.add_resource(Dataset, '/dataset/')
-api.add_resource(PatchList, '/patches/')
-api.add_resource(PatchRequest, '/patches/<int:id>/')
-api.add_resource(Patch, '/patches/<int:id>/patch.jsonpatch')
-api.add_resource(PatchMerge, '/patches/<int:id>/merge')
-api.add_resource(Register, '/register')
-api.add_resource(Registered, '/registered')
 
 ######################
 #  Database handling #
