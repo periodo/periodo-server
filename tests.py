@@ -4,7 +4,6 @@ import periodo
 import tempfile
 import unittest
 import http.client
-from time import sleep
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
 
