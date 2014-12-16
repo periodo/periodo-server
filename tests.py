@@ -1,11 +1,13 @@
 import os
 import json
 import periodo
+import identifier
 import tempfile
 import unittest
 import http.client
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
+from jsonpatch import JsonPatch
 
 class TestAuthentication(unittest.TestCase):
 
@@ -302,6 +304,124 @@ class TestPatchMethods(unittest.TestCase):
         res = self.app.get(patch_url)
         self.assertEqual(json.loads(self.patch2),
                          json.loads(res.get_data(as_text=True)))
+
+class TestIdentifiers(unittest.TestCase):
+
+    def test_substitution_error(self):
+        cid = identifier.for_collection()
+        identifier.check(cid)
+        chars = list(cid)
+        chars[2] = chr(ord(chars[2]) + 1)
+        cid2 = ''.join(chars)
+        with self.assertRaises(identifier.IdentifierException):
+            identifier.check(cid2)
+
+        did = identifier.for_definition(cid)
+        identifier.check(did)
+        chars = list(did)
+        chars[-2] = chr(ord(chars[-2]) + 1)
+        did2 = ''.join(chars)
+        with self.assertRaises(identifier.IdentifierException):
+            identifier.check(did2)
+
+    def test_transposition_error(self):
+        cid = identifier.for_collection()
+        identifier.check(cid)
+        chars = list(cid)
+        chars[1], chars[2] = chars[2], chars[1]
+        cid2 = ''.join(chars)
+        with self.assertRaises(identifier.IdentifierException):
+            identifier.check(cid2)
+
+        did = identifier.for_definition(cid)
+        identifier.check(did)
+        chars = list(did)
+        chars[-3], chars[-2] = chars[-2], chars[-3]
+        did2 = ''.join(chars)
+        with self.assertRaises(identifier.IdentifierException):
+            identifier.check(did2)
+
+    def test_id_has_wrong_shape(self):
+        with self.assertRaises(identifier.IdentifierException):
+            identifier.check('6rw8') # collection id too short
+        with self.assertRaises(identifier.IdentifierException):
+            identifier.check('6rw87669p') # definition id missing slash
+
+    def test_generate_definition_id(self):
+        cid = identifier.for_collection()
+        did = identifier.for_definition(cid)
+        self.assertTrue(did.startswith(cid + '/'))
+        self.assertEqual(len(did), 10)
+
+    def test_replace_skolem_ids_when_adding_items(self):
+        with open('test-data-permanent-ids.json') as f:
+            data = json.load(f)
+        with open('test-patch-adds-items.json') as f:
+            original_patch = JsonPatch(json.load(f))
+        applied_patch = identifier.replace_skolem_ids(original_patch, data)
+        self.assertRegex(
+            applied_patch.patch[0]['path'],
+            r'^/periodCollections/trgkv/definitions/trgkv~1[%s]{4}$' % identifier.XDIGITS)
+        self.assertRegex(
+            applied_patch.patch[0]['value']['id'],
+            r'^trgkv/[%s]{4}$' % identifier.XDIGITS)
+        identifier.check(applied_patch.patch[0]['value']['id'])
+
+        self.assertRegex(
+            applied_patch.patch[1]['path'],
+            r'^/periodCollections/[%s]{5}$' % identifier.XDIGITS)
+        self.assertRegex(
+            applied_patch.patch[1]['value']['id'],
+            r'^[%s]{5}$' % identifier.XDIGITS)
+        collection_id = applied_patch.patch[1]['value']['id']
+        identifier.check(collection_id)
+        self.assertRegex(
+            list(applied_patch.patch[1]['value']['definitions'].keys())[0],
+            r'^%s/[%s]{4}$' % (collection_id, identifier.XDIGITS))
+        self.assertEqual(
+            list(applied_patch.patch[1]['value']['definitions'].values())[0]['id'],
+            list(applied_patch.patch[1]['value']['definitions'].keys())[0])
+        identifier.check(list(applied_patch.patch[1]['value']['definitions'].keys())[0])
+
+    def test_replace_skolem_ids_when_replacing_definitions(self):
+        with open('test-data-permanent-ids.json') as f:
+            data = json.load(f)
+        with open('test-patch-replaces-definitions.json') as f:
+            original_patch = JsonPatch(json.load(f))
+        applied_patch = identifier.replace_skolem_ids(original_patch, data)
+        self.assertEqual(
+            applied_patch.patch[0]['path'],
+            original_patch.patch[0]['path'])
+        definition_id, definition = list(applied_patch.patch[0]['value'].items())[0]
+        self.assertRegex(
+            definition_id,
+            r'^trgkv/[%s]{4}$' % identifier.XDIGITS)
+        self.assertEqual(definition_id, definition['id'])
+        identifier.check(definition_id)
+
+    def test_replace_skolem_ids_when_replacing_collections(self):
+        with open('test-data-permanent-ids.json') as f:
+            data = json.load(f)
+        with open('test-patch-replaces-collections.json') as f:
+            original_patch = JsonPatch(json.load(f))
+        applied_patch = identifier.replace_skolem_ids(original_patch, data)
+        self.assertEqual(
+            applied_patch.patch[0]['path'],
+            original_patch.patch[0]['path'])
+
+        collection_id, collection = list(applied_patch.patch[0]['value'].items())[0]
+        self.assertRegex(
+            collection_id,
+            r'^[%s]{5}$' % identifier.XDIGITS)
+        self.assertEqual(collection_id, collection['id'])
+        identifier.check(collection_id)
+
+        definition_id, definition = list(applied_patch.patch[0]['value'][collection_id]['definitions'].items())[0]
+        self.assertRegex(
+            definition_id,
+            r'^%s/[%s]{4}$' % (collection_id, identifier.XDIGITS))
+        self.assertEqual(definition_id, definition['id'])
+        identifier.check(definition_id)
 
 if __name__ == '__main__':
     unittest.main()

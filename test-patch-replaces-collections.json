@@ -1,0 +1,35 @@
+[
+  {
+    "op": "replace",
+    "path": "/periodCollections",
+    "value": {
+      "https://perio.do/.well-known/genid/36c1db27acc00e91c8a628abcaa64eb0": {
+        "definitions": {
+          "https://perio.do/.well-known/genid/8d3df296ba8665cf4045d34a2d983c97": {
+            "spatialCoverageDescription": "Roman Britain",
+            "editorialNote": "May be an inference, not statement / assertion.",
+            "spatialCoverage": [
+              {"id": "http://dbpedia.org/resource/United_Kingdom", "label": "United Kingdom"}
+            ],
+            "localizedLabel": {"eng-latn": "Iron Age"},
+            "label": "Iron Age",
+            "id": "https://perio.do/.well-known/genid/8d3df296ba8665cf4045d34a2d983c97",
+            "start": {"in": {"year": "-0799"}, "label": "800 B.C."},
+            "stop": {"in": {"year": "0043"}, "label": "43 A.D."}
+          }
+        },
+        "id": "https://perio.do/.well-known/genid/36c1db27acc00e91c8a628abcaa64eb0",
+        "source": {
+          "partOf": {
+            "id": "http://www.worldcat.org/oclc/27811171",
+            "creators": [{"id": "http://viaf.org/viaf/56699974", "name": "Salway, Peter."}],
+            "yearPublished": 1993,
+            "title": "The Oxford illustrated history of Roman Britain"
+          },
+          "locator": "pages 11, 13"
+        }
+      }
+    }
+  }
+]
+

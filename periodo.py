@@ -26,6 +26,8 @@ from flask.ext.principal import (Principal, Permission, PermissionDenied,
 
 from werkzeug.exceptions import Unauthorized
 
+from identifier import replace_skolem_ids
+
 from secrets import SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET
 
 __all__ = ['init_db', 'load_data', 'app']
@@ -451,10 +453,12 @@ class PatchMerge(Resource):
         if not mergeable:
             return { 'message': 'Patch is not mergeable.' }, 400
 
-        patch = patch_from_text(row['original_patch'])
+        data = json.loads(dataset['data'])
+        original_patch = patch_from_text(row['original_patch'])
+        applied_patch = replace_skolem_ids(original_patch, data)
 
         # Should this be ordered?
-        new_data = patch.apply(json.loads(dataset['data']))
+        new_data = applied_patch.apply(data)
 
         db = get_db()
         curs = db.cursor()
@@ -467,10 +471,12 @@ class PatchMerge(Resource):
                 merged_at = CURRENT_TIMESTAMP,
                 merged_by = ?,
                 applied_to = ?,
-                resulted_in = ?
+                resulted_in = ?,
+                applied_patch = ?
             where id = ?;
             ''',
-            (g.identity.id, dataset['id'], curs.lastrowid, row['id'])
+            (g.identity.id, dataset['id'], curs.lastrowid,
+             applied_patch.to_string(), row['id'])
         )
         db.commit()
 
