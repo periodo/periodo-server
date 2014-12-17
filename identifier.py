@@ -57,24 +57,25 @@ ADD_COLLECTION_PATH = re.compile(
     r'^(?P<path_prefix>/periodCollections/)(.*)~1\.well-known~1genid~1(.*)$')
 SKOLEM_URI = re.compile(r'^(.*)/\.well-known/genid/(.*)$')
 
-def replace_skolem_ids(patch, data):
+def index_by_id(items):
+    return { i['id']:i for i in items }
 
-    existing_ids = chain.from_iterable(
+def replace_skolem_ids(patch_or_obj, dataset):
+
+    existing_ids = set(chain.from_iterable(
         ( [cid] + list(c['definitions'].keys())
-          for cid,c in data['periodCollections'].items() ))
+          for cid,c in dataset['periodCollections'].items() )))
 
     def unused_identifier(id_generator, *args):
         for i in range(10):
             new_id = id_generator(*args)
             if new_id not in existing_ids:
+                existing_ids.add(new_id)
                 return new_id
         raise IdentifierException(
             'Too many identifier collisions:'
             + ' {} existing ids'.format(len(existing_ids)))
 
-    def index_by_id(items):
-        return { i['id']:i for i in items }
-    
     def assign_definition_id(definition, collection_id):
         if SKOLEM_URI.match(definition['id']):
             definition['id'] = unused_identifier(for_definition, collection_id)
@@ -121,10 +122,25 @@ def replace_skolem_ids(patch, data):
             return new_op
 
         return new_op
-            
-    return JsonPatch([ modify_operation(op) for op in patch ])
+
+    if hasattr(patch_or_obj, 'patch'):
+        return JsonPatch([ modify_operation(op) for op in patch_or_obj ])
+    else:
+        out = deepcopy(patch_or_obj)
+        out['periodCollections'] = index_by_id(
+            [ assign_collection_ids(c)
+              for c in patch_or_obj['periodCollections'].values() ])
+        return out
 
 class IdentifierException(Exception):
     pass
 
 
+if __name__ == "__main__":
+    from sys import argv
+    import json
+    for filename in argv[1:]:
+        with open(filename) as f:
+            i = json.load(f)
+            o = replace_skolem_ids(i, i)
+            print(json.dumps(o))
