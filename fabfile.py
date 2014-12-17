@@ -21,3 +21,7 @@ def init_db():
 def load_data(datafile):
     local('./bin/python3 -c "from periodo import load_data; load_data(\'{}\')"'.format(datafile))
     print('Data loaded from {}.'.format(datafile))
+
+@task
+def test():
+    local('bin/python3 -m unittest discover')

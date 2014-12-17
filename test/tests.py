@@ -9,6 +9,9 @@ from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
 from jsonpatch import JsonPatch
 
+def setUpModule():
+    os.chdir('test')
+
 class TestAuthentication(unittest.TestCase):
 
     def setUp(self):
@@ -131,7 +134,7 @@ class TestAuthorization(unittest.TestCase):
             'expires_in': 3600,
             'orcid': '1211-1098-7654-321X',
         }, (ActionNeed('accept-patch'),))
-        with open('test-patch.json') as f:
+        with open('test-patch-replace-values-1.json') as f:
             self.patch = f.read()
 
     def tearDown(self):
@@ -274,7 +277,7 @@ class TestPatchMethods(unittest.TestCase):
             'expires_in': 631138518,
             'orcid': '1234-5678-9101-112X',
         })
-        with open('test-patch.json') as f:
+        with open('test-patch-replace-values-1.json') as f:
             self.patch = f.read()
 
     def tearDown(self):
@@ -292,7 +295,7 @@ class TestPatchMethods(unittest.TestCase):
         res = self.app.get(patch_url)
         self.assertEqual(json.loads(self.patch),
                          json.loads(res.get_data(as_text=True)))
-        with open('test-patch-2.json') as f:
+        with open('test-patch-replace-values-2.json') as f:
             self.patch2 = f.read()
         res = self.app.put(
             patch_url,
@@ -354,7 +357,7 @@ class TestIdentifiers(unittest.TestCase):
         self.assertEqual(len(did), 10)
 
     def test_replace_skolem_ids_when_adding_items(self):
-        with open('test-data-permanent-ids.json') as f:
+        with open('test-data.json') as f:
             data = json.load(f)
         with open('test-patch-adds-items.json') as f:
             original_patch = JsonPatch(json.load(f))
@@ -384,7 +387,7 @@ class TestIdentifiers(unittest.TestCase):
         identifier.check(list(applied_patch.patch[1]['value']['definitions'].keys())[0])
 
     def test_replace_skolem_ids_when_replacing_definitions(self):
-        with open('test-data-permanent-ids.json') as f:
+        with open('test-data.json') as f:
             data = json.load(f)
         with open('test-patch-replaces-definitions.json') as f:
             original_patch = JsonPatch(json.load(f))
@@ -400,7 +403,7 @@ class TestIdentifiers(unittest.TestCase):
         identifier.check(definition_id)
 
     def test_replace_skolem_ids_when_replacing_collections(self):
-        with open('test-data-permanent-ids.json') as f:
+        with open('test-data.json') as f:
             data = json.load(f)
         with open('test-patch-replaces-collections.json') as f:
             original_patch = JsonPatch(json.load(f))
@@ -422,7 +425,4 @@ class TestIdentifiers(unittest.TestCase):
             r'^%s/[%s]{4}$' % (collection_id, identifier.XDIGITS))
         self.assertEqual(definition_id, definition['id'])
         identifier.check(definition_id)
-
-if __name__ == '__main__':
-    unittest.main()
 
