@@ -6,6 +6,7 @@ import sqlite3
 from time import mktime
 from wsgiref.handlers import format_date_time
 from base64 import b64encode
+import os
 import re
 from functools import partial
 import random
@@ -225,9 +226,34 @@ class JsonField(fields.Raw):
     def format(self, value):
         return json.loads(value)
 
+
 #################
 # API Resources #
 #################
+
+
+# HTML representation of root resource is optional and dependent on the
+# existence of a folder in static/html containing an index.html file.
+HTML_REPR_EXISTS = os.path.exists(os.path.join(
+    os.path.dirname(__file__),
+    'static',
+    'html',
+    'index.html'))
+
+if HTML_REPR_EXISTS:
+
+    def output_html(data, code, headers=None):
+        if request.path == '/':
+            return app.send_static_file('html/index.html')
+    api.representations['text/html'] = output_html
+
+    @app.route('/lib/<path:path>')
+    @app.route('/dist/<path:path>')
+    @app.route('/favicon.ico')
+    @app.route('/index.html')
+    def static_proxy(path=None):
+        return app.send_static_file('html' + request.path)
+
 
 index_fields = {
     'dataset': fields.Url('dataset', absolute=True),
