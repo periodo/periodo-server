@@ -15,6 +15,10 @@ from urllib.parse import urlencode
 
 import requests
 
+from rdflib import Graph, URIRef, Literal
+from rdflib.namespace import Namespace, RDF, DCTERMS, XSD, VOID
+SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
+
 from jsonpatch import JsonPatch, JsonPatchException
 from jsonpointer import JsonPointerException
 
@@ -254,6 +258,26 @@ if HTML_REPR_EXISTS:
     def static_proxy(path=None):
         return app.send_static_file('html' + request.path)
 
+def get_dataset_description():
+    with open('void-stub.ttl') as f:
+        g = Graph().parse(file=f, format='turtle')
+        ns = Namespace(g.value(predicate=RDF.type, object=VOID.DatasetDescription))
+        row = query_db('SELECT data, created FROM dataset ORDER BY created DESC LIMIT 1', one=True)
+        dataset = Graph().parse(data=row['data'], format='json-ld')
+        g.add( (ns.dataset,
+                DCTERMS.modified,
+                Literal(row['created'], datatype=XSD.dateTime)) )
+        g.add( (ns.dataset,
+                VOID.triples,
+                Literal(len(dataset), datatype=XSD.integer)) )
+        return g
+
+@api.representation('text/turtle')
+def output_turtle(data, code, headers=None):
+    if request.path == '/':
+        res = make_response(get_dataset_description().serialize(format='turtle'), code)
+        res.headers.extend(headers or {})
+        return res
 
 index_fields = {
     'dataset': fields.Url('dataset', absolute=True),

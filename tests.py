@@ -4,8 +4,12 @@ import periodo
 import tempfile
 import unittest
 import http.client
+from rdflib import Graph
+from rdflib.namespace import Namespace, RDF, DCTERMS
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
+
+VOID = Namespace('http://rdfs.org/ns/void#')
 
 class TestAuthentication(unittest.TestCase):
 
@@ -302,6 +306,45 @@ class TestPatchMethods(unittest.TestCase):
         res = self.app.get(patch_url)
         self.assertEqual(json.loads(self.patch2),
                          json.loads(res.get_data(as_text=True)))
+
+class TestRedirects(unittest.TestCase):
+
+    def setUp(self):
+        self.db_fd, periodo.app.config['DATABASE'] = tempfile.mkstemp()
+        periodo.app.config['TESTING'] = True
+        self.app = periodo.app.test_client()
+        periodo.init_db()
+        periodo.load_data('test-data.json')
+        self.user_identity = periodo.add_user_or_update_credentials({
+            'name': 'Regular Gal',
+            'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
+            'expires_in': 631138518,
+            'orcid': '1234-5678-9101-112X',
+        })
+        with open('test-patch.json') as f:
+            self.patch = f.read()
+
+    def tearDown(self):
+        os.close(self.db_fd)
+        os.unlink(periodo.app.config['DATABASE'])
+
+    def test_dataset_description(self):
+        res1 = self.app.get('', headers={ 'Accept': 'text/html' })
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'text/html')
+
+        res2 = self.app.get('', headers={ 'Accept': 'text/turtle' })
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'text/turtle')
+
+        g = Graph()
+        g.parse(format='turtle', data=res2.get_data(as_text=True))
+        desc = g.value(predicate=RDF.type, object=VOID.DatasetDescription)
+        self.assertEqual(
+            desc.n3(), '<http://n2t.net/ark:/58825/p0/>')
+        title = g.value(subject=desc, predicate=DCTERMS.title)
+        self.assertEqual(
+            title.n3(), '"Description of the PeriodO Period Gazetteer"@en')
 
 if __name__ == '__main__':
     unittest.main()
