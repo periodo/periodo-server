@@ -346,36 +346,42 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
 class TestIdentifiers(unittest.TestCase):
 
     def test_substitution_error(self):
+        def substitute(s):
+            chars = list(s)
+            chars[2] = identifier.XDIGITS[
+                (identifier.XDIGITS.index(chars[2]) + 1)
+                % len(identifier.XDIGITS)]
+            return ''.join(chars)
+
         cid = identifier.for_collection()
         identifier.check(cid)
-        chars = list(cid)
-        chars[2] = chr(ord(chars[2]) + 1)
-        cid2 = ''.join(chars)
+        cid2 = substitute(cid)
         with self.assertRaises(identifier.IdentifierException):
             identifier.check(cid2)
 
         did = identifier.for_definition(cid)
         identifier.check(did)
-        chars = list(did)
-        chars[-2] = chr(ord(chars[-2]) + 1)
-        did2 = ''.join(chars)
+        did2 = substitute(did)
         with self.assertRaises(identifier.IdentifierException):
             identifier.check(did2)
 
     def test_transposition_error(self):
+        def transpose(s):
+            chars = list(s)
+            for i in range(-3, -(len(s)+1), -1):
+                if not chars[i] == chars[i+1]:
+                    chars[i], chars[i+1] = chars[i+1], chars[i]
+                    return ''.join(chars)
+
         cid = identifier.for_collection()
         identifier.check(cid)
-        chars = list(cid)
-        chars[1], chars[2] = chars[2], chars[1]
-        cid2 = ''.join(chars)
+        cid2 = transpose(cid)
         with self.assertRaises(identifier.IdentifierException):
             identifier.check(cid2)
 
         did = identifier.for_definition(cid)
         identifier.check(did)
-        chars = list(did)
-        chars[-3], chars[-2] = chars[-2], chars[-3]
-        did2 = ''.join(chars)
+        did2 = transpose(did)
         with self.assertRaises(identifier.IdentifierException):
             identifier.check(did2)
 
