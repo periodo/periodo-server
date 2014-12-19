@@ -17,7 +17,6 @@ import requests
 
 from rdflib import Graph, URIRef, Literal
 from rdflib.namespace import Namespace, RDF, DCTERMS, XSD, VOID
-SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
 
 from jsonpatch import JsonPatch, JsonPatchException
 from jsonpointer import JsonPointerException
