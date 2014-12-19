@@ -5,7 +5,7 @@ import identifier
 import tempfile
 import unittest
 import http.client
-from rdflib import Graph
+from rdflib import Graph, URIRef
 from rdflib.namespace import Namespace, RDF, DCTERMS
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
@@ -320,20 +320,33 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         self.app = periodo.app.test_client()
         periodo.init_db()
         periodo.load_data('test-data.json')
+        self.user_identity = periodo.add_user_or_update_credentials({
+            'name': 'Regular Gal',
+            'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
+            'expires_in': 631138518,
+            'orcid': '1234-5678-9101-112X',
+        })
+        self.admin_identity = periodo.add_user_or_update_credentials({
+            'name': 'Super Admin',
+            'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
+            'expires_in': 3600,
+            'orcid': '1211-1098-7654-321X',
+        }, (ActionNeed('accept-patch'),))
+        with open('test-patch-replace-values-1.json') as f:
+            self.patch = f.read()
 
     def tearDown(self):
         os.close(self.db_fd)
         os.unlink(periodo.app.config['DATABASE'])
 
     def test_dataset_description(self):
-        res1 = self.app.get('', headers={ 'Accept': 'text/html' })
+        res1 = self.app.get('/', headers={ 'Accept': 'text/html' })
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/html')
 
-        res2 = self.app.get('', headers={ 'Accept': 'text/turtle' })
+        res2 = self.app.get('/', headers={ 'Accept': 'text/turtle' })
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'text/turtle')
-
         g = Graph()
         g.parse(format='turtle', data=res2.get_data(as_text=True))
         desc = g.value(predicate=RDF.type, object=VOID.DatasetDescription)
@@ -342,6 +355,30 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         title = g.value(subject=desc, predicate=DCTERMS.title)
         self.assertEqual(
             title.n3(), '"Description of the PeriodO Period Gazetteer"@en')
+
+    def test_add_contributors_to_dataset_description(self):
+        contribution = (URIRef('http://n2t.net/ark:/58825/p0/dataset'),
+                        DCTERMS.contributor,
+                        URIRef('http://orcid.org/1234-5678-9101-112X'))
+        data = self.app.get(
+            '/', headers={ 'Accept': 'text/turtle' }).get_data(as_text=True)
+        g = Graph().parse(format='turtle', data=data)
+        self.assertNotIn(contribution, g)
+        with self.app as client:
+            res = client.patch(
+                '/dataset/',
+                data=self.patch,
+                content_type='application/json',
+                headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
+            patch_id = int(res.headers['Location'].split('/')[-2])
+            res = client.post(
+                urlparse(res.headers['Location']).path + 'merge',
+                headers={ 'Authorization': 'Bearer ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4' } )
+        data = self.app.get(
+            '/', headers={ 'Accept': 'text/turtle' }).get_data(as_text=True)
+        g = Graph().parse(format='turtle', data=data)
+        self.assertIn(contribution, g)
+
 
 class TestIdentifiers(unittest.TestCase):
 

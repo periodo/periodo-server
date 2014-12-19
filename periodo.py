@@ -232,10 +232,51 @@ class JsonField(fields.Raw):
     def format(self, value):
         return json.loads(value)
 
+def describe_dataset(cursor, data, created):
+    contributors = query_db(
+'''
+SELECT DISTINCT created_by, updated_by
+FROM patch_request
+WHERE merged = 1
+''', cursor=cursor)
+    with open(os.path.join(os.path.dirname(__file__), 'void-stub.ttl')) as f:
+        description = Graph().parse(file=f, format='turtle')
+    ns = Namespace(description.value(
+        predicate=RDF.type, object=VOID.DatasetDescription))
+    dataset_g = Graph().parse(data=json.dumps(data), format='json-ld')
+    entity_count = len(dataset_g.query(
+'''
+SELECT DISTINCT ?s
+WHERE {
+?s ?p ?o .
+FILTER (STRSTARTS(STR(?s), "%s"))
+}
+''' % ns))
+    def add_to_description(p, o):
+        description.add((ns.dataset, p, o))
+    add_to_description(
+         DCTERMS.modified, Literal(created, datatype=XSD.dateTime))
+    add_to_description(
+         VOID.triples, Literal(len(dataset_g), datatype=XSD.integer))
+    add_to_description(
+         VOID.entities, Literal(entity_count, datatype=XSD.integer))
+    for row in contributors:
+        add_to_description(
+             DCTERMS.contributor, URIRef(row['created_by']))
+        if row['updated_by']:
+            add_to_description(
+                 DCTERMS.contributor, URIRef(row['updated_by']))
+    return description.serialize(format='turtle')
 
 def get_latest_dataset(cursor=None):
     return query_db(
         'SELECT * FROM dataset ORDER BY id DESC', one=True, cursor=cursor)
+
+def add_new_version_of_dataset(cursor, data):
+    now = query_db("SELECT CURRENT_TIMESTAMP AS now", one=True, cursor=cursor)['now']
+    cursor.execute(
+        'INSERT into DATASET (data, description, created) VALUES (?,?,?)',
+        (json.dumps(data), describe_dataset(cursor, data, now), now))
 
 #################
 # API Resources #
@@ -264,24 +305,10 @@ if HTML_REPR_EXISTS:
     def static_proxy(path=None):
         return app.send_static_file('html' + request.path)
 
-def get_dataset_description():
-    with open(os.path.join(os.path.dirname(__file__), 'void-stub.ttl')) as f:
-        g = Graph().parse(file=f, format='turtle')
-        ns = Namespace(g.value(predicate=RDF.type, object=VOID.DatasetDescription))
-        row = query_db('SELECT data, created FROM dataset ORDER BY created DESC LIMIT 1', one=True)
-        dataset = Graph().parse(data=row['data'], format='json-ld')
-        g.add( (ns.dataset,
-                DCTERMS.modified,
-                Literal(row['created'], datatype=XSD.dateTime)) )
-        g.add( (ns.dataset,
-                VOID.triples,
-                Literal(len(dataset), datatype=XSD.integer)) )
-        return g
-
 @api.representation('text/turtle')
 def output_turtle(data, code, headers=None):
     if request.path == '/':
-        res = make_response(get_dataset_description().serialize(format='turtle'), code)
+        res = make_response(get_latest_dataset()['description'], code)
         res.headers.extend(headers or {})
         return res
 
@@ -512,7 +539,6 @@ class PatchMerge(Resource):
 
         db = get_db()
         curs = db.cursor()
-        curs.execute('insert into dataset (data) values (?);', (json.dumps(new_data),))
         curs.execute(
             '''
             update patch_request
@@ -528,6 +554,7 @@ class PatchMerge(Resource):
             (g.identity.id, dataset['id'], curs.lastrowid,
              applied_patch.to_string(), row['id'])
         )
+        add_new_version_of_dataset(curs, new_data)
         db.commit()
 
         return None, 204
@@ -587,10 +614,10 @@ def init_db():
 def load_data(datafile):
     with app.app_context():
         db = get_db()
+        curs = db.cursor()
         with open(datafile) as f:
             data = json.load(f)
-            db.execute(u'insert into dataset (data) values (?)',
-                       (json.dumps(data),))
+            add_new_version_of_dataset(curs, data)
         db.commit()
         
 def get_db():
@@ -600,10 +627,11 @@ def get_db():
         db.row_factory = sqlite3.Row
     return db
 
-def query_db(query, args=(), one=False):
-    curs = get_db().execute(query, args)
+def query_db(query, args=(), one=False, cursor=None):
+    curs = cursor if cursor else get_db().cursor()
+    curs.execute(query, args)
     rows = curs.fetchall()
-    curs.close()
+    if not cursor: curs.close()
     return (rows[0] if rows else None) if one else rows
 
 @app.teardown_appcontext
