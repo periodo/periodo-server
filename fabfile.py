@@ -24,6 +24,10 @@ def load_data(datafile):
     print('Data loaded from {}.'.format(datafile))
 
 @task
+def test():
+    local('bin/python3 -m unittest discover')
+
+@task
 def get_latest_client():
     url = 'https://api.github.com/repos/periodo/periodo-client/releases'
     page = urllib2.urlopen(url)
@@ -39,3 +43,4 @@ def get_latest_client():
     local('mkdir -p static/html')
     local('unzip client.zip -d static/html')
     local('rm client.zip')
+

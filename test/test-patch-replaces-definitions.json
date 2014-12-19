@@ -1,0 +1,35 @@
+[
+  {
+    "op": "replace",
+    "path": "/periodCollections/trgkv/definitions",
+    "value": {
+        "https://perio.do/.well-known/genid/53f38e07f928ecdb849c1a98bbc24917": {
+          "id": "https://perio.do/.well-known/genid/53f38e07f928ecdb849c1a98bbc24917",
+          "label": "Herakleid",
+          "localizedLabel": {
+            "eng-latn": "Herakleid"
+          },
+          "note": "chronological table on p. 4",
+          "spatialCoverage": [
+            {
+              "@id": "http://dbpedia.org/resource/Turkey",
+              "label": "Turkey"
+            }
+          ],
+          "start": {
+            "in": {
+              "year": "-1184"
+            },
+            "label": "1185 B.C."
+          },
+          "stop": {
+            "in": {
+              "year": "-0679"
+            },
+            "label": "680 B.C."
+          }
+        }
+    }
+  }
+]
+

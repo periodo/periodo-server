@@ -60,10 +60,10 @@
     }
   },
   "periodCollections": {
-    "http://perio.do/temporary/004d5ac95fc57fece04adf1b9cf27c16": {
+    "trgkv": {
       "definitions": {
-        "http://perio.do/temporary/004d5ac95fc57fece04adf1b9cf27c16/607": {
-          "id": "http://perio.do/temporary/004d5ac95fc57fece04adf1b9cf27c16/607",
+        "trgkv/wbjd": {
+          "id": "trgkv/wbjd",
           "label": "Archaic",
           "localizedLabel": {
             "eng-latn": "Archaic"
@@ -87,35 +87,9 @@
             },
             "label": "547 B.C."
           }
-        },
-        "http://perio.do/temporary/004d5ac95fc57fece04adf1b9cf27c16/608": {
-          "id": "http://perio.do/temporary/004d5ac95fc57fece04adf1b9cf27c16/608",
-          "label": "Herakleid",
-          "localizedLabel": {
-            "eng-latn": "Herakleid"
-          },
-          "note": "chronological table on p. 4",
-          "spatialCoverage": [
-            {
-              "@id": "http://dbpedia.org/resource/Turkey",
-              "label": "Turkey"
-            }
-          ],
-          "start": {
-            "in": {
-              "year": "-1184"
-            },
-            "label": "1185 B.C."
-          },
-          "stop": {
-            "in": {
-              "year": "-0679"
-            },
-            "label": "680 B.C."
-          }
         }
       },
-      "id": "http://perio.do/temporary/004d5ac95fc57fece04adf1b9cf27c16",
+      "id": "trgkv",
       "source": {
         "locator": "page 4",
         "partOf": {
