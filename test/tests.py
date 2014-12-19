@@ -6,6 +6,7 @@ import tempfile
 import unittest
 import http.client
 from rdflib import Graph, URIRef
+from rdflib.plugins import sparql
 from rdflib.namespace import Namespace, RDF, DCTERMS
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
@@ -15,6 +16,7 @@ def setUpModule():
     os.chdir('test')
 
 VOID = Namespace('http://rdfs.org/ns/void#')
+SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
 
 class TestAuthentication(unittest.TestCase):
 
@@ -355,6 +357,21 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         title = g.value(subject=desc, predicate=DCTERMS.title)
         self.assertEqual(
             title.n3(), '"Description of the PeriodO Period Gazetteer"@en')
+        q = sparql.prepareQuery(
+'''
+SELECT ?count 
+WHERE { 
+  ?d void:classPartition ?p .
+  ?p void:class ?class .
+  ?p void:entities ?count .
+}
+''', initNs = { 'void': VOID, 'skos': SKOS })
+        concept_count = next(iter(g.query(
+            q, initBindings = { 'class': SKOS.Concept  })))['count'].value
+        self.assertEqual(concept_count, 1)
+        scheme_count = next(iter(g.query(
+            q, initBindings = { 'class': SKOS.ConceptScheme  })))['count'].value
+        self.assertEqual(scheme_count, 1)
 
     def test_add_contributors_to_dataset_description(self):
         contribution = (URIRef('http://n2t.net/ark:/58825/p0/dataset'),

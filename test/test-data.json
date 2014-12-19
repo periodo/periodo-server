@@ -34,10 +34,12 @@
       "@id": "http://purl.org/dc/terms/isPartOf",
       "@type": "@id"
     },
+    "PeriodCollection": "http://www.w3.org/2004/02/skos/core#ConceptScheme",
     "periodCollections": {
       "@container": "@index",
       "@id": "http://www.w3.org/2000/01/rdf-schema#member"
     },
+    "PeriodDefinition": "http://www.w3.org/2004/02/skos/core#Concept",
     "sameAs": {
       "@id": "http://www.w3.org/2002/07/owl#sameAs",
       "@type": "@id"
@@ -48,6 +50,7 @@
     "start": "http://www.w3.org/2006/time#intervalStartedBy",
     "stop": "http://www.w3.org/2006/time#intervalFinishedBy",
     "title": "http://purl.org/dc/terms/title",
+    "type": "@type",
     "url": {
       "@id": "http://xmlns.com/foaf/0.1/page",
       "@type": "@id"
@@ -61,13 +64,14 @@
       "@type": "http://www.w3.org/2001/XMLSchema#gYear"
     }
   },
-  "@id": "dataset/#periodCollections",
-  "@type": "rdf:Bag",
+  "id": "dataset/#periodCollections",
+  "type": "rdf:Bag",
   "periodCollections": {
     "trgkv": {
       "definitions": {
         "trgkv/wbjd": {
           "id": "trgkv/wbjd",
+          "type": "PeriodDefinition",
           "label": "Archaic",
           "localizedLabel": {
             "eng-latn": "Archaic"
@@ -94,6 +98,7 @@
         }
       },
       "id": "trgkv",
+      "type": "PeriodCollection",
       "source": {
         "locator": "page 4",
         "partOf": {

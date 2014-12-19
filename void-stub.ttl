@@ -4,6 +4,7 @@
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix orcid: <http://orcid.org/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix void: <http://rdfs.org/ns/void#> .
 @prefix wv: <http://vocab.org/waive/terms/> .
 
@@ -28,6 +29,8 @@
    # void:exampleResource <xxx> ;
    void:uriSpace "http://n2t.net/ark:/58825/p0/" ;
    # void:vocabulary <xxx> ;
+   void:classPartition [ void:class skos:Concept ] ;
+   void:classPartition [ void:class skos:ConceptScheme ]
    .
 
 # statistics

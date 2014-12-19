@@ -243,22 +243,26 @@ WHERE merged = 1
     ns = Namespace(description.value(
         predicate=RDF.type, object=VOID.DatasetDescription))
     dataset_g = Graph().parse(data=json.dumps(data), format='json-ld')
-    entity_count = len(dataset_g.query(
+
+    for part in description[ ns.dataset : VOID.classPartition ]:
+        clazz = description.value(subject=part, predicate=VOID['class'])
+        entity_count = len(dataset_g.query(
 '''
 SELECT DISTINCT ?s
 WHERE {
-?s ?p ?o .
+?s a <%s> .
 FILTER (STRSTARTS(STR(?s), "%s"))
 }
-''' % ns))
+''' % (clazz, ns)))
+        description.add(
+            (part, VOID.entities, Literal(entity_count, datatype=XSD.integer)))
+
     def add_to_description(p, o):
         description.add((ns.dataset, p, o))
     add_to_description(
          DCTERMS.modified, Literal(created, datatype=XSD.dateTime))
     add_to_description(
          VOID.triples, Literal(len(dataset_g), datatype=XSD.integer))
-    add_to_description(
-         VOID.entities, Literal(entity_count, datatype=XSD.integer))
     for row in contributors:
         add_to_description(
              DCTERMS.contributor, URIRef(row['created_by']))
