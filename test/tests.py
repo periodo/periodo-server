@@ -343,7 +343,7 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
 
     def test_dataset_description(self):
         res1 = self.app.get('/', headers={ 'Accept': 'text/html' })
-        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertIn(res1.status_code, (http.client.OK, http.client.NOT_ACCEPTABLE))
         self.assertEqual(res1.headers['Content-Type'], 'text/html')
 
         res2 = self.app.get('/', headers={ 'Accept': 'text/turtle' })

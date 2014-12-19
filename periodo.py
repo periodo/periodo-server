@@ -295,12 +295,6 @@ HTML_REPR_EXISTS = os.path.exists(os.path.join(
     'index.html'))
 
 if HTML_REPR_EXISTS:
-
-    def output_html(data, code, headers=None):
-        if request.path == '/':
-            return app.send_static_file('html/index.html')
-    api.representations['text/html'] = output_html
-
     @app.route('/lib/<path:path>')
     @app.route('/dist/<path:path>')
     @app.route('/favicon.ico')
@@ -308,12 +302,27 @@ if HTML_REPR_EXISTS:
     def static_proxy(path=None):
         return app.send_static_file('html' + request.path)
 
+@api.representation('text/html')
+def output_html(data, code, headers=None):
+    if HTML_REPR_EXISTS and request.path == '/':
+        res = app.send_static_file('html/index.html')
+    else:
+        res = make_response(
+            'This resource is not available as text/html', 406,
+            { 'Link': '<>; rel=alternate; type=application/json' })
+    res.headers.extend(headers or {})
+    return res
+
 @api.representation('text/turtle')
 def output_turtle(data, code, headers=None):
     if request.path == '/':
         res = make_response(get_latest_dataset()['description'], code)
-        res.headers.extend(headers or {})
-        return res
+    else:
+        res = make_response(
+            'This resource is not available as text/turtle', 406,
+            { 'Link': '<>; rel=alternate; type=application/json' })
+    res.headers.extend(headers or {})
+    return res
 
 index_fields = {
     'dataset': fields.Url('dataset', absolute=True),
