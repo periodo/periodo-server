@@ -1,5 +1,7 @@
 {
   "@context": {
+    "@base": "http://n2t.net/ark:/58825/p0/",
+    "periodo": "http://n2t.net/ark:/58825/p0/vocab#",
     "abstract": "http://purl.org/dc/terms/abstract",
     "alternateLabel": {
       "@id": "http://www.w3.org/2004/02/skos/core#altLabel",
@@ -15,12 +17,12 @@
       "@container": "@index",
       "@reverse": "http://www.w3.org/2004/02/skos/core#inScheme"
     },
-    "earliestYear": "http://perio.do/temporary/vocab#earliestYear",
+    "earliestYear": "periodo:earliestYear",
     "editorialNote": "http://www.w3.org/2004/02/skos/core#note",
     "id": "@id",
     "in": "http://www.w3.org/2006/time#hasDateTimeDescription",
     "label": "http://www.w3.org/2004/02/skos/core#prefLabel",
-    "latestYear": "http://perio.do/temporary/vocab#latestYear",
+    "latestYear": "periodo:latestYear",
     "localizedLabel": {
       "@container": "@language",
       "@id": "http://www.w3.org/2004/02/skos/core#altLabel"
@@ -34,7 +36,7 @@
     },
     "periodCollections": {
       "@container": "@index",
-      "@id": "http://perio.do/temporary/"
+      "@id": "http://www.w3.org/2000/01/rdf-schema#member"
     },
     "sameAs": {
       "@id": "http://www.w3.org/2002/07/owl#sameAs",
@@ -42,7 +44,7 @@
     },
     "source": "http://purl.org/dc/terms/source",
     "spatialCoverage": "http://purl.org/dc/terms/spatial",
-    "spatialCoverageDescription": "http://perio.do/temporary/vocab#spatialCoverageDescription",
+    "spatialCoverageDescription": "periodo:spatialCoverageDescription",
     "start": "http://www.w3.org/2006/time#intervalStartedBy",
     "stop": "http://www.w3.org/2006/time#intervalFinishedBy",
     "title": "http://purl.org/dc/terms/title",
@@ -59,6 +61,8 @@
       "@type": "http://www.w3.org/2001/XMLSchema#gYear"
     }
   },
+  "@id": "dataset/#periodCollections",
+  "@type": "rdf:Bag",
   "periodCollections": {
     "trgkv": {
       "definitions": {
