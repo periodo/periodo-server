@@ -216,7 +216,7 @@ def patch_from_text(patch_text):
     return patch
 
 def validate_patch(patch, dataset=None):
-    dataset = dataset or query_db('select * from dataset order by created desc', one=True)
+    dataset = dataset or get_latest_dataset()
     
     # Test to make sure it will apply
     try:
@@ -232,6 +232,10 @@ class JsonField(fields.Raw):
     def format(self, value):
         return json.loads(value)
 
+
+def get_latest_dataset(cursor=None):
+    return query_db(
+        'SELECT * FROM dataset ORDER BY id DESC', one=True, cursor=cursor)
 
 #################
 # API Resources #
@@ -300,9 +304,6 @@ dataset_parser.add_argument('version', type=int, location='args',
 
 @api.resource('/dataset/')
 class Dataset(Resource):
-    def _get_latest_dataset(self):
-        "Returns the latest row in the dataset table."
-        return query_db('select * from dataset order by created desc', one=True)
     def get(self):
         args = dataset_parser.parse_args()
 
@@ -313,7 +314,7 @@ class Dataset(Resource):
             query += ' where id = (?) '
             query_args += (args['version'],)
         else:
-            query += 'order by created desc'
+            query += 'ORDER BY id DESC'
 
         dataset = query_db(query, query_args, one=True)
 
@@ -335,7 +336,7 @@ class Dataset(Resource):
     @submit_patch_permission.require()
     def patch(self):
         try:
-            dataset = self._get_latest_dataset()
+            dataset = get_latest_dataset()
             patch = patch_from_text(request.data)
             validate_patch(patch, dataset)
         except InvalidPatchException as e:
@@ -379,8 +380,7 @@ def make_dataset_url(version):
     return api.url_for(Dataset, _external=True) + '?version=' + str(version)
 
 def is_mergeable(patch_text, dataset=None):
-    if dataset is None:
-        dataset = query_db('select * from dataset order by created desc', one=True)
+    dataset = dataset or get_latest_dataset()
     patch = patch_from_text(patch_text)
     mergeable = True
     try:
@@ -497,7 +497,7 @@ class PatchMerge(Resource):
         if not row['open']:
             return { 'message': 'Closed patches cannot be merged.' }, 404
 
-        dataset = query_db('select * from dataset order by created desc', one=True)
+        dataset = get_latest_dataset()
         mergeable = is_mergeable(row['original_patch'], dataset)
 
         if not mergeable:
