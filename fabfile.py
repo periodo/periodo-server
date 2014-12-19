@@ -1,5 +1,6 @@
 import json
 import sqlite3
+import urllib2
 
 from fabric.api import *
 
@@ -25,3 +26,21 @@ def load_data(datafile):
 @task
 def test():
     local('bin/python3 -m unittest discover')
+
+@task
+def get_latest_client():
+    url = 'https://api.github.com/repos/periodo/periodo-client/releases'
+    page = urllib2.urlopen(url)
+    releases = json.load(page)
+
+    request = urllib2.Request(releases[0]['assets'][0]['url'],
+                              headers={'Accept': 'application/octet-stream'})
+    zip_resp = urllib2.urlopen(request)
+
+    with open('client.zip', 'w') as tmp_zip:
+        tmp_zip.write(zip_resp.read())
+
+    local('mkdir -p static/html')
+    local('unzip client.zip -d static/html')
+    local('rm client.zip')
+
