@@ -351,6 +351,13 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         res2 = self.app.get('/', headers={ 'Accept': 'text/turtle' })
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'text/turtle')
+
+        res3 = self.app.get('/.well-known/void')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'text/turtle')
+        self.assertEqual(res2.get_data(as_text=True),
+                         res3.get_data(as_text=True))
+
         g = Graph()
         g.parse(format='turtle', data=res2.get_data(as_text=True))
         desc = g.value(predicate=RDF.type, object=VOID.DatasetDescription)

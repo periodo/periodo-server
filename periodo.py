@@ -319,20 +319,20 @@ def output_html(data, code, headers=None):
     if HTML_REPR_EXISTS and request.path == '/':
         res = app.send_static_file('html/index.html')
     else:
-        res = make_response(
-            'This resource is not available as text/html', 406,
-            { 'Link': '<>; rel=alternate; type=application/json' })
+        res = make_response('This resource is not available as text/html', 406)
+        res.headers.add('Link', '<>; rel="alternate"; type="application/json"')
+    if request.path == '/':
+        res.headers.add('Link', '</>; rel="alternate"; type="text/turtle"; title="VoID description of the PeriodO Period Gazetteer')
     res.headers.extend(headers or {})
     return res
 
 @api.representation('text/turtle')
 def output_turtle(data, code, headers=None):
     if request.path == '/':
-        res = make_response(get_latest_dataset()['description'], code)
+        res = void()
     else:
-        res = make_response(
-            'This resource is not available as text/turtle', 406,
-            { 'Link': '<>; rel=alternate; type=application/json' })
+        res = make_response('This resource is not available as text/turtle', 406)
+        res.headers.add('Link', '<>; rel="alternate"; type="application/json"')
     res.headers.extend(headers or {})
     return res
 
@@ -353,6 +353,14 @@ class Index(Resource):
     @marshal_with(index_fields)
     def get(self):
         return {}
+
+# http://www.w3.org/TR/void/#well-known
+@app.route('/.well-known/void')
+def void():
+    return make_response(get_latest_dataset()['description'], 200, {
+        'Content-Type': 'text/turtle',
+        'Link': '</>; rel="alternate"; type="text/html"',
+    })
 
 # URIs for abstract resources (no representations, just 303 See Other)
 @app.route('/dataset')
