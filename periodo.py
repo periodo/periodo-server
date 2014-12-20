@@ -288,6 +288,11 @@ def add_new_version_of_dataset(cursor, data):
         'INSERT into DATASET (data, description, created) VALUES (?,?,?)',
         (json.dumps(data), describe_dataset(cursor, data, now), now))
 
+def attach_to_dataset(o):
+    o['primaryTopicOf'] = { 'id': request.path[1:], 'inDataset': 'dataset' }
+    return o
+
+
 #################
 # API Resources #
 #################
@@ -396,8 +401,9 @@ class Dataset(Resource):
         if modified_check >= last_modified:
             return None, 304
 
-        return json.loads(dataset['data']), 200, {
+        return attach_to_dataset(json.loads(dataset['data'])), 200, {
             'Last-Modified': format_date_time(last_modified)}
+
     @submit_patch_permission.require()
     def patch(self):
         try:
@@ -442,14 +448,14 @@ class Entity(Resource):
         collection = o['periodCollections'][collection_id]
         if not 'definition_id' in kwargs:
             collection['@context'] = o['@context']
-            return collection
+            return attach_to_dataset(collection)
 
         definition_id = '/'.join((collection_id, kwargs['definition_id']))
         if not definition_id in collection['definitions']:
             abort(404)
         definition = collection['definitions'][definition_id]
         definition['@context'] = o['@context']
-        return definition
+        return  attach_to_dataset(definition)
 
 
 PATCH_QUERY = """

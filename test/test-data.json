@@ -21,6 +21,14 @@
     "editorialNote": "http://www.w3.org/2004/02/skos/core#note",
     "id": "@id",
     "in": "http://www.w3.org/2006/time#hasDateTimeDescription",
+    "inDataset": {
+      "@id": "http://rdfs.org/ns/void#inDataset",
+      "@type": "@id"
+    },
+    "primaryTopicOf": {
+      "@id": "http://xmlns.com/foaf/0.1/isPrimaryTopicOf",
+      "@type": "@id"
+    },
     "label": "http://www.w3.org/2004/02/skos/core#prefLabel",
     "latestYear": "periodo:latestYear",
     "localizedLabel": {
