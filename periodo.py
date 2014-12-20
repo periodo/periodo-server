@@ -21,7 +21,8 @@ from rdflib.namespace import Namespace, RDF, DCTERMS, XSD, VOID
 from jsonpatch import JsonPatch, JsonPatchException
 from jsonpointer import JsonPointerException
 
-from flask import Flask, abort, g, request, make_response, redirect, session
+from flask import (Flask, abort, g, request, make_response, redirect,
+                   session, url_for)
 from flask.ext.restful import (Api, Resource, fields, marshal, marshal_with,
                                reqparse)
 from flask.ext.principal import (Principal, Permission, PermissionDenied,
@@ -55,6 +56,12 @@ class PeriodOApi(Api):
             return super().handle_error(e)
         else:
             return response
+    def make_response(self, data, *args, **kwargs):
+        if request.path.endswith('.jsonld'):
+            res = self.representations['application/json'](data, *args, **kwargs)
+            res.content_type = 'application/ld+json'
+            return res
+        return super().make_response(data, *args, **kwargs)
 
 api = PeriodOApi(app)
 
@@ -324,6 +331,12 @@ def output_turtle(data, code, headers=None):
     res.headers.extend(headers or {})
     return res
 
+@api.representation('application/ld+json')
+def output_jsonld(data, code, headers=None):
+    res = make_response(json.dumps(data), code, headers)
+    res.headers.extend(headers or {})
+    return res
+
 index_fields = {
     'dataset': fields.Url('dataset', absolute=True),
     'patches': fields.Url('patchlist', absolute=True),
@@ -336,12 +349,26 @@ class Index(Resource):
     def get(self):
         return {}
 
+# URIs for abstract resources (no representations, just 303 See Other)
+@app.route('/dataset')
+@app.route('/<string(length=5):collection_id>')
+@app.route('/<string(length=5):collection_id>/<string(length=4):definition_id>')
+def see_other(**kwargs):
+    if request.path == '/dataset':
+        url = url_for('dataset')
+    elif request.accept_mimetypes.best == 'application/json':
+        url = request.path + '.json'
+    elif request.accept_mimetypes.best == 'application/ld+json':
+        url = request.path + '.jsonld'
+    else:
+        url = url_for('index', _anchor=request.path[1:])
+    return redirect(url, code=303)
 dataset_parser = reqparse.RequestParser()
 dataset_parser.add_argument('If-Modified-Since', dest='modified', location='headers')
 dataset_parser.add_argument('version', type=int, location='args',
                             help='Invalid version number')
 
-@api.resource('/dataset/')
+@api.resource('/dataset/', '/dataset.json', '/dataset.jsonld')
 class Dataset(Resource):
     def get(self):
         args = dataset_parser.parse_args()
@@ -370,8 +397,7 @@ class Dataset(Resource):
             return None, 304
 
         return json.loads(dataset['data']), 200, {
-            'Last-Modified': format_date_time(last_modified),
-        }
+            'Last-Modified': format_date_time(last_modified)}
     @submit_patch_permission.require()
     def patch(self):
         try:
@@ -396,6 +422,35 @@ VALUES (?, ?, ?, ?)
         return None, 202, {
             'Location': api.url_for(PatchRequest, id=curs.lastrowid)
         }
+
+@api.resource('/<string(length=5):collection_id>.json',
+              endpoint='collection-json')
+@api.resource('/<string(length=5):collection_id>.jsonld',
+              endpoint='collection-jsonld')
+@api.resource('/<string(length=5):collection_id>/<string(length=4):definition_id>.json',
+              endpoint='definition-json')
+@api.resource('/<string(length=5):collection_id>/<string(length=4):definition_id>.jsonld',
+              endpoint='definition-jsonld')
+class Entity(Resource):
+    def get(self, **kwargs):
+        dataset = get_latest_dataset()
+        o = json.loads(dataset['data'])
+
+        collection_id = kwargs['collection_id']
+        if not collection_id in o['periodCollections']:
+            abort(404)
+        collection = o['periodCollections'][collection_id]
+        if not 'definition_id' in kwargs:
+            collection['@context'] = o['@context']
+            return collection
+
+        definition_id = '/'.join((collection_id, kwargs['definition_id']))
+        if not definition_id in collection['definitions']:
+            abort(404)
+        definition = collection['definitions'][definition_id]
+        definition['@context'] = o['@context']
+        return definition
+
 
 PATCH_QUERY = """
 SELECT *

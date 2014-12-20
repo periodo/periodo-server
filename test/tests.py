@@ -396,6 +396,92 @@ WHERE {
         g = Graph().parse(format='turtle', data=data)
         self.assertIn(contribution, g)
 
+    def test_dataset(self):
+        res = self.app.get('/dataset')
+        self.assertEqual(res.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res.headers['Location']).path, '/dataset/')
+
+    def test_dataset_data(self):
+        res1 = self.app.get('/dataset/')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        res2 = self.app.get('/dataset.json')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'application/json')
+        res3 = self.app.get('/dataset.jsonld')
+        self.assertEqual(res3.status_code, http.client.OK)
+        self.assertEqual(res3.headers['Content-Type'], 'application/ld+json')
+        res4 = self.app.get('/dataset/', headers={ 'Accept': 'application/ld+json' })
+        self.assertEqual(res4.status_code, http.client.OK)
+        self.assertEqual(res4.headers['Content-Type'], 'application/ld+json')
+        self.assertEqual(json.loads(res1.get_data(as_text=True)),
+                         json.loads(res2.get_data(as_text=True)))
+        self.assertEqual(json.loads(res2.get_data(as_text=True)),
+                         json.loads(res3.get_data(as_text=True)))
+        self.assertEqual(json.loads(res3.get_data(as_text=True)),
+                         json.loads(res4.get_data(as_text=True)))
+
+    def test_period_collection(self):
+        res1 = self.app.get('/trgkv')
+        self.assertEqual(res1.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res1.headers['Location']).path, '/')
+        self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkv')
+        res2 = self.app.get('/trgkv', headers={'Accept':'application/json'})
+        self.assertEqual(res2.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res2.headers['Location']).path, '/trgkv.json')
+        res3 = self.app.get('/trgkv', headers={'Accept':'application/ld+json'})
+        self.assertEqual(res3.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res3.headers['Location']).path, '/trgkv.jsonld')
+        res4 = self.app.get('/trgkv', headers={'Accept':'text/html'})
+        self.assertEqual(res4.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res4.headers['Location']).path, '/')
+        self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkv')
+        res5 = self.app.get('/trgkv/')
+        self.assertEqual(res5.status_code, http.client.NOT_FOUND)
+
+    def test_period_collection_data(self):
+        res1 = self.app.get('/trgkv.json')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        res2 = self.app.get('/trgkv.jsonld')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
+        self.assertEqual(json.loads(res1.get_data(as_text=True)),
+                         json.loads(res2.get_data(as_text=True)))
+        g = Graph().parse(data=res1.get_data(as_text=True), format='json-ld')
+        self.assertIsNone(g.value(predicate=RDF.type, object=RDF.Bag))
+        res3 = self.app.get('/trgkv.json/')
+        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+        res4 = self.app.get('/trgkv.jsonld/')
+        self.assertEqual(res4.status_code, http.client.NOT_FOUND)
+
+    def test_period_definition(self):
+        res1 = self.app.get('/trgkv/wbjd')
+        self.assertEqual(res1.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res1.headers['Location']).path, '/')
+        self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkv/wbjd')
+        res2 = self.app.get('/trgkv/wbjd', headers={'Accept':'application/json'})
+        self.assertEqual(res2.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res2.headers['Location']).path, '/trgkv/wbjd.json')
+        res3 = self.app.get('/trgkv/wbjd', headers={'Accept':'application/ld+json'})
+        self.assertEqual(res3.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res3.headers['Location']).path, '/trgkv/wbjd.jsonld')
+        res4 = self.app.get('/trgkv/wbjd', headers={'Accept':'text/html'})
+        self.assertEqual(res4.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res4.headers['Location']).path, '/')
+        self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkv/wbjd')
+
+    def test_period_definition_data(self):
+        res1 = self.app.get('/trgkv/wbjd.json')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        res2 = self.app.get('/trgkv/wbjd.jsonld')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
+        self.assertEqual(json.loads(res1.get_data(as_text=True)),
+                         json.loads(res2.get_data(as_text=True)))
+        g = Graph().parse(data=res1.get_data(as_text=True), format='json-ld')
+        self.assertIsNone(g.value(predicate=RDF.type, object=SKOS.ConceptScheme))
 
 class TestIdentifiers(unittest.TestCase):
 
