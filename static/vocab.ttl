@@ -1,0 +1,36 @@
+@base <http://n2t.net/ark:/99152/p0/vocab> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix time: <http://www.w3.org/2006/time#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<#spatialCoverageDescription> a owl:DatatypeProperty ;
+    rdfs:comment "Free-text description of the spatial coverage of a resource."@en ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "spatial coverage description"@en ;
+    rdfs:range xsd:string .
+
+<#earliestYear> a owl:DatatypeProperty ;
+    rdfs:comment "The earliest Gregorian year referred to in the description of a temporal interval."@en ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "earliest year"@en ;
+    rdfs:domain time:DateTimeDescription ;
+    rdfs:range xsd:gYear .
+
+<#latestYear> a owl:DatatypeProperty ;
+    rdfs:comment "The latest Gregorian year referred to in the description of a temporal interval."@en ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "latest year"@en ;
+    rdfs:domain time:DateTimeDescription ;
+    rdfs:range xsd:gYear .
+
+time:DateTimeDescription
+    rdfs:subClassOf [
+        a owl:Restriction ;
+        owl:maxCardinality "1"^^xsd:nonNegativeInteger ;
+        owl:onProperty <#earliestYear>
+    ], [
+        a owl:Restriction ;
+        owl:maxCardinality "1"^^xsd:nonNegativeInteger ;
+        owl:onProperty <#latestYear>
+    ] .

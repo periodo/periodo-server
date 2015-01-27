@@ -3,3 +3,6 @@ flask-restful==0.3.0
 flask-principal==0.4.0
 jsonpatch==1.7
 requests==2.3.0
+rdflib==4.1.2
+rdflib-jsonld==0.2
+

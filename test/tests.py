@@ -5,12 +5,20 @@ import identifier
 import tempfile
 import unittest
 import http.client
+from rdflib import Graph, URIRef
+from rdflib.plugins import sparql
+from rdflib.namespace import Namespace, RDF, DCTERMS, OWL
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
 from jsonpatch import JsonPatch
 
 def setUpModule():
     os.chdir('test')
+
+VOID = Namespace('http://rdfs.org/ns/void#')
+SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
+PERIODO = Namespace('http://n2t.net/ark:/99152/p0/')
+FOAF = Namespace('http://xmlns.com/foaf/0.1/')
 
 class TestAuthentication(unittest.TestCase):
 
@@ -308,6 +316,202 @@ class TestPatchMethods(unittest.TestCase):
         self.assertEqual(json.loads(self.patch2),
                          json.loads(res.get_data(as_text=True)))
 
+class TestRepresentationsAndRedirects(unittest.TestCase):
+
+    def setUp(self):
+        self.db_fd, periodo.app.config['DATABASE'] = tempfile.mkstemp()
+        periodo.app.config['TESTING'] = True
+        self.app = periodo.app.test_client()
+        periodo.init_db()
+        periodo.load_data('test-data.json')
+        self.user_identity = periodo.add_user_or_update_credentials({
+            'name': 'Regular Gal',
+            'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
+            'expires_in': 631138518,
+            'orcid': '1234-5678-9101-112X',
+        })
+        self.admin_identity = periodo.add_user_or_update_credentials({
+            'name': 'Super Admin',
+            'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
+            'expires_in': 3600,
+            'orcid': '1211-1098-7654-321X',
+        }, (ActionNeed('accept-patch'),))
+        with open('test-patch-replace-values-1.json') as f:
+            self.patch = f.read()
+
+    def tearDown(self):
+        os.close(self.db_fd)
+        os.unlink(periodo.app.config['DATABASE'])
+
+    def test_vocab(self):
+        res1 = self.app.get('/vocab')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'text/turtle; charset=utf-8')
+
+        g = Graph()
+        g.parse(format='turtle', data=res1.get_data(as_text=True))
+        self.assertIn(
+            (PERIODO['vocab#spatialCoverageDescription'],
+             RDF.type, OWL.DatatypeProperty), g)
+        self.assertIn(
+            (PERIODO['vocab#earliestYear'],
+             RDF.type, OWL.DatatypeProperty), g)
+        self.assertIn(
+            (PERIODO['vocab#latestYear'],
+             RDF.type, OWL.DatatypeProperty), g)
+
+    def test_dataset_description(self):
+        res1 = self.app.get('/', headers={ 'Accept': 'text/html' })
+        self.assertIn(res1.status_code, (http.client.OK, http.client.NOT_ACCEPTABLE))
+        self.assertEqual(res1.headers['Content-Type'], 'text/html')
+
+        res2 = self.app.get('/', headers={ 'Accept': 'text/turtle' })
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'text/turtle')
+
+        res3 = self.app.get('/.well-known/void')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'text/turtle')
+        self.assertEqual(res2.get_data(as_text=True),
+                         res3.get_data(as_text=True))
+
+        g = Graph()
+        g.parse(format='turtle', data=res2.get_data(as_text=True))
+        desc = g.value(predicate=RDF.type, object=VOID.DatasetDescription)
+        self.assertEqual(
+            desc.n3(), '<http://n2t.net/ark:/99152/p0/>')
+        title = g.value(subject=desc, predicate=DCTERMS.title)
+        self.assertEqual(
+            title.n3(), '"Description of the PeriodO Period Gazetteer"@en')
+        q = sparql.prepareQuery(
+'''
+SELECT ?count 
+WHERE { 
+  ?d void:classPartition ?p .
+  ?p void:class ?class .
+  ?p void:entities ?count .
+}
+''', initNs = { 'void': VOID, 'skos': SKOS })
+        concept_count = next(iter(g.query(
+            q, initBindings = { 'class': SKOS.Concept  })))['count'].value
+        self.assertEqual(concept_count, 1)
+        scheme_count = next(iter(g.query(
+            q, initBindings = { 'class': SKOS.ConceptScheme  })))['count'].value
+        self.assertEqual(scheme_count, 1)
+
+    def test_add_contributors_to_dataset_description(self):
+        contribution = (URIRef('http://n2t.net/ark:/99152/p0/dataset'),
+                        DCTERMS.contributor,
+                        URIRef('http://orcid.org/1234-5678-9101-112X'))
+        data = self.app.get(
+            '/', headers={ 'Accept': 'text/turtle' }).get_data(as_text=True)
+        g = Graph().parse(format='turtle', data=data)
+        self.assertNotIn(contribution, g)
+        with self.app as client:
+            res = client.patch(
+                '/dataset/',
+                data=self.patch,
+                content_type='application/json',
+                headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
+            patch_id = int(res.headers['Location'].split('/')[-2])
+            res = client.post(
+                urlparse(res.headers['Location']).path + 'merge',
+                headers={ 'Authorization': 'Bearer ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4' } )
+        data = self.app.get(
+            '/', headers={ 'Accept': 'text/turtle' }).get_data(as_text=True)
+        g = Graph().parse(format='turtle', data=data)
+        self.assertIn(contribution, g)
+
+    def test_dataset(self):
+        res = self.app.get('/dataset')
+        self.assertEqual(res.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res.headers['Location']).path, '/dataset/')
+
+    def test_dataset_data(self):
+        res1 = self.app.get('/dataset/')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        res2 = self.app.get('/dataset.json')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'application/json')
+        res3 = self.app.get('/dataset.jsonld')
+        self.assertEqual(res3.status_code, http.client.OK)
+        self.assertEqual(res3.headers['Content-Type'], 'application/ld+json')
+        res4 = self.app.get('/dataset/', headers={ 'Accept': 'application/ld+json' })
+        self.assertEqual(res4.status_code, http.client.OK)
+        self.assertEqual(res4.headers['Content-Type'], 'application/ld+json')
+        g = Graph().parse(data=res4.get_data(as_text=True), format='json-ld')
+        self.assertIn((PERIODO['dataset/#periodCollections'],
+                       FOAF.isPrimaryTopicOf, PERIODO['dataset/']), g)
+        self.assertIn((PERIODO['dataset/'],
+                       VOID.inDataset, PERIODO.dataset), g)
+
+    def test_period_collection(self):
+        res1 = self.app.get('/trgkv')
+        self.assertEqual(res1.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res1.headers['Location']).path, '/')
+        self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkv')
+        res2 = self.app.get('/trgkv', headers={'Accept':'application/json'})
+        self.assertEqual(res2.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res2.headers['Location']).path, '/trgkv.json')
+        res3 = self.app.get('/trgkv', headers={'Accept':'application/ld+json'})
+        self.assertEqual(res3.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res3.headers['Location']).path, '/trgkv.jsonld')
+        res4 = self.app.get('/trgkv', headers={'Accept':'text/html'})
+        self.assertEqual(res4.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res4.headers['Location']).path, '/')
+        self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkv')
+        res5 = self.app.get('/trgkv/')
+        self.assertEqual(res5.status_code, http.client.NOT_FOUND)
+
+    def test_period_collection_data(self):
+        res1 = self.app.get('/trgkv.json')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        res2 = self.app.get('/trgkv.jsonld')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
+        g = Graph().parse(data=res2.get_data(as_text=True), format='json-ld')
+        self.assertIsNone(g.value(predicate=RDF.type, object=RDF.Bag))
+        self.assertIn((PERIODO['trgkv'],
+                       FOAF.isPrimaryTopicOf, PERIODO['trgkv.jsonld']), g)
+        self.assertIn((PERIODO['trgkv.jsonld'],
+                       VOID.inDataset, PERIODO.dataset), g)
+        res3 = self.app.get('/trgkv.json/')
+        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+        res4 = self.app.get('/trgkv.jsonld/')
+        self.assertEqual(res4.status_code, http.client.NOT_FOUND)
+
+    def test_period_definition(self):
+        res1 = self.app.get('/trgkv/wbjd')
+        self.assertEqual(res1.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res1.headers['Location']).path, '/')
+        self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkv/wbjd')
+        res2 = self.app.get('/trgkv/wbjd', headers={'Accept':'application/json'})
+        self.assertEqual(res2.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res2.headers['Location']).path, '/trgkv/wbjd.json')
+        res3 = self.app.get('/trgkv/wbjd', headers={'Accept':'application/ld+json'})
+        self.assertEqual(res3.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res3.headers['Location']).path, '/trgkv/wbjd.jsonld')
+        res4 = self.app.get('/trgkv/wbjd', headers={'Accept':'text/html'})
+        self.assertEqual(res4.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res4.headers['Location']).path, '/')
+        self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkv/wbjd')
+
+    def test_period_definition_data(self):
+        res1 = self.app.get('/trgkv/wbjd.json')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        res2 = self.app.get('/trgkv/wbjd.jsonld')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
+        g = Graph().parse(data=res1.get_data(as_text=True), format='json-ld')
+        self.assertIsNone(g.value(predicate=RDF.type, object=SKOS.ConceptScheme))
+        self.assertIn((PERIODO['trgkv/wbjd'],
+                       FOAF.isPrimaryTopicOf, PERIODO['trgkv/wbjd.json']), g)
+        self.assertIn((PERIODO['trgkv/wbjd.json'],
+                       VOID.inDataset, PERIODO.dataset), g)
+
 class TestIdentifiers(unittest.TestCase):
 
     def test_substitution_error(self):
@@ -431,4 +635,3 @@ class TestIdentifiers(unittest.TestCase):
             r'^%s/[%s]{4}$' % (collection_id, identifier.XDIGITS))
         self.assertEqual(definition_id, definition['id'])
         identifier.check(definition_id)
-

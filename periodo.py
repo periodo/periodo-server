@@ -15,10 +15,14 @@ from urllib.parse import urlencode
 
 import requests
 
+from rdflib import Graph, URIRef, Literal
+from rdflib.namespace import Namespace, RDF, DCTERMS, XSD, VOID
+
 from jsonpatch import JsonPatch, JsonPatchException
 from jsonpointer import JsonPointerException
 
-from flask import Flask, abort, g, request, make_response, redirect, session
+from flask import (Flask, abort, g, request, make_response, redirect,
+                   session, url_for)
 from flask.ext.restful import (Api, Resource, fields, marshal, marshal_with,
                                reqparse)
 from flask.ext.principal import (Principal, Permission, PermissionDenied,
@@ -52,6 +56,12 @@ class PeriodOApi(Api):
             return super().handle_error(e)
         else:
             return response
+    def make_response(self, data, *args, **kwargs):
+        if request.path.endswith('.jsonld'):
+            res = self.representations['application/json'](data, *args, **kwargs)
+            res.content_type = 'application/ld+json'
+            return res
+        return super().make_response(data, *args, **kwargs)
 
 api = PeriodOApi(app)
 
@@ -212,7 +222,7 @@ def patch_from_text(patch_text):
     return patch
 
 def validate_patch(patch, dataset=None):
-    dataset = dataset or query_db('select * from dataset order by created desc', one=True)
+    dataset = dataset or get_latest_dataset()
     
     # Test to make sure it will apply
     try:
@@ -227,6 +237,60 @@ patch_parser = reqparse.RequestParser()
 class JsonField(fields.Raw):
     def format(self, value):
         return json.loads(value)
+
+def describe_dataset(cursor, data, created):
+    contributors = query_db(
+'''
+SELECT DISTINCT created_by, updated_by
+FROM patch_request
+WHERE merged = 1
+''', cursor=cursor)
+    with open(os.path.join(os.path.dirname(__file__), 'void-stub.ttl')) as f:
+        description = Graph().parse(file=f, format='turtle')
+    ns = Namespace(description.value(
+        predicate=RDF.type, object=VOID.DatasetDescription))
+    dataset_g = Graph().parse(data=json.dumps(data), format='json-ld')
+
+    for part in description[ ns.dataset : VOID.classPartition ]:
+        clazz = description.value(subject=part, predicate=VOID['class'])
+        entity_count = len(dataset_g.query(
+'''
+SELECT DISTINCT ?s
+WHERE {
+?s a <%s> .
+FILTER (STRSTARTS(STR(?s), "%s"))
+}
+''' % (clazz, ns)))
+        description.add(
+            (part, VOID.entities, Literal(entity_count, datatype=XSD.integer)))
+
+    def add_to_description(p, o):
+        description.add((ns.dataset, p, o))
+    add_to_description(
+         DCTERMS.modified, Literal(created, datatype=XSD.dateTime))
+    add_to_description(
+         VOID.triples, Literal(len(dataset_g), datatype=XSD.integer))
+    for row in contributors:
+        add_to_description(
+             DCTERMS.contributor, URIRef(row['created_by']))
+        if row['updated_by']:
+            add_to_description(
+                 DCTERMS.contributor, URIRef(row['updated_by']))
+    return description.serialize(format='turtle')
+
+def get_latest_dataset(cursor=None):
+    return query_db(
+        'SELECT * FROM dataset ORDER BY id DESC', one=True, cursor=cursor)
+
+def add_new_version_of_dataset(cursor, data):
+    now = query_db("SELECT CURRENT_TIMESTAMP AS now", one=True, cursor=cursor)['now']
+    cursor.execute(
+        'INSERT into DATASET (data, description, created) VALUES (?,?,?)',
+        (json.dumps(data), describe_dataset(cursor, data, now), now))
+
+def attach_to_dataset(o):
+    o['primaryTopicOf'] = { 'id': request.path[1:], 'inDataset': 'dataset' }
+    return o
 
 
 #################
@@ -243,12 +307,6 @@ HTML_REPR_EXISTS = os.path.exists(os.path.join(
     'index.html'))
 
 if HTML_REPR_EXISTS:
-
-    def output_html(data, code, headers=None):
-        if request.path == '/':
-            return app.send_static_file('html/index.html')
-    api.representations['text/html'] = output_html
-
     @app.route('/lib/<path:path>')
     @app.route('/dist/<path:path>')
     @app.route('/favicon.ico')
@@ -256,6 +314,33 @@ if HTML_REPR_EXISTS:
     def static_proxy(path=None):
         return app.send_static_file('html' + request.path)
 
+@api.representation('text/html')
+def output_html(data, code, headers=None):
+    if HTML_REPR_EXISTS and request.path == '/':
+        res = app.send_static_file('html/index.html')
+    else:
+        res = make_response('This resource is not available as text/html', 406)
+        res.headers.add('Link', '<>; rel="alternate"; type="application/json"')
+    if request.path == '/':
+        res.headers.add('Link', '</>; rel="alternate"; type="text/turtle"; title="VoID description of the PeriodO Period Gazetteer')
+    res.headers.extend(headers or {})
+    return res
+
+@api.representation('text/turtle')
+def output_turtle(data, code, headers=None):
+    if request.path == '/':
+        res = void()
+    else:
+        res = make_response('This resource is not available as text/turtle', 406)
+        res.headers.add('Link', '<>; rel="alternate"; type="application/json"')
+    res.headers.extend(headers or {})
+    return res
+
+@api.representation('application/ld+json')
+def output_jsonld(data, code, headers=None):
+    res = make_response(json.dumps(data), code, headers)
+    res.headers.extend(headers or {})
+    return res
 
 index_fields = {
     'dataset': fields.Url('dataset', absolute=True),
@@ -269,16 +354,39 @@ class Index(Resource):
     def get(self):
         return {}
 
+@app.route('/vocab')
+def vocab():
+    return app.send_static_file('vocab.ttl')
+
+# http://www.w3.org/TR/void/#well-known
+@app.route('/.well-known/void')
+def void():
+    return make_response(get_latest_dataset()['description'], 200, {
+        'Content-Type': 'text/turtle',
+        'Link': '</>; rel="alternate"; type="text/html"',
+    })
+
+# URIs for abstract resources (no representations, just 303 See Other)
+@app.route('/dataset')
+@app.route('/<string(length=5):collection_id>')
+@app.route('/<string(length=5):collection_id>/<string(length=4):definition_id>')
+def see_other(**kwargs):
+    if request.path == '/dataset':
+        url = url_for('dataset')
+    elif request.accept_mimetypes.best == 'application/json':
+        url = request.path + '.json'
+    elif request.accept_mimetypes.best == 'application/ld+json':
+        url = request.path + '.jsonld'
+    else:
+        url = url_for('index', _anchor=request.path[1:])
+    return redirect(url, code=303)
 dataset_parser = reqparse.RequestParser()
 dataset_parser.add_argument('If-Modified-Since', dest='modified', location='headers')
 dataset_parser.add_argument('version', type=int, location='args',
                             help='Invalid version number')
 
-@api.resource('/dataset/')
+@api.resource('/dataset/', '/dataset.json', '/dataset.jsonld')
 class Dataset(Resource):
-    def _get_latest_dataset(self):
-        "Returns the latest row in the dataset table."
-        return query_db('select * from dataset order by created desc', one=True)
     def get(self):
         args = dataset_parser.parse_args()
 
@@ -289,7 +397,7 @@ class Dataset(Resource):
             query += ' where id = (?) '
             query_args += (args['version'],)
         else:
-            query += 'order by created desc'
+            query += 'ORDER BY id DESC'
 
         dataset = query_db(query, query_args, one=True)
 
@@ -305,13 +413,13 @@ class Dataset(Resource):
         if modified_check >= last_modified:
             return None, 304
 
-        return json.loads(dataset['data']), 200, {
-            'Last-Modified': format_date_time(last_modified),
-        }
+        return attach_to_dataset(json.loads(dataset['data'])), 200, {
+            'Last-Modified': format_date_time(last_modified)}
+
     @submit_patch_permission.require()
     def patch(self):
         try:
-            dataset = self._get_latest_dataset()
+            dataset = get_latest_dataset()
             patch = patch_from_text(request.data)
             validate_patch(patch, dataset)
         except InvalidPatchException as e:
@@ -332,6 +440,35 @@ VALUES (?, ?, ?, ?)
         return None, 202, {
             'Location': api.url_for(PatchRequest, id=curs.lastrowid)
         }
+
+@api.resource('/<string(length=5):collection_id>.json',
+              endpoint='collection-json')
+@api.resource('/<string(length=5):collection_id>.jsonld',
+              endpoint='collection-jsonld')
+@api.resource('/<string(length=5):collection_id>/<string(length=4):definition_id>.json',
+              endpoint='definition-json')
+@api.resource('/<string(length=5):collection_id>/<string(length=4):definition_id>.jsonld',
+              endpoint='definition-jsonld')
+class Entity(Resource):
+    def get(self, **kwargs):
+        dataset = get_latest_dataset()
+        o = json.loads(dataset['data'])
+
+        collection_id = kwargs['collection_id']
+        if not collection_id in o['periodCollections']:
+            abort(404)
+        collection = o['periodCollections'][collection_id]
+        if not 'definition_id' in kwargs:
+            collection['@context'] = o['@context']
+            return attach_to_dataset(collection)
+
+        definition_id = '/'.join((collection_id, kwargs['definition_id']))
+        if not definition_id in collection['definitions']:
+            abort(404)
+        definition = collection['definitions'][definition_id]
+        definition['@context'] = o['@context']
+        return  attach_to_dataset(definition)
+
 
 PATCH_QUERY = """
 SELECT *
@@ -355,8 +492,7 @@ def make_dataset_url(version):
     return api.url_for(Dataset, _external=True) + '?version=' + str(version)
 
 def is_mergeable(patch_text, dataset=None):
-    if dataset is None:
-        dataset = query_db('select * from dataset order by created desc', one=True)
+    dataset = dataset or get_latest_dataset()
     patch = patch_from_text(patch_text)
     mergeable = True
     try:
@@ -473,7 +609,7 @@ class PatchMerge(Resource):
         if not row['open']:
             return { 'message': 'Closed patches cannot be merged.' }, 404
 
-        dataset = query_db('select * from dataset order by created desc', one=True)
+        dataset = get_latest_dataset()
         mergeable = is_mergeable(row['original_patch'], dataset)
 
         if not mergeable:
@@ -488,7 +624,6 @@ class PatchMerge(Resource):
 
         db = get_db()
         curs = db.cursor()
-        curs.execute('insert into dataset (data) values (?);', (json.dumps(new_data),))
         curs.execute(
             '''
             update patch_request
@@ -504,6 +639,7 @@ class PatchMerge(Resource):
             (g.identity.id, dataset['id'], curs.lastrowid,
              applied_patch.to_string(), row['id'])
         )
+        add_new_version_of_dataset(curs, new_data)
         db.commit()
 
         return None, 204
@@ -564,10 +700,10 @@ def init_db():
 def load_data(datafile):
     with app.app_context():
         db = get_db()
+        curs = db.cursor()
         with open(datafile) as f:
             data = json.load(f)
-            db.execute(u'insert into dataset (data) values (?)',
-                       (json.dumps(data),))
+            add_new_version_of_dataset(curs, data)
         db.commit()
         
 def get_db():
@@ -577,10 +713,11 @@ def get_db():
         db.row_factory = sqlite3.Row
     return db
 
-def query_db(query, args=(), one=False):
-    curs = get_db().execute(query, args)
+def query_db(query, args=(), one=False, cursor=None):
+    curs = cursor if cursor else get_db().cursor()
+    curs.execute(query, args)
     rows = curs.fetchall()
-    curs.close()
+    if not cursor: curs.close()
     return (rows[0] if rows else None) if one else rows
 
 @app.teardown_appcontext

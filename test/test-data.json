@@ -1,5 +1,7 @@
 {
   "@context": {
+    "@base": "http://n2t.net/ark:/99152/p0/",
+    "periodo": "http://n2t.net/ark:/99152/p0/vocab#",
     "abstract": "http://purl.org/dc/terms/abstract",
     "alternateLabel": {
       "@id": "http://www.w3.org/2004/02/skos/core#altLabel",
@@ -15,12 +17,20 @@
       "@container": "@index",
       "@reverse": "http://www.w3.org/2004/02/skos/core#inScheme"
     },
-    "earliestYear": "http://perio.do/temporary/vocab#earliestYear",
+    "earliestYear": "periodo:earliestYear",
     "editorialNote": "http://www.w3.org/2004/02/skos/core#note",
     "id": "@id",
     "in": "http://www.w3.org/2006/time#hasDateTimeDescription",
+    "inDataset": {
+      "@id": "http://rdfs.org/ns/void#inDataset",
+      "@type": "@id"
+    },
+    "primaryTopicOf": {
+      "@id": "http://xmlns.com/foaf/0.1/isPrimaryTopicOf",
+      "@type": "@id"
+    },
     "label": "http://www.w3.org/2004/02/skos/core#prefLabel",
-    "latestYear": "http://perio.do/temporary/vocab#latestYear",
+    "latestYear": "periodo:latestYear",
     "localizedLabel": {
       "@container": "@language",
       "@id": "http://www.w3.org/2004/02/skos/core#altLabel"
@@ -32,20 +42,23 @@
       "@id": "http://purl.org/dc/terms/isPartOf",
       "@type": "@id"
     },
+    "PeriodCollection": "http://www.w3.org/2004/02/skos/core#ConceptScheme",
     "periodCollections": {
       "@container": "@index",
-      "@id": "http://perio.do/temporary/"
+      "@id": "http://www.w3.org/2000/01/rdf-schema#member"
     },
+    "PeriodDefinition": "http://www.w3.org/2004/02/skos/core#Concept",
     "sameAs": {
       "@id": "http://www.w3.org/2002/07/owl#sameAs",
       "@type": "@id"
     },
     "source": "http://purl.org/dc/terms/source",
     "spatialCoverage": "http://purl.org/dc/terms/spatial",
-    "spatialCoverageDescription": "http://perio.do/temporary/vocab#spatialCoverageDescription",
+    "spatialCoverageDescription": "periodo:spatialCoverageDescription",
     "start": "http://www.w3.org/2006/time#intervalStartedBy",
     "stop": "http://www.w3.org/2006/time#intervalFinishedBy",
     "title": "http://purl.org/dc/terms/title",
+    "type": "@type",
     "url": {
       "@id": "http://xmlns.com/foaf/0.1/page",
       "@type": "@id"
@@ -59,11 +72,14 @@
       "@type": "http://www.w3.org/2001/XMLSchema#gYear"
     }
   },
+  "id": "dataset/#periodCollections",
+  "type": "rdf:Bag",
   "periodCollections": {
     "trgkv": {
       "definitions": {
         "trgkv/wbjd": {
           "id": "trgkv/wbjd",
+          "type": "PeriodDefinition",
           "label": "Archaic",
           "localizedLabel": {
             "eng-latn": "Archaic"
@@ -90,6 +106,7 @@
         }
       },
       "id": "trgkv",
+      "type": "PeriodCollection",
       "source": {
         "locator": "page 4",
         "partOf": {
