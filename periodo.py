@@ -547,7 +547,9 @@ class Registered(Resource):
         credentials = response.json()
         print(credentials)
         identity = add_user_or_update_credentials(credentials)
-        return { 'access_token': identity.b64token.decode() }
+        return make_response(
+            '<!doctype html><title>access token</title><pre>access_token: '
+            + identity.b64token.decode())
 
 ######################
 #  Database handling #
