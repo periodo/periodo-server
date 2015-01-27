@@ -17,7 +17,7 @@ def setUpModule():
 
 VOID = Namespace('http://rdfs.org/ns/void#')
 SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
-PERIODO = Namespace('http://n2t.net/ark:/58825/p0/')
+PERIODO = Namespace('http://n2t.net/ark:/99152/p0/')
 FOAF = Namespace('http://xmlns.com/foaf/0.1/')
 
 class TestAuthentication(unittest.TestCase):
@@ -362,7 +362,7 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         g.parse(format='turtle', data=res2.get_data(as_text=True))
         desc = g.value(predicate=RDF.type, object=VOID.DatasetDescription)
         self.assertEqual(
-            desc.n3(), '<http://n2t.net/ark:/58825/p0/>')
+            desc.n3(), '<http://n2t.net/ark:/99152/p0/>')
         title = g.value(subject=desc, predicate=DCTERMS.title)
         self.assertEqual(
             title.n3(), '"Description of the PeriodO Period Gazetteer"@en')
@@ -383,7 +383,7 @@ WHERE {
         self.assertEqual(scheme_count, 1)
 
     def test_add_contributors_to_dataset_description(self):
-        contribution = (URIRef('http://n2t.net/ark:/58825/p0/dataset'),
+        contribution = (URIRef('http://n2t.net/ark:/99152/p0/dataset'),
                         DCTERMS.contributor,
                         URIRef('http://orcid.org/1234-5678-9101-112X'))
         data = self.app.get(
