@@ -32,16 +32,16 @@
    void:feature <http://www.w3.org/ns/formats/JSON-LD> ;
    void:dataDump <dataset/> ;
    void:rootResource <dataset/#periodCollections> ;
-   # void:exampleResource <xxx> ;
+   void:exampleResource <fh3zc> , <fh3zc/qs6h> , <fh3zc/g927> ;
    void:uriSpace "http://n2t.net/ark:/99152/p0/" ;
-   # void:vocabulary <xxx> ;
-   void:classPartition [ void:class skos:Concept ] ;
-   void:classPartition [ void:class skos:ConceptScheme ]
+   void:vocabulary
+      <http://www.w3.org/2004/02/skos/core> ,
+      <http://www.w3.org/2006/time> ,
+      <http://purl.org/dc/terms/> ;
+   void:classPartition
+      [ void:class skos:Concept ] ,
+      [ void:class skos:ConceptScheme ]
    .
-
-# statistics
-# Class- and property-based partitions can be used to provide statistics such as the number of instances of a given class and the number of triples that have a certain predicate. (period collection, period)
-
 
 orcid:0000-0002-5486-159X a foaf:Person ;
    rdfs:label "Ryan Shaw" ;
