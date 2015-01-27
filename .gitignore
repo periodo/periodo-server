@@ -9,7 +9,7 @@ include/*
 lib/*
 local
 local/*
-static/*
+static/html
 
 db.sqlite
 secrets.py

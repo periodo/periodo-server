@@ -354,6 +354,10 @@ class Index(Resource):
     def get(self):
         return {}
 
+@app.route('/vocab')
+def vocab():
+    return app.send_static_file('vocab.ttl')
+
 # http://www.w3.org/TR/void/#well-known
 @app.route('/.well-known/void')
 def void():

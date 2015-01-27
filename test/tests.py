@@ -7,7 +7,7 @@ import unittest
 import http.client
 from rdflib import Graph, URIRef
 from rdflib.plugins import sparql
-from rdflib.namespace import Namespace, RDF, DCTERMS
+from rdflib.namespace import Namespace, RDF, DCTERMS, OWL
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
 from jsonpatch import JsonPatch
@@ -342,6 +342,23 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
     def tearDown(self):
         os.close(self.db_fd)
         os.unlink(periodo.app.config['DATABASE'])
+
+    def test_vocab(self):
+        res1 = self.app.get('/vocab')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'text/turtle; charset=utf-8')
+
+        g = Graph()
+        g.parse(format='turtle', data=res1.get_data(as_text=True))
+        self.assertIn(
+            (PERIODO['vocab#spatialCoverageDescription'],
+             RDF.type, OWL.DatatypeProperty), g)
+        self.assertIn(
+            (PERIODO['vocab#earliestYear'],
+             RDF.type, OWL.DatatypeProperty), g)
+        self.assertIn(
+            (PERIODO['vocab#latestYear'],
+             RDF.type, OWL.DatatypeProperty), g)
 
     def test_dataset_description(self):
         res1 = self.app.get('/', headers={ 'Accept': 'text/html' })
