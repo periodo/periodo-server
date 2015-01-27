@@ -545,7 +545,6 @@ class Registered(Resource):
             headers={'Accept': 'application/json'},
             allow_redirects=True, data=data)
         credentials = response.json()
-        print(credentials)
         identity = add_user_or_update_credentials(credentials)
         return make_response(
             '<!doctype html><title>access token</title><pre>access_token: '
