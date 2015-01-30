@@ -1,4 +1,4 @@
-@base <http://n2t.net/ark:/99152/p0/vocab> .
+@base <http://n2t.net/ark:/99152/p0v> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix time: <http://www.w3.org/2006/time#> .

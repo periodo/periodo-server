@@ -17,7 +17,7 @@ def setUpModule():
 
 VOID = Namespace('http://rdfs.org/ns/void#')
 SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
-PERIODO = Namespace('http://n2t.net/ark:/99152/p0/')
+PERIODO = Namespace('http://n2t.net/ark:/99152/')
 FOAF = Namespace('http://xmlns.com/foaf/0.1/')
 
 class TestAuthentication(unittest.TestCase):
@@ -62,7 +62,7 @@ class TestAuthentication(unittest.TestCase):
         self.assertIsNone(self.expired_identity.auth_type)
 
     def test_no_credentials(self):
-        res = self.app.patch('/dataset/')
+        res = self.app.patch('/d/')
         self.assertEqual(res.status_code, http.client.UNAUTHORIZED)
         self.assertEqual(
             res.headers['WWW-Authenticate'],
@@ -70,7 +70,7 @@ class TestAuthentication(unittest.TestCase):
 
     def test_unsupported_auth_method(self):
         res = self.app.patch(
-            '/dataset/',
+            '/d/',
             headers={ 'Authorization': 'Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==' } )
         self.assertEqual(res.status_code, http.client.UNAUTHORIZED)
         self.assertEqual(
@@ -79,7 +79,7 @@ class TestAuthentication(unittest.TestCase):
 
     def test_malformed_token(self):
         res = self.app.patch(
-            '/dataset/',
+            '/d/',
             headers={ 'Authorization': 'Bearer =!@#$%^&*()_+' } )
         self.assertEqual(res.status_code, http.client.UNAUTHORIZED)
         self.assertEqual(
@@ -90,7 +90,7 @@ class TestAuthentication(unittest.TestCase):
 
     def test_token_not_in_database(self):
         res = self.app.patch(
-            '/dataset/',
+            '/d/',
             headers={ 'Authorization': 'Bearer mF_9.B5f-4.1JqM' } )
         self.assertEqual(res.status_code, http.client.UNAUTHORIZED)
         self.assertEqual(
@@ -101,7 +101,7 @@ class TestAuthentication(unittest.TestCase):
 
     def test_expired_token(self):
         res = self.app.patch(
-            '/dataset/',
+            '/d/',
             headers={ 'Authorization': 'Bearer ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4' } )
         self.assertEqual(res.status_code, http.client.UNAUTHORIZED)
         self.assertEqual(
@@ -160,7 +160,7 @@ class TestAuthorization(unittest.TestCase):
 
     def test_unauthorized_user(self):
         res = self.app.patch(
-            '/dataset/',
+            '/d/',
             headers={ 'Authorization': 'Bearer ZjdlMDBjMDItNmY5Ny00NjM2LTg0OTktMDM3NDQ2ZDk1NDQ2' } )
         self.assertEqual(res.status_code, http.client.FORBIDDEN)
         self.assertEqual(
@@ -172,7 +172,7 @@ class TestAuthorization(unittest.TestCase):
     def test_authorized_user(self):
         with self.app as client:
             res = client.patch(
-                '/dataset/',
+                '/d/',
                 data=self.patch,
                 content_type='application/json',
                 headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
@@ -185,7 +185,7 @@ class TestAuthorization(unittest.TestCase):
 
     def test_nonadmin_merge(self):
         res = self.app.patch(
-            '/dataset/',
+            '/d/',
             data=self.patch,
             content_type='application/json',
             headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
@@ -202,7 +202,7 @@ class TestAuthorization(unittest.TestCase):
     def test_admin_merge(self):
         with self.app as client:
             res = client.patch(
-                '/dataset/',
+                '/d/',
                 data=self.patch,
                 content_type='application/json',
                 headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
@@ -218,7 +218,7 @@ class TestAuthorization(unittest.TestCase):
 
     def test_noncreator_patch_update(self):
         res = self.app.patch(
-            '/dataset/',
+            '/d/',
             data=self.patch,
             content_type='application/json',
             headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
@@ -237,7 +237,7 @@ class TestAuthorization(unittest.TestCase):
     def test_creator_patch_update(self):
         with self.app as client:
             res = client.patch(
-                '/dataset/',
+                '/d/',
                 data=self.patch,
                 content_type='application/json',
                 headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
@@ -251,7 +251,7 @@ class TestAuthorization(unittest.TestCase):
     def test_update_merged_patch(self):
         with self.app as client:
             res = client.patch(
-                '/dataset/',
+                '/d/',
                 data=self.patch,
                 content_type='application/json',
                 headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
@@ -294,7 +294,7 @@ class TestPatchMethods(unittest.TestCase):
 
     def test_update_patch(self):
         res = self.app.patch(
-            '/dataset/',
+            '/d/',
             data=self.patch,
             content_type='application/json',
             headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
@@ -344,24 +344,24 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         os.unlink(periodo.app.config['DATABASE'])
 
     def test_vocab(self):
-        res1 = self.app.get('/vocab')
+        res1 = self.app.get('/v', buffered=True)
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle; charset=utf-8')
 
         g = Graph()
         g.parse(format='turtle', data=res1.get_data(as_text=True))
         self.assertIn(
-            (PERIODO['vocab#spatialCoverageDescription'],
+            (PERIODO['p0v#spatialCoverageDescription'],
              RDF.type, OWL.DatatypeProperty), g)
         self.assertIn(
-            (PERIODO['vocab#earliestYear'],
+            (PERIODO['p0v#earliestYear'],
              RDF.type, OWL.DatatypeProperty), g)
         self.assertIn(
-            (PERIODO['vocab#latestYear'],
+            (PERIODO['p0v#latestYear'],
              RDF.type, OWL.DatatypeProperty), g)
 
     def test_dataset_description(self):
-        res1 = self.app.get('/', headers={ 'Accept': 'text/html' })
+        res1 = self.app.get('/', headers={ 'Accept': 'text/html' }, buffered=True)
         self.assertIn(res1.status_code, (http.client.OK, http.client.NOT_ACCEPTABLE))
         self.assertEqual(res1.headers['Content-Type'], 'text/html')
 
@@ -379,7 +379,7 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         g.parse(format='turtle', data=res2.get_data(as_text=True))
         desc = g.value(predicate=RDF.type, object=VOID.DatasetDescription)
         self.assertEqual(
-            desc.n3(), '<http://n2t.net/ark:/99152/p0/>')
+            desc.n3(), '<http://n2t.net/ark:/99152/p0>')
         title = g.value(subject=desc, predicate=DCTERMS.title)
         self.assertEqual(
             title.n3(), '"Description of the PeriodO Period Gazetteer"@en')
@@ -400,7 +400,7 @@ WHERE {
         self.assertEqual(scheme_count, 1)
 
     def test_add_contributors_to_dataset_description(self):
-        contribution = (URIRef('http://n2t.net/ark:/99152/p0/dataset'),
+        contribution = (URIRef('http://n2t.net/ark:/99152/p0d'),
                         DCTERMS.contributor,
                         URIRef('http://orcid.org/1234-5678-9101-112X'))
         data = self.app.get(
@@ -409,7 +409,7 @@ WHERE {
         self.assertNotIn(contribution, g)
         with self.app as client:
             res = client.patch(
-                '/dataset/',
+                '/d/',
                 data=self.patch,
                 content_type='application/json',
                 headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
@@ -423,28 +423,28 @@ WHERE {
         self.assertIn(contribution, g)
 
     def test_dataset(self):
-        res = self.app.get('/dataset')
+        res = self.app.get('/d')
         self.assertEqual(res.status_code, http.client.SEE_OTHER)
-        self.assertEqual(urlparse(res.headers['Location']).path, '/dataset/')
+        self.assertEqual(urlparse(res.headers['Location']).path, '/d/')
 
     def test_dataset_data(self):
-        res1 = self.app.get('/dataset/')
+        res1 = self.app.get('/d/')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
-        res2 = self.app.get('/dataset.json')
+        res2 = self.app.get('/d.json')
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'application/json')
-        res3 = self.app.get('/dataset.jsonld')
+        res3 = self.app.get('/d.jsonld')
         self.assertEqual(res3.status_code, http.client.OK)
         self.assertEqual(res3.headers['Content-Type'], 'application/ld+json')
-        res4 = self.app.get('/dataset/', headers={ 'Accept': 'application/ld+json' })
+        res4 = self.app.get('/d/', headers={ 'Accept': 'application/ld+json' })
         self.assertEqual(res4.status_code, http.client.OK)
         self.assertEqual(res4.headers['Content-Type'], 'application/ld+json')
         g = Graph().parse(data=res4.get_data(as_text=True), format='json-ld')
-        self.assertIn((PERIODO['dataset/#periodCollections'],
-                       FOAF.isPrimaryTopicOf, PERIODO['dataset/']), g)
-        self.assertIn((PERIODO['dataset/'],
-                       VOID.inDataset, PERIODO.dataset), g)
+        self.assertIn((PERIODO['p0d/#periodCollections'],
+                       FOAF.isPrimaryTopicOf, PERIODO['p0d/']), g)
+        self.assertIn((PERIODO['p0d/'],
+                       VOID.inDataset, PERIODO['p0d']), g)
 
     def test_period_collection(self):
         res1 = self.app.get('/trgkv')
@@ -473,44 +473,44 @@ WHERE {
         self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
         g = Graph().parse(data=res2.get_data(as_text=True), format='json-ld')
         self.assertIsNone(g.value(predicate=RDF.type, object=RDF.Bag))
-        self.assertIn((PERIODO['trgkv'],
-                       FOAF.isPrimaryTopicOf, PERIODO['trgkv.jsonld']), g)
-        self.assertIn((PERIODO['trgkv.jsonld'],
-                       VOID.inDataset, PERIODO.dataset), g)
+        self.assertIn((PERIODO['p0trgkv'],
+                       FOAF.isPrimaryTopicOf, PERIODO['p0trgkv.jsonld']), g)
+        self.assertIn((PERIODO['p0trgkv.jsonld'],
+                       VOID.inDataset, PERIODO['p0d']), g)
         res3 = self.app.get('/trgkv.json/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
         res4 = self.app.get('/trgkv.jsonld/')
         self.assertEqual(res4.status_code, http.client.NOT_FOUND)
 
     def test_period_definition(self):
-        res1 = self.app.get('/trgkv/wbjd')
+        res1 = self.app.get('/trgkvwbjd')
         self.assertEqual(res1.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res1.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkv/wbjd')
-        res2 = self.app.get('/trgkv/wbjd', headers={'Accept':'application/json'})
+        self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkvwbjd')
+        res2 = self.app.get('/trgkvwbjd', headers={'Accept':'application/json'})
         self.assertEqual(res2.status_code, http.client.SEE_OTHER)
-        self.assertEqual(urlparse(res2.headers['Location']).path, '/trgkv/wbjd.json')
-        res3 = self.app.get('/trgkv/wbjd', headers={'Accept':'application/ld+json'})
+        self.assertEqual(urlparse(res2.headers['Location']).path, '/trgkvwbjd.json')
+        res3 = self.app.get('/trgkvwbjd', headers={'Accept':'application/ld+json'})
         self.assertEqual(res3.status_code, http.client.SEE_OTHER)
-        self.assertEqual(urlparse(res3.headers['Location']).path, '/trgkv/wbjd.jsonld')
-        res4 = self.app.get('/trgkv/wbjd', headers={'Accept':'text/html'})
+        self.assertEqual(urlparse(res3.headers['Location']).path, '/trgkvwbjd.jsonld')
+        res4 = self.app.get('/trgkvwbjd', headers={'Accept':'text/html'})
         self.assertEqual(res4.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res4.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkv/wbjd')
+        self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkvwbjd')
 
     def test_period_definition_data(self):
-        res1 = self.app.get('/trgkv/wbjd.json')
+        res1 = self.app.get('/trgkvwbjd.json')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
-        res2 = self.app.get('/trgkv/wbjd.jsonld')
+        res2 = self.app.get('/trgkvwbjd.jsonld')
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
         g = Graph().parse(data=res1.get_data(as_text=True), format='json-ld')
         self.assertIsNone(g.value(predicate=RDF.type, object=SKOS.ConceptScheme))
-        self.assertIn((PERIODO['trgkv/wbjd'],
-                       FOAF.isPrimaryTopicOf, PERIODO['trgkv/wbjd.json']), g)
-        self.assertIn((PERIODO['trgkv/wbjd.json'],
-                       VOID.inDataset, PERIODO.dataset), g)
+        self.assertIn((PERIODO['p0trgkvwbjd'],
+                       FOAF.isPrimaryTopicOf, PERIODO['p0trgkvwbjd.json']), g)
+        self.assertIn((PERIODO['p0trgkvwbjd.json'],
+                       VOID.inDataset, PERIODO['p0d']), g)
 
 class TestIdentifiers(unittest.TestCase):
 
@@ -556,15 +556,15 @@ class TestIdentifiers(unittest.TestCase):
 
     def test_id_has_wrong_shape(self):
         with self.assertRaises(identifier.IdentifierException):
-            identifier.check('6rw8') # collection id too short
+            identifier.check('p06rw8') # collection id too short
         with self.assertRaises(identifier.IdentifierException):
-            identifier.check('6rw87669p') # definition id missing slash
+            identifier.check('p06rw87/669p') # definition id has slash
 
     def test_generate_definition_id(self):
         cid = identifier.for_collection()
         did = identifier.for_definition(cid)
-        self.assertTrue(did.startswith(cid + '/'))
-        self.assertEqual(len(did), 10)
+        self.assertTrue(did.startswith(cid))
+        self.assertEqual(len(did), 11)
 
     def test_replace_skolem_ids_when_adding_items(self):
         with open('test-data.json') as f:
@@ -574,23 +574,23 @@ class TestIdentifiers(unittest.TestCase):
         applied_patch = identifier.replace_skolem_ids(original_patch, data)
         self.assertRegex(
             applied_patch.patch[0]['path'],
-            r'^/periodCollections/trgkv/definitions/trgkv~1[%s]{4}$' % identifier.XDIGITS)
+            r'^/periodCollections/p0trgkv/definitions/p0trgkv[%s]{4}$' % identifier.XDIGITS)
         self.assertRegex(
             applied_patch.patch[0]['value']['id'],
-            r'^trgkv/[%s]{4}$' % identifier.XDIGITS)
+            r'^p0trgkv[%s]{4}$' % identifier.XDIGITS)
         identifier.check(applied_patch.patch[0]['value']['id'])
 
         self.assertRegex(
             applied_patch.patch[1]['path'],
-            r'^/periodCollections/[%s]{5}$' % identifier.XDIGITS)
+            r'^/periodCollections/p0[%s]{5}$' % identifier.XDIGITS)
         self.assertRegex(
             applied_patch.patch[1]['value']['id'],
-            r'^[%s]{5}$' % identifier.XDIGITS)
+            r'^p0[%s]{5}$' % identifier.XDIGITS)
         collection_id = applied_patch.patch[1]['value']['id']
         identifier.check(collection_id)
         self.assertRegex(
             list(applied_patch.patch[1]['value']['definitions'].keys())[0],
-            r'^%s/[%s]{4}$' % (collection_id, identifier.XDIGITS))
+            r'^%s[%s]{4}$' % (collection_id, identifier.XDIGITS))
         self.assertEqual(
             list(applied_patch.patch[1]['value']['definitions'].values())[0]['id'],
             list(applied_patch.patch[1]['value']['definitions'].keys())[0])
@@ -608,7 +608,7 @@ class TestIdentifiers(unittest.TestCase):
         definition_id, definition = list(applied_patch.patch[0]['value'].items())[0]
         self.assertRegex(
             definition_id,
-            r'^trgkv/[%s]{4}$' % identifier.XDIGITS)
+            r'^p0trgkv[%s]{4}$' % identifier.XDIGITS)
         self.assertEqual(definition_id, definition['id'])
         identifier.check(definition_id)
 
@@ -625,13 +625,13 @@ class TestIdentifiers(unittest.TestCase):
         collection_id, collection = list(applied_patch.patch[0]['value'].items())[0]
         self.assertRegex(
             collection_id,
-            r'^[%s]{5}$' % identifier.XDIGITS)
+            r'^p0[%s]{5}$' % identifier.XDIGITS)
         self.assertEqual(collection_id, collection['id'])
         identifier.check(collection_id)
 
         definition_id, definition = list(applied_patch.patch[0]['value'][collection_id]['definitions'].items())[0]
         self.assertRegex(
             definition_id,
-            r'^%s/[%s]{4}$' % (collection_id, identifier.XDIGITS))
+            r'^%s[%s]{4}$' % (collection_id, identifier.XDIGITS))
         self.assertEqual(definition_id, definition['id'])
         identifier.check(definition_id)

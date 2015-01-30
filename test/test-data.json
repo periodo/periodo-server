@@ -1,7 +1,6 @@
 {
   "@context": {
-    "@base": "http://n2t.net/ark:/99152/p0/",
-    "periodo": "http://n2t.net/ark:/99152/p0/vocab#",
+    "@base": "http://n2t.net/ark:/99152/",
     "abstract": "http://purl.org/dc/terms/abstract",
     "alternateLabel": {
       "@id": "http://www.w3.org/2004/02/skos/core#altLabel",
@@ -48,6 +47,7 @@
       "@id": "http://www.w3.org/2000/01/rdf-schema#member"
     },
     "PeriodDefinition": "http://www.w3.org/2004/02/skos/core#Concept",
+    "periodo": "http://n2t.net/ark:/99152/p0v#",
     "sameAs": {
       "@id": "http://www.w3.org/2002/07/owl#sameAs",
       "@type": "@id"
@@ -72,13 +72,13 @@
       "@type": "http://www.w3.org/2001/XMLSchema#gYear"
     }
   },
-  "id": "dataset/#periodCollections",
+  "id": "p0d/#periodCollections",
   "type": "rdf:Bag",
   "periodCollections": {
-    "trgkv": {
+    "p0trgkv": {
       "definitions": {
-        "trgkv/wbjd": {
-          "id": "trgkv/wbjd",
+        "p0trgkvwbjd": {
+          "id": "p0trgkvwbjd",
           "type": "PeriodDefinition",
           "label": "Archaic",
           "localizedLabel": {
@@ -105,7 +105,7 @@
           }
         }
       },
-      "id": "trgkv",
+      "id": "p0trgkv",
       "type": "PeriodCollection",
       "source": {
         "locator": "page 4",
