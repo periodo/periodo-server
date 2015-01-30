@@ -361,7 +361,7 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
              RDF.type, OWL.DatatypeProperty), g)
 
     def test_dataset_description(self):
-        res1 = self.app.get('/', headers={ 'Accept': 'text/html' })
+        res1 = self.app.get('/', headers={ 'Accept': 'text/html' }, buffered=True)
         self.assertIn(res1.status_code, (http.client.OK, http.client.NOT_ACCEPTABLE))
         self.assertEqual(res1.headers['Content-Type'], 'text/html')
 
