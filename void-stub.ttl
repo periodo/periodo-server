@@ -1,4 +1,4 @@
-@base <http://n2t.net/ark:/99152/p0/> .
+@base <http://n2t.net/ark:/99152/> .
 
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
@@ -9,12 +9,12 @@
 @prefix wv: <http://vocab.org/waive/terms/> .
 
 
-<> a void:DatasetDescription ;
+<p0> a void:DatasetDescription ;
    dcterms:title "Description of the PeriodO Period Gazetteer"@en ;
-   foaf:primaryTopic <dataset> ;
+   foaf:primaryTopic <p0-dataset> ;
    dcterms:creator orcid:0000-0002-5486-159X .
 
-<dataset> a void:Dataset ;
+<p0d> a void:Dataset ;
    dcterms:title "PeriodO Period Gazetteer" ;
    dcterms:description "A gazetteer of scholarly assertions about the spatial and temporal extents of historical, art-historical, and archaeological periods."@en ;
    dcterms:subject <http://dbpedia.org/resource/Periodization> ;
@@ -28,12 +28,12 @@
    wv:waiver <http://creativecommons.org/publicdomain/zero/1.0/> ;
    wv:norms <http://www.opendatacommons.org/norms/odc-by-sa/> ;
    wv:declaration "To the extent allowed by law, the contributors have dedicated the PeriodO dataset to the public domain by waiving all of their rights to the work worldwide under copyright law, including all related and neighboring rights. You can copy, modify, and distribute this dataset, even for commercial purposes, all without asking permission. However, if you desire our respect and cooperation, then you will clearly attribute your use of our work and share your own work in kind (even though you are not required to in any way)."@en ;
-   foaf:homepage <> ;
+   foaf:homepage <p0> ;
    void:feature <http://www.w3.org/ns/formats/JSON-LD> ;
-   void:dataDump <dataset/> ;
-   void:rootResource <dataset/#periodCollections> ;
-   void:exampleResource <fh3zc> , <fh3zc/qs6h> , <fh3zc/g927> ;
-   void:uriSpace "http://n2t.net/ark:/99152/p0/" ;
+   void:dataDump <p0d/> ;
+   void:rootResource <p0d/#periodCollections> ;
+   void:exampleResource <p0fh3zc> , <p0fh3zcqs6h> , <p0fh3zcg927> ;
+   void:uriSpace "http://n2t.net/ark:/99152/p0" ;
    void:vocabulary
       <http://www.w3.org/2004/02/skos/core> ,
       <http://www.w3.org/2006/time> ,
