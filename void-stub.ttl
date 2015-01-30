@@ -11,7 +11,7 @@
 
 <p0> a void:DatasetDescription ;
    dcterms:title "Description of the PeriodO Period Gazetteer"@en ;
-   foaf:primaryTopic <p0-dataset> ;
+   foaf:primaryTopic <p0d> ;
    dcterms:creator orcid:0000-0002-5486-159X .
 
 <p0d> a void:Dataset ;
