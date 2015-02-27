@@ -5,23 +5,38 @@ from itertools import chain
 
 from jsonpatch import JsonPatch
 
+PREFIX = 'p0' # shoulder assigned by EZID service
 XDIGITS = '23456789bcdfghjkmnpqrstvwxz'
-COLLECTION_ID_LENGTH = 4
-DEFINITION_ID_LENGTH = 3
+COLLECTION_SEQUENCE_LENGTH = 4
+DEFINITION_SEQUENCE_LENGTH = 3
 IDENTIFIER_RE = re.compile(
-    r'[%s]{%s}(/[%s]{%s})?' % (XDIGITS, COLLECTION_ID_LENGTH,
-                               XDIGITS, DEFINITION_ID_LENGTH))
+    r'^%s[%s]{%s}([%s]{1}[%s]{%s})?[%s]{1}$' % (
+        PREFIX,
+        XDIGITS, COLLECTION_SEQUENCE_LENGTH,
+        XDIGITS,
+        XDIGITS, DEFINITION_SEQUENCE_LENGTH,
+        XDIGITS))
 
 def for_definition(collection_id):
     check(collection_id)
-    return add_check_digit(
-        '/'.join([ collection_id, random_sequence(DEFINITION_ID_LENGTH) ]))
+    return id_from_sequence(
+        collection_id[len(PREFIX):] +
+        random_sequence(DEFINITION_SEQUENCE_LENGTH))
     
 def for_collection():
-    return add_check_digit(random_sequence(COLLECTION_ID_LENGTH))
+    return id_from_sequence(
+        random_sequence(COLLECTION_SEQUENCE_LENGTH))
+
+def prefix(s):
+    return PREFIX + s
+
+def id_from_sequence(sequence):
+    return prefix(add_check_digit(sequence))
 
 def check(identifier):
-    check_digit = check_digit_for(identifier[:-1])
+    if not IDENTIFIER_RE.match(identifier):
+        raise IdentifierException('malformed identifier: {}'.format(identifier))
+    check_digit = check_digit_for(identifier[len(PREFIX):-1])
     if not check_digit == identifier[-1]:
         raise IdentifierException(
             ('malformed identifier: {}' +
@@ -31,8 +46,8 @@ def check(identifier):
 def random_sequence(length):
     return ''.join(random.choice(XDIGITS) for x in range(length))
 
-def add_check_digit(identifier):
-    return identifier + check_digit_for(identifier)
+def add_check_digit(sequence):
+    return sequence + check_digit_for(sequence)
 
 def ordinal_value(char):
     try:
@@ -41,11 +56,9 @@ def ordinal_value(char):
         return 0
 
 # from http://search.cpan.org/~jak/Noid/noid#NOID_CHECK_DIGIT_ALGORITHM
-def check_digit_for(identifier):
-    if not IDENTIFIER_RE.match(identifier):
-        raise IdentifierException('malformed identifier: {}'.format(identifier))
+def check_digit_for(sequence):
     total = sum([ ordinal_value(char) * position
-                  for position, char in enumerate(identifier, start=1) ])
+                  for position, char in enumerate(sequence, start=1) ])
     return XDIGITS[total % len(XDIGITS)]
 
 
@@ -97,7 +110,7 @@ def replace_skolem_ids(patch_or_obj, dataset):
             # adding a new definition to a collection
             collection_id = m.group('collection_id')
             new_op['value'] = assign_definition_id(new_op['value'], collection_id)
-            new_op['path'] = m.group('path_prefix') + new_op['value']['id'].replace('/', '~1')
+            new_op['path'] = m.group('path_prefix') + new_op['value']['id']
             return new_op
 
         m = REPLACE_DEFINITIONS_PATH.match(op['path'])

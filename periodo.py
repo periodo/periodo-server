@@ -31,7 +31,9 @@ from flask.ext.principal import (Principal, Permission, PermissionDenied,
 
 from werkzeug.exceptions import Unauthorized
 
-from identifier import replace_skolem_ids
+from identifier import (replace_skolem_ids, prefix,
+                        COLLECTION_SEQUENCE_LENGTH,
+                        DEFINITION_SEQUENCE_LENGTH)
 
 from secrets import SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET
 
@@ -251,7 +253,7 @@ WHERE merged = 1
         predicate=RDF.type, object=VOID.DatasetDescription))
     dataset_g = Graph().parse(data=json.dumps(data), format='json-ld')
 
-    for part in description[ ns.dataset : VOID.classPartition ]:
+    for part in description[ ns.d : VOID.classPartition ]:
         clazz = description.value(subject=part, predicate=VOID['class'])
         entity_count = len(dataset_g.query(
 '''
@@ -265,7 +267,7 @@ FILTER (STRSTARTS(STR(?s), "%s"))
             (part, VOID.entities, Literal(entity_count, datatype=XSD.integer)))
 
     def add_to_description(p, o):
-        description.add((ns.dataset, p, o))
+        description.add((ns.d, p, o))
     add_to_description(
          DCTERMS.modified, Literal(created, datatype=XSD.dateTime))
     add_to_description(
@@ -289,7 +291,8 @@ def add_new_version_of_dataset(cursor, data):
         (json.dumps(data), describe_dataset(cursor, data, now), now))
 
 def attach_to_dataset(o):
-    o['primaryTopicOf'] = { 'id': request.path[1:], 'inDataset': 'dataset' }
+    o['primaryTopicOf'] = { 'id': prefix(request.path[1:]),
+                            'inDataset': prefix('d') }
     return o
 
 
@@ -354,7 +357,7 @@ class Index(Resource):
     def get(self):
         return {}
 
-@app.route('/vocab')
+@app.route('/v')
 def vocab():
     return app.send_static_file('vocab.ttl')
 
@@ -367,11 +370,13 @@ def void():
     })
 
 # URIs for abstract resources (no representations, just 303 See Other)
-@app.route('/dataset')
-@app.route('/<string(length=5):collection_id>')
-@app.route('/<string(length=5):collection_id>/<string(length=4):definition_id>')
+@app.route('/d')
+@app.route('/<string(length=%s):collection_id>'
+           % (COLLECTION_SEQUENCE_LENGTH + 1))
+@app.route('/<string(length=%s):definition_id>'
+           % (COLLECTION_SEQUENCE_LENGTH + 1 + DEFINITION_SEQUENCE_LENGTH + 1))
 def see_other(**kwargs):
-    if request.path == '/dataset':
+    if request.path == '/d':
         url = url_for('dataset')
     elif request.accept_mimetypes.best == 'application/json':
         url = request.path + '.json'
@@ -385,7 +390,7 @@ dataset_parser.add_argument('If-Modified-Since', dest='modified', location='head
 dataset_parser.add_argument('version', type=int, location='args',
                             help='Invalid version number')
 
-@api.resource('/dataset/', '/dataset.json', '/dataset.jsonld')
+@api.resource('/d/', '/d.json', '/d.jsonld')
 class Dataset(Resource):
     def get(self):
         args = dataset_parser.parse_args()
@@ -441,34 +446,46 @@ VALUES (?, ?, ?, ?)
             'Location': api.url_for(PatchRequest, id=curs.lastrowid)
         }
 
-@api.resource('/<string(length=5):collection_id>.json',
+@api.resource('/<string(length=%s):collection_id>.json'
+              % (COLLECTION_SEQUENCE_LENGTH + 1),
               endpoint='collection-json')
-@api.resource('/<string(length=5):collection_id>.jsonld',
+@api.resource('/<string(length=%s):collection_id>.jsonld'
+              % (COLLECTION_SEQUENCE_LENGTH + 1),
               endpoint='collection-jsonld')
-@api.resource('/<string(length=5):collection_id>/<string(length=4):definition_id>.json',
-              endpoint='definition-json')
-@api.resource('/<string(length=5):collection_id>/<string(length=4):definition_id>.jsonld',
-              endpoint='definition-jsonld')
-class Entity(Resource):
-    def get(self, **kwargs):
+class PeriodCollection(Resource):
+    def get(self, collection_id):
         dataset = get_latest_dataset()
         o = json.loads(dataset['data'])
-
-        collection_id = kwargs['collection_id']
-        if not collection_id in o['periodCollections']:
+        collection_key = prefix(collection_id)
+        if not collection_key in o['periodCollections']:
             abort(404)
-        collection = o['periodCollections'][collection_id]
-        if not 'definition_id' in kwargs:
-            collection['@context'] = o['@context']
-            return attach_to_dataset(collection)
+        collection = o['periodCollections'][collection_key]
+        collection['@context'] = o['@context']
+        return attach_to_dataset(collection)
 
-        definition_id = '/'.join((collection_id, kwargs['definition_id']))
-        if not definition_id in collection['definitions']:
+@api.resource('/<string(length=%s):definition_id>.json'
+              % (COLLECTION_SEQUENCE_LENGTH + 1 +
+                 DEFINITION_SEQUENCE_LENGTH + 1),
+              endpoint='definition-json')
+@api.resource('/<string(length=%s):definition_id>.jsonld'
+              % (COLLECTION_SEQUENCE_LENGTH + 1 +
+                 DEFINITION_SEQUENCE_LENGTH + 1),
+              endpoint='definition-jsonld')
+class PeriodDefinition(Resource):
+    def get(self, definition_id):
+        dataset = get_latest_dataset()
+        o = json.loads(dataset['data'])
+        definition_key = prefix(definition_id)
+        collection_key = prefix(definition_id[:5])
+        if not collection_key in o['periodCollections']:
             abort(404)
-        definition = collection['definitions'][definition_id]
+        collection = o['periodCollections'][collection_key]
+
+        if not definition_key in collection['definitions']:
+            abort(404)
+        definition = collection['definitions'][definition_key]
         definition['@context'] = o['@context']
         return  attach_to_dataset(definition)
-
 
 PATCH_QUERY = """
 SELECT *
