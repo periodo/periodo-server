@@ -683,8 +683,18 @@ class Registered(Resource):
         credentials = response.json()
         identity = add_user_or_update_credentials(credentials)
         return make_response(
-            '<!doctype html><title>access token</title><pre>access_token: '
-            + identity.b64token.decode())
+            """
+            <!doctype html>
+            <head>
+                <script type="text/javascript">
+                localStorage.auth = '{}';
+                window.close();
+                </script>
+            </head>
+            <body>
+            """.format(json.dumps(
+                { 'name': credentials['name'], 'token': identity.b64token.decode() }
+            )))
 
 ######################
 #  Database handling #
