@@ -665,53 +665,51 @@ def generate_state_token():
     return ''.join(random.choice(string.ascii_uppercase + string.digits)
                    for x in range(32))
 
-@api.resource('/register')
-class Register(Resource):
-    def get(self):
-        state_token = generate_state_token()
-        session['state_token'] = state_token
-        params = {
-            'client_id': ORCID_CLIENT_ID,
-            'redirect_uri': api.url_for(Registered, _external=True),
-            'response_type': 'code',
-            'scope': '/authenticate',
-            'state': state_token,
-        }
-        return redirect(
-            'https://orcid.org/oauth/authorize?{}'.format(urlencode(params)))
+@app.route('/register')
+def register():
+    state_token = generate_state_token()
+    session['state_token'] = state_token
+    params = {
+        'client_id': ORCID_CLIENT_ID,
+        'redirect_uri': url_for('registered', _external=True),
+        'response_type': 'code',
+        'scope': '/authenticate',
+        'state': state_token,
+    }
+    return redirect(
+        'https://orcid.org/oauth/authorize?{}'.format(urlencode(params)))
 
-@api.resource('/registered')
-class Registered(Resource):
-    def get(self):
-        if not request.args['state'] == session.pop('state_token'):
-            abort(403)
-        data = {
-            'client_id': ORCID_CLIENT_ID,
-            'client_secret': ORCID_CLIENT_SECRET,
-            'code': request.args['code'],
-            'grant_type': 'authorization_code',
-            'redirect_uri': api.url_for(Registered, _external=True),
-            'scope': '/authenticate',
-        }
-        response = requests.post(
-            'https://pub.orcid.org/oauth/token',
-            headers={'Accept': 'application/json'},
-            allow_redirects=True, data=data)
-        credentials = response.json()
-        identity = add_user_or_update_credentials(credentials)
-        return make_response(
-            """
-            <!doctype html>
-            <head>
-                <script type="text/javascript">
-                localStorage.auth = '{}';
-                window.close();
-                </script>
-            </head>
-            <body>
-            """.format(json.dumps(
-                { 'name': credentials['name'], 'token': identity.b64token.decode() }
-            )))
+@app.route('/registered')
+def registered():
+    if not request.args['state'] == session.pop('state_token'):
+        abort(403)
+    data = {
+        'client_id': ORCID_CLIENT_ID,
+        'client_secret': ORCID_CLIENT_SECRET,
+        'code': request.args['code'],
+        'grant_type': 'authorization_code',
+        'redirect_uri': url_for('registered', _external=True),
+        'scope': '/authenticate',
+    }
+    response = requests.post(
+        'https://pub.orcid.org/oauth/token',
+        headers={'Accept': 'application/json'},
+        allow_redirects=True, data=data)
+    credentials = response.json()
+    identity = add_user_or_update_credentials(credentials)
+    return make_response(
+        """
+        <!doctype html>
+        <head>
+            <script type="text/javascript">
+            localStorage.auth = '{}';
+            window.close();
+            </script>
+        </head>
+        <body>
+        """.format(json.dumps(
+            { 'name': credentials['name'], 'token': identity.b64token.decode() }
+        )))
 
 ######################
 #  Database handling #
