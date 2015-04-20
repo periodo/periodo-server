@@ -189,8 +189,16 @@ class TestAuthorization(unittest.TestCase):
             data=self.patch,
             content_type='application/json',
             headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
+
+        # Test that there's NO link header
+        patch_url = urlparse(res.headers['Location']).path
+        res = self.app.get(patch_url, headers={
+            'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'
+        })
+        self.assertEqual(res.headers.get('Link'), None)
+
         res = self.app.post(
-            urlparse(res.headers['Location']).path + 'merge',
+            patch_url + 'merge',
             headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
         self.assertEqual(res.status_code, http.client.FORBIDDEN)
         self.assertEqual(
@@ -207,8 +215,17 @@ class TestAuthorization(unittest.TestCase):
                 content_type='application/json',
                 headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
             patch_id = int(res.headers['Location'].split('/')[-2])
+
+            # Test that there's a link header
+            patch_url = urlparse(res.headers['Location']).path
+            res = self.app.get(patch_url, headers={
+                'Authorization': 'Bearer ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'
+            })
+            self.assertEqual(res.headers.get('Link'),
+                             '<{}>;rel="merge"'.format(patch_url + 'merge'))
+
             res = client.post(
-                urlparse(res.headers['Location']).path + 'merge',
+                patch_url + 'merge',
                 headers={ 'Authorization': 'Bearer ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4' } )
             self.assertEqual(res.status_code, http.client.NO_CONTENT)
             merger = periodo.query_db(
@@ -298,21 +315,20 @@ class TestPatchMethods(unittest.TestCase):
             data=self.patch,
             content_type='application/json',
             headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
-        patch_url = urlparse(res.headers['Location']).path + 'patch.jsonpatch'
-        res = self.app.get(patch_url)
-        res = self.app.get(patch_url)
+        jsonpatch_url = patch_url + 'patch.jsonpatch'
+
+        res = self.app.get(jsonpatch_url)
         self.assertEqual(json.loads(self.patch),
                          json.loads(res.get_data(as_text=True)))
         with open('test-patch-replace-values-2.json') as f:
             self.patch2 = f.read()
         res = self.app.put(
-            patch_url,
+            jsonpatch_url,
             data=self.patch2,
             content_type='application/json',
             headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
         self.assertEqual(res.status_code, http.client.OK)
-        res = self.app.get(patch_url)
-        res = self.app.get(patch_url)
+        res = self.app.get(jsonpatch_url)
         self.assertEqual(json.loads(self.patch2),
                          json.loads(res.get_data(as_text=True)))
 

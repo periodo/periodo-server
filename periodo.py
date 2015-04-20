@@ -581,8 +581,16 @@ class PatchRequest(Resource):
         if not row:
             abort(404)
         data = process_patch_row(row)
-        data['mergeable'] = is_mergeable(data['text'])
-        return marshal(data, patch_fields)
+        data['mergeable'] = is_mergeable(data['original_patch'])
+        headers = {}
+
+        try:
+            if accept_patch_permission.can():
+                headers['Link'] = '<{}>;rel="merge"'.format(url_for('patchmerge', id=id))
+        except AuthenticationFailed:
+            pass
+
+        return marshal(data, patch_fields), 200, headers
 
 @api.resource('/patches/<int:id>/patch.jsonpatch')
 class Patch(Resource):
