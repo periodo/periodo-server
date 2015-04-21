@@ -581,7 +581,7 @@ class PatchRequest(Resource):
         if not row:
             abort(404)
         data = process_patch_row(row)
-        data['mergeable'] = is_mergeable(data['text'])
+        data['mergeable'] = is_mergeable(data['original_patch'])
         return marshal(data, patch_fields)
 
 @api.resource('/patches/<int:id>/patch.jsonpatch')
