@@ -59,6 +59,11 @@ class PeriodOApi(Api):
         else:
             return response
     def make_response(self, data, *args, **kwargs):
+        # Override content negotation for content-type-specific URLs.
+        if request.path.endswith('.json'):
+            res = self.representations['application/json'](data, *args, **kwargs)
+            res.content_type = 'application/json'
+            return res
         if request.path.endswith('.jsonld'):
             res = self.representations['application/json'](data, *args, **kwargs)
             res.content_type = 'application/ld+json'
