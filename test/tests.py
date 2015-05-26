@@ -440,6 +440,12 @@ WHERE {
         res4 = self.app.get('/d/', headers={ 'Accept': 'application/ld+json' })
         self.assertEqual(res4.status_code, http.client.OK)
         self.assertEqual(res4.headers['Content-Type'], 'application/ld+json')
+        res5 = self.app.get('/d.json', headers={ 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' })
+        self.assertEqual(res5.status_code, http.client.OK)
+        self.assertEqual(res5.headers['Content-Type'], 'application/json')
+        res6 = self.app.get('/d.jsonld', headers={ 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' })
+        self.assertEqual(res6.status_code, http.client.OK)
+        self.assertEqual(res6.headers['Content-Type'], 'application/ld+json')
         g = Graph().parse(data=res4.get_data(as_text=True), format='json-ld')
         self.assertIn((PERIODO['p0d/#periodCollections'],
                        FOAF.isPrimaryTopicOf, PERIODO['p0d/']), g)
