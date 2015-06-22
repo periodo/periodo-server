@@ -22,6 +22,7 @@ CREATE TABLE patch_request (
   created_from INTEGER NOT NULL,
   applied_to INTEGER,
   resulted_in INTEGER,
+  affected_entities TEXT NOT NULL,
 
   original_patch TEXT NOT NULL,
   applied_patch TEXT,

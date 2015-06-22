@@ -309,6 +309,21 @@ class TestPatchMethods(unittest.TestCase):
         os.close(self.db_fd)
         os.unlink(periodo.app.config['DATABASE'])
 
+    def test_submit_patch(self):
+        with self.app as client:
+            res = client.patch(
+                '/d/',
+                data=self.patch,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            self.assertEqual(res.status_code, http.client.ACCEPTED)
+            patch_id = int(res.headers['Location'].split('/')[-2])
+            affected_entities = periodo.query_db(
+                'SELECT affected_entities FROM patch_request WHERE id = ?',
+                (patch_id,), one=True)['affected_entities']
+            self.assertEqual(affected_entities, '["p0trgkv", "p0trgkvwbjd"]')
+
     def test_update_patch(self):
         res = self.app.patch(
             '/d/',

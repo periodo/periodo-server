@@ -8,7 +8,7 @@ from wsgiref.handlers import format_date_time
 from base64 import b64encode
 import os
 import re
-from functools import partial
+from functools import partial, reduce
 import random
 import string
 from urllib.parse import urlencode
@@ -210,6 +210,16 @@ WHERE user.b64token = ?
 
 ISO_TIME_FMT = '%Y-%m-%d %H:%M:%S'
 
+CHANGE_PATH_PATTERN = re.compile(r'''
+/periodCollections/
+([^/]+)   # match collection ID
+(?:
+  /definitions/
+  ([^/]+) # optionally match definition ID
+)?
+''', re.VERBOSE)
+
+
 class InvalidPatchException(Exception):
     pass
 
@@ -238,6 +248,12 @@ def validate_patch(patch, dataset=None):
         raise InvalidPatchException('Not a valid JSON patch.')
     except JsonPointerException:
         raise InvalidPatchException('Could not apply JSON patch to dataset.')
+
+    matches = [CHANGE_PATH_PATTERN.match(change['path']) for change in patch]
+    affected_entities = reduce(
+        lambda s, groups: s | set(groups),
+        [m.groups() for m in matches if m is not None], set())
+    return affected_entities
 
 patch_parser = reqparse.RequestParser()
 
@@ -431,20 +447,18 @@ class Dataset(Resource):
         try:
             dataset = get_latest_dataset()
             patch = patch_from_text(request.data)
-            validate_patch(patch, dataset)
+            affected_entities = validate_patch(patch, dataset)
         except InvalidPatchException as e:
             return { 'status': 400, 'message': str(e) }, 400
 
         db = get_db()
         curs = db.cursor()
-        curs.execute(
-'''
+        curs.execute('''
 INSERT INTO patch_request
-(created_by, updated_by, created_from, original_patch)
-VALUES (?, ?, ?, ?)
-''',
-            (g.identity.id, g.identity.id, dataset['id'], patch.to_string())
-        )
+(created_by, updated_by, created_from, affected_entities, original_patch)
+VALUES (?, ?, ?, ?, ?)
+        ''', (g.identity.id, g.identity.id, dataset['id'],
+              json.dumps(sorted(affected_entities)), patch.to_string()))
         db.commit()
 
         return None, 202, {
