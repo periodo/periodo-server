@@ -315,6 +315,7 @@ class TestPatchMethods(unittest.TestCase):
             data=self.patch,
             content_type='application/json',
             headers={ 'Authorization': 'Bearer NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4' } )
+        patch_url = urlparse(res.headers['Location']).path
         jsonpatch_url = patch_url + 'patch.jsonpatch'
 
         res = self.app.get(jsonpatch_url)

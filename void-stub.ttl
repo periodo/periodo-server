@@ -24,7 +24,7 @@
       orcid:0000-0003-2557-5145 ,
       orcid:0000-0001-5620-4764 ,
       orcid:0000-0002-3617-9378 ,
-      _:sarahab ;
+      orcid:0000-0002-4871-039X ;
    wv:waiver <http://creativecommons.org/publicdomain/zero/1.0/> ;
    wv:norms <http://www.opendatacommons.org/norms/odc-by-sa/> ;
    wv:declaration "To the extent allowed by law, the contributors have dedicated the PeriodO dataset to the public domain by waiving all of their rights to the work worldwide under copyright law, including all related and neighboring rights. You can copy, modify, and distribute this dataset, even for commercial purposes, all without asking permission. However, if you desire our respect and cooperation, then you will clearly attribute your use of our work and share your own work in kind (even though you are not required to in any way)."@en ;
@@ -59,6 +59,6 @@ orcid:0000-0002-3617-9378 a foaf:Person ;
    rdfs:label "Patrick Golden" ;
    foaf:mbox <mailto:ptgolden@berkeley.edu> .
 
-_:sarahab a foaf:Person ;
-   rdfs:label "Sarah A. Buchanan" ;
+orcid:0000-0002-4871-039X a foaf:Person ;
+   rdfs:label "Sarah Buchanan" ;
    foaf:mbox <mailto:sarahab@utexas.edu> .
