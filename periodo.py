@@ -238,9 +238,10 @@ def patch_from_text(patch_text):
     patch = JsonPatch(patch)
     return patch
 
+
 def validate_patch(patch, dataset=None):
     dataset = dataset or get_latest_dataset()
-    
+
     # Test to make sure it will apply
     try:
         patch.apply(json.loads(dataset['data']))
@@ -449,7 +450,7 @@ class Dataset(Resource):
             patch = patch_from_text(request.data)
             affected_entities = validate_patch(patch, dataset)
         except InvalidPatchException as e:
-            return { 'status': 400, 'message': str(e) }, 400
+            return {'status': 400, 'message': str(e)}, 400
 
         db = get_db()
         curs = db.cursor()
