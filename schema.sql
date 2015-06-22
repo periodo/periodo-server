@@ -1,27 +1,27 @@
 DROP TABLE IF EXISTS dataset;
 CREATE TABLE dataset (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	data TEXT NOT NULL,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  data TEXT NOT NULL,
   description TEXT NOT NULL
 );
 
 DROP TABLE IF EXISTS patch_request;
 CREATE TABLE patch_request (
-	id integer PRIMARY KEY AUTOINCREMENT,
-	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	created_by TEXT NOT NULL,
-	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_by TEXT NOT NULL,
+  id integer PRIMARY KEY AUTOINCREMENT,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by TEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_by TEXT NOT NULL,
 
-	open BOOLEAN NOT NULL DEFAULT 1,
-	merged BOOLEAN NOT NULL DEFAULT 0,
-	merged_at TIMESTAMP,
-	merged_by TEXT,
+  open BOOLEAN NOT NULL DEFAULT 1,
+  merged BOOLEAN NOT NULL DEFAULT 0,
+  merged_at TIMESTAMP,
+  merged_by TEXT,
 
-	created_from INTEGER NOT NULL,
-	applied_to INTEGER,
-	resulted_in INTEGER,
+  created_from INTEGER NOT NULL,
+  applied_to INTEGER,
+  resulted_in INTEGER,
 
   original_patch TEXT NOT NULL,
   applied_patch TEXT,
@@ -29,9 +29,9 @@ CREATE TABLE patch_request (
   FOREIGN KEY(created_by) REFERENCES user(id),
   FOREIGN KEY(merged_by) REFERENCES user(id),
 
-	FOREIGN KEY(created_from) REFERENCES dataset(id),
-	FOREIGN KEY(applied_to) REFERENCES dataset(id)
-	FOREIGN KEY(resulted_in) REFERENCES dataset(id)
+  FOREIGN KEY(created_from) REFERENCES dataset(id),
+  FOREIGN KEY(applied_to) REFERENCES dataset(id)
+  FOREIGN KEY(resulted_in) REFERENCES dataset(id)
 );
 
 DROP TRIGGER IF EXISTS update_patch;
