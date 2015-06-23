@@ -10,7 +10,7 @@ XDIGITS = '23456789bcdfghjkmnpqrstvwxz'
 COLLECTION_SEQUENCE_LENGTH = 4
 DEFINITION_SEQUENCE_LENGTH = 3
 IDENTIFIER_RE = re.compile(
-    r'^%s[%s]{%s}([%s]{1}[%s]{%s})?[%s]{1}$' % (
+    r'^%s[%s]{%s}(?:[%s]{1}[%s]{%s})?[%s]{1}$' % (
         PREFIX,
         XDIGITS, COLLECTION_SEQUENCE_LENGTH,
         XDIGITS,
@@ -78,11 +78,13 @@ def replace_skolem_ids(patch_or_obj, dataset):
     existing_ids = set(chain.from_iterable(
         ( [cid] + list(c['definitions'].keys())
           for cid,c in dataset['periodCollections'].items() )))
+    new_ids = []
 
     def unused_identifier(id_generator, *args):
         for i in range(10):
             new_id = id_generator(*args)
             if new_id not in existing_ids:
+                new_ids.append(new_id)
                 existing_ids.add(new_id)
                 return new_id
         raise IdentifierException(
@@ -137,13 +139,15 @@ def replace_skolem_ids(patch_or_obj, dataset):
         return new_op
 
     if hasattr(patch_or_obj, 'patch'):
-        return JsonPatch([ modify_operation(op) for op in patch_or_obj ])
+        result = JsonPatch([modify_operation(op) for op in patch_or_obj])
     else:
-        out = deepcopy(patch_or_obj)
-        out['periodCollections'] = index_by_id(
-            [ assign_collection_ids(c)
-              for c in patch_or_obj['periodCollections'].values() ])
-        return out
+        result = deepcopy(patch_or_obj)
+        result['periodCollections'] = index_by_id(
+            [assign_collection_ids(c)
+             for c in patch_or_obj['periodCollections'].values()])
+
+    return result, new_ids
+
 
 class IdentifierException(Exception):
     pass

@@ -33,7 +33,8 @@ from werkzeug.exceptions import Unauthorized
 
 from identifier import (replace_skolem_ids, prefix,
                         COLLECTION_SEQUENCE_LENGTH,
-                        DEFINITION_SEQUENCE_LENGTH)
+                        DEFINITION_SEQUENCE_LENGTH,
+                        IDENTIFIER_RE)
 
 from secrets import SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET
 
@@ -212,12 +213,12 @@ ISO_TIME_FMT = '%Y-%m-%d %H:%M:%S'
 
 CHANGE_PATH_PATTERN = re.compile(r'''
 /periodCollections/
-([^/]+)   # match collection ID
+({id_pattern})   # match collection ID
 (?:
   /definitions/
-  ([^/]+) # optionally match definition ID
+  ({id_pattern}) # optionally match definition ID
 )?
-''', re.VERBOSE)
+'''.format(id_pattern=IDENTIFIER_RE.pattern[1:-1]), re.VERBOSE)
 
 
 class InvalidPatchException(Exception):
@@ -254,6 +255,7 @@ def validate_patch(patch, dataset=None):
     affected_entities = reduce(
         lambda s, groups: s | set(groups),
         [m.groups() for m in matches if m is not None], set())
+    affected_entities.discard(None)
     return affected_entities
 
 patch_parser = reqparse.RequestParser()
@@ -623,7 +625,7 @@ class Patch(Resource):
         if not permission.can(): raise PermissionDenied(permission)
         try:
             patch = patch_from_text(request.data)
-            validate_patch(patch)
+            affected_entities = validate_patch(patch)
         except InvalidPatchException as e:
             if str(e) != 'Could not apply JSON patch to dataset.':
                 return { 'status': 400, 'message': str(e) }, 400
@@ -634,10 +636,12 @@ class Patch(Resource):
 '''
 UPDATE patch_request SET
 original_patch = ?,
+affected_entities = ?,
 updated_by = ?
 WHERE id = ?
 ''',
-            (patch.to_string(), g.identity.id, id)
+            (patch.to_string(), json.dumps(sorted(affected_entities)),
+             g.identity.id, id)
         )
         db.commit()
 
@@ -662,7 +666,9 @@ class PatchMerge(Resource):
 
         data = json.loads(dataset['data'])
         original_patch = patch_from_text(row['original_patch'])
-        applied_patch = replace_skolem_ids(original_patch, data)
+        applied_patch, new_ids = replace_skolem_ids(original_patch, data)
+        affected_entities = (set(json.loads(row['affected_entities']))
+                             | set(new_ids))
 
         # Should this be ordered?
         new_data = applied_patch.apply(data)
@@ -678,11 +684,13 @@ class PatchMerge(Resource):
                 merged_by = ?,
                 applied_to = ?,
                 resulted_in = ?,
+                affected_entities = ?,
                 applied_patch = ?
             where id = ?;
             ''',
             (g.identity.id, dataset['id'], curs.lastrowid,
-             applied_patch.to_string(), row['id'])
+             json.dumps(list(affected_entities)), applied_patch.to_string(),
+             row['id'])
         )
         add_new_version_of_dataset(curs, new_data)
         db.commit()

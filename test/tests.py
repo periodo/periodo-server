@@ -302,6 +302,12 @@ class TestPatchMethods(unittest.TestCase):
             'expires_in': 631138518,
             'orcid': '1234-5678-9101-112X',
         })
+        self.admin_identity = periodo.add_user_or_update_credentials({
+            'name': 'Super Admin',
+            'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
+            'expires_in': 3600,
+            'orcid': '1211-1098-7654-321X',
+        }, (ActionNeed('accept-patch'),))
         with open('test-patch-replace-values-1.json') as f:
             self.patch = f.read()
 
@@ -347,6 +353,34 @@ class TestPatchMethods(unittest.TestCase):
         res = self.app.get(jsonpatch_url)
         self.assertEqual(json.loads(self.patch2),
                          json.loads(res.get_data(as_text=True)))
+
+    def test_merge_patch(self):
+        with open('test-patch-adds-items.json') as f:
+            patch = f.read()
+        with self.app as client:
+            res = client.patch(
+                '/d/',
+                data=patch,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            patch_id = int(res.headers['Location'].split('/')[-2])
+            affected_entities = periodo.query_db(
+                'SELECT affected_entities FROM patch_request WHERE id = ?',
+                (patch_id,), one=True)['affected_entities']
+            self.assertEqual(affected_entities, '["p0trgkv"]')
+            patch_url = urlparse(res.headers['Location']).path
+            res = client.post(
+                patch_url + 'merge',
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+            self.assertEqual(res.status_code, http.client.NO_CONTENT)
+            affected_entities = json.loads(periodo.query_db(
+                'SELECT affected_entities FROM patch_request WHERE id = ?',
+                (patch_id,), one=True)['affected_entities'])
+            self.assertEqual(len(affected_entities), 4)
+            for entity_id in affected_entities:
+                self.assertRegex(entity_id, identifier.IDENTIFIER_RE)
 
 class TestRepresentationsAndRedirects(unittest.TestCase):
 
@@ -609,14 +643,17 @@ class TestIdentifiers(unittest.TestCase):
             data = json.load(f)
         with open('test-patch-adds-items.json') as f:
             original_patch = JsonPatch(json.load(f))
-        applied_patch = identifier.replace_skolem_ids(original_patch, data)
+        applied_patch, new_ids = identifier.replace_skolem_ids(
+            original_patch, data)
         self.assertRegex(
             applied_patch.patch[0]['path'],
-            r'^/periodCollections/p0trgkv/definitions/p0trgkv[%s]{4}$' % identifier.XDIGITS)
+            r'^/periodCollections/p0trgkv/definitions/p0trgkv[%s]{4}$'
+            % identifier.XDIGITS)
         self.assertRegex(
             applied_patch.patch[0]['value']['id'],
             r'^p0trgkv[%s]{4}$' % identifier.XDIGITS)
         identifier.check(applied_patch.patch[0]['value']['id'])
+        self.assertTrue(applied_patch.patch[0]['value']['id'] in new_ids)
 
         self.assertRegex(
             applied_patch.patch[1]['path'],
@@ -626,6 +663,7 @@ class TestIdentifiers(unittest.TestCase):
             r'^p0[%s]{5}$' % identifier.XDIGITS)
         collection_id = applied_patch.patch[1]['value']['id']
         identifier.check(collection_id)
+        self.assertTrue(collection_id in new_ids)
         self.assertRegex(
             list(applied_patch.patch[1]['value']['definitions'].keys())[0],
             r'^%s[%s]{4}$' % (collection_id, identifier.XDIGITS))
@@ -639,11 +677,13 @@ class TestIdentifiers(unittest.TestCase):
             data = json.load(f)
         with open('test-patch-replaces-definitions.json') as f:
             original_patch = JsonPatch(json.load(f))
-        applied_patch = identifier.replace_skolem_ids(original_patch, data)
+        applied_patch, new_ids = identifier.replace_skolem_ids(
+            original_patch, data)
         self.assertEqual(
             applied_patch.patch[0]['path'],
             original_patch.patch[0]['path'])
         definition_id, definition = list(applied_patch.patch[0]['value'].items())[0]
+        self.assertTrue(definition_id in new_ids)
         self.assertRegex(
             definition_id,
             r'^p0trgkv[%s]{4}$' % identifier.XDIGITS)
@@ -655,12 +695,13 @@ class TestIdentifiers(unittest.TestCase):
             data = json.load(f)
         with open('test-patch-replaces-collections.json') as f:
             original_patch = JsonPatch(json.load(f))
-        applied_patch = identifier.replace_skolem_ids(original_patch, data)
+        applied_patch, new_ids = identifier.replace_skolem_ids(original_patch, data)
         self.assertEqual(
             applied_patch.patch[0]['path'],
             original_patch.patch[0]['path'])
 
         collection_id, collection = list(applied_patch.patch[0]['value'].items())[0]
+        self.assertTrue(collection_id in new_ids)
         self.assertRegex(
             collection_id,
             r'^p0[%s]{5}$' % identifier.XDIGITS)
@@ -668,6 +709,7 @@ class TestIdentifiers(unittest.TestCase):
         identifier.check(collection_id)
 
         definition_id, definition = list(applied_patch.patch[0]['value'][collection_id]['definitions'].items())[0]
+        self.assertTrue(definition_id in new_ids)
         self.assertRegex(
             definition_id,
             r'^%s[%s]{4}$' % (collection_id, identifier.XDIGITS))
