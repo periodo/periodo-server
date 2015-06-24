@@ -568,11 +568,42 @@ class PatchList(Resource):
 
         offset = args['from']
         if offset < 0: offset = 0
-        query += ' limit ' + str(limit) + ' offset ' + str(offset)
+        query += ' limit ' + str(limit + 1) + ' offset ' + str(offset)
 
         rows = query_db(query, params)
-        data = [process_patch_row(row) for row in rows]
-        return marshal(data, patch_list_fields)
+        data = [process_patch_row(row) for row in rows][:limit]
+
+        link_headers = []
+
+        if offset > 0:
+            prev_url = url_for('patchlist', _external=True)
+
+            prev_params = request.args.to_dict().copy()
+            prev_params['from'] = offset - limit
+            if (prev_params['from'] <= 0): prev_params.pop('from')
+
+            prev_params = urlencode(prev_params)
+            if (prev_params):
+                prev_url += '?' + prev_params
+
+            link_headers.append('<{}>; rel="prev"'.format(prev_url))
+
+        # We fetched 1 more than the limit. If there are limit+1 rows in the
+        # retrieved query, then there are more rows to be fetched
+        if len(rows) > limit:
+            next_url = url_for('patchlist', _external=True)
+            next_params = request.args.to_dict().copy()
+
+            next_params['from'] = offset + limit
+            link_headers.append(
+                '<{}?{}>; rel="next"'.format(next_url, urlencode(next_params)))
+
+
+        headers = {}
+        if (link_headers):
+            headers['Link'] = ', '.join(link_headers)
+
+        return marshal(data, patch_list_fields), 200, headers
 
 patch_fields = patch_list_fields.copy()
 patch_fields.update((
