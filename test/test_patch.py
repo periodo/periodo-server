@@ -7,6 +7,7 @@ import unittest
 import http.client
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
+from .filepath import filepath
 
 
 class TestPatchMethods(unittest.TestCase):
@@ -16,7 +17,7 @@ class TestPatchMethods(unittest.TestCase):
         periodo.app.config['TESTING'] = True
         self.app = periodo.app.test_client()
         periodo.init_db()
-        periodo.load_data('test-data.json')
+        periodo.load_data(filepath('test-data.json'))
         self.user_identity = periodo.add_user_or_update_credentials({
             'name': 'Regular Gal',
             'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
@@ -29,7 +30,7 @@ class TestPatchMethods(unittest.TestCase):
             'expires_in': 3600,
             'orcid': '1211-1098-7654-321X',
         }, (ActionNeed('accept-patch'),))
-        with open('test-patch-replace-values-1.json') as f:
+        with open(filepath('test-patch-replace-values-1.json')) as f:
             self.patch = f.read()
 
     def tearDown(self):
@@ -77,7 +78,7 @@ class TestPatchMethods(unittest.TestCase):
         res = self.app.get(jsonpatch_url)
         self.assertEqual(json.loads(self.patch),
                          json.loads(res.get_data(as_text=True)))
-        with open('test-patch-replace-values-2.json') as f:
+        with open(filepath('test-patch-replace-values-2.json')) as f:
             self.patch2 = f.read()
         res = self.app.put(
             jsonpatch_url,
@@ -91,7 +92,7 @@ class TestPatchMethods(unittest.TestCase):
                          json.loads(res.get_data(as_text=True)))
 
     def test_merge_patch(self):
-        with open('test-patch-adds-items.json') as f:
+        with open(filepath('test-patch-adds-items.json')) as f:
             patch = f.read()
         with self.app as client:
             res = client.patch(

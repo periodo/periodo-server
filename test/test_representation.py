@@ -8,6 +8,7 @@ from rdflib.plugins import sparql
 from rdflib.namespace import Namespace, RDF, DCTERMS, OWL
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
+from .filepath import filepath
 
 VOID = Namespace('http://rdfs.org/ns/void#')
 SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
@@ -22,7 +23,7 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         periodo.app.config['TESTING'] = True
         self.app = periodo.app.test_client()
         periodo.init_db()
-        periodo.load_data('test-data.json')
+        periodo.load_data(filepath('test-data.json'))
         self.user_identity = periodo.add_user_or_update_credentials({
             'name': 'Regular Gal',
             'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
@@ -35,7 +36,7 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
             'expires_in': 3600,
             'orcid': '1211-1098-7654-321X',
         }, (ActionNeed('accept-patch'),))
-        with open('test-patch-replace-values-1.json') as f:
+        with open(filepath('test-patch-replace-values-1.json')) as f:
             self.patch = f.read()
 
     def tearDown(self):

@@ -3,6 +3,7 @@ import json
 import identifier
 import unittest
 from jsonpatch import JsonPatch
+from .filepath import filepath
 
 
 class TestIdentifiers(unittest.TestCase):
@@ -60,9 +61,9 @@ class TestIdentifiers(unittest.TestCase):
         self.assertEqual(len(did), 11)
 
     def test_replace_skolem_ids_when_adding_items(self):
-        with open('test-data.json') as f:
+        with open(filepath('test-data.json')) as f:
             data = json.load(f)
-        with open('test-patch-adds-items.json') as f:
+        with open(filepath('test-patch-adds-items.json')) as f:
             original_patch = JsonPatch(json.load(f))
         applied_patch, new_ids = identifier.replace_skolem_ids(
             original_patch, data)
@@ -95,9 +96,9 @@ class TestIdentifiers(unittest.TestCase):
         identifier.check(list(defs.keys())[0])
 
     def test_replace_skolem_ids_when_replacing_definitions(self):
-        with open('test-data.json') as f:
+        with open(filepath('test-data.json')) as f:
             data = json.load(f)
-        with open('test-patch-replaces-definitions.json') as f:
+        with open(filepath('test-patch-replaces-definitions.json')) as f:
             original_patch = JsonPatch(json.load(f))
         applied_patch, new_ids = identifier.replace_skolem_ids(
             original_patch, data)
@@ -114,9 +115,9 @@ class TestIdentifiers(unittest.TestCase):
         identifier.check(definition_id)
 
     def test_replace_skolem_ids_when_replacing_collections(self):
-        with open('test-data.json') as f:
+        with open(filepath('test-data.json')) as f:
             data = json.load(f)
-        with open('test-patch-replaces-collections.json') as f:
+        with open(filepath('test-patch-replaces-collections.json')) as f:
             original_patch = JsonPatch(json.load(f))
         applied_patch, new_ids = identifier.replace_skolem_ids(
             original_patch, data)

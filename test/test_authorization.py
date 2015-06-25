@@ -5,10 +5,7 @@ import unittest
 import http.client
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
-
-
-def setUpModule():
-    os.chdir('test')
+from .filepath import filepath
 
 
 class TestAuthorization(unittest.TestCase):
@@ -18,7 +15,7 @@ class TestAuthorization(unittest.TestCase):
         periodo.app.config['TESTING'] = True
         self.app = periodo.app.test_client()
         periodo.init_db()
-        periodo.load_data('test-data.json')
+        periodo.load_data(filepath('test-data.json'))
         self.unauthorized_identity = periodo.add_user_or_update_credentials({
             'name': 'Dangerous Dan',
             'access_token': 'f7e00c02-6f97-4636-8499-037446d95446',
@@ -43,7 +40,7 @@ class TestAuthorization(unittest.TestCase):
             'expires_in': 3600,
             'orcid': '1211-1098-7654-321X',
         }, (ActionNeed('accept-patch'),))
-        with open('test-patch-replace-values-1.json') as f:
+        with open(filepath('test-patch-replace-values-1.json')) as f:
             self.patch = f.read()
 
     def tearDown(self):
