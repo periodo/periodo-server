@@ -75,10 +75,10 @@
   "id": "p0d/#periodCollections",
   "type": "rdf:Bag",
   "periodCollections": {
-    "p0trgkv": {
+    "https://perio.do/.well-known/genid/assigned/p0trgkv": {
       "definitions": {
-        "p0trgkvwbjd": {
-          "id": "p0trgkvwbjd",
+        "https://perio.do/.well-known/genid/assigned/p0trgkvwbjd": {
+          "id": "https://perio.do/.well-known/genid/assigned/p0trgkvwbjd",
           "type": "PeriodDefinition",
           "label": "Archaic",
           "localizedLabel": {
@@ -105,7 +105,7 @@
           }
         }
       },
-      "id": "p0trgkv",
+      "id": "https://perio.do/.well-known/genid/assigned/p0trgkv",
       "type": "PeriodCollection",
       "source": {
         "locator": "page 4",

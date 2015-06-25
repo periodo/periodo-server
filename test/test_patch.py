@@ -36,6 +36,19 @@ class TestPatchMethods(unittest.TestCase):
         os.close(self.db_fd)
         os.unlink(periodo.app.config['DATABASE'])
 
+    def test_initial_patch(self):
+        with self.app as client:
+            client.patch(
+                '/d/',
+                data=self.patch,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            affected_entities = periodo.query_db(
+                'SELECT affected_entities FROM patch_request WHERE id = 1',
+                one=True)['affected_entities']
+            self.assertEqual(affected_entities, '["p0trgkv", "p0trgkvwbjd"]')
+
     def test_submit_patch(self):
         with self.app as client:
             res = client.patch(
@@ -98,9 +111,14 @@ class TestPatchMethods(unittest.TestCase):
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
             self.assertEqual(res.status_code, http.client.NO_CONTENT)
+            row = periodo.query_db(
+                'SELECT applied_to, resulted_in FROM patch_request WHERE id=?',
+                (patch_id,), one=True)
+            self.assertEqual(1, row['applied_to'])
+            self.assertEqual(2, row['resulted_in'])
             affected_entities = json.loads(periodo.query_db(
                 'SELECT affected_entities FROM patch_request WHERE id = ?',
                 (patch_id,), one=True)['affected_entities'])
-            self.assertEqual(len(affected_entities), 4)
+            self.assertEqual(4, len(affected_entities))
             for entity_id in affected_entities:
                 self.assertRegex(entity_id, identifier.IDENTIFIER_RE)

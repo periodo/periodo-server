@@ -15,8 +15,10 @@ from urllib.parse import urlencode
 
 import requests
 
-from rdflib import Graph, URIRef, Literal
-from rdflib.namespace import Namespace, RDF, DCTERMS, XSD, VOID
+from rdflib import Graph, URIRef, Literal, BNode
+from rdflib.collection import Collection
+from rdflib.namespace import Namespace, RDF, DCTERMS, XSD, VOID, FOAF
+PROV = Namespace('http://www.w3.org/ns/prov#')
 
 from jsonpatch import JsonPatch, JsonPatchException
 from jsonpointer import JsonPointerException
@@ -35,7 +37,7 @@ from identifier import (replace_skolem_ids, prefix,
                         COLLECTION_SEQUENCE_LENGTH,
                         DEFINITION_SEQUENCE_LENGTH,
                         IDENTIFIER_RE)
-
+import provenance
 from secrets import SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET
 
 __all__ = ['init_db', 'load_data', 'app']
@@ -44,6 +46,8 @@ __all__ = ['init_db', 'load_data', 'app']
 #########
 # Setup #
 #########
+
+PERIODO = Namespace('http://n2t.net/ark:/99152/')
 
 app = Flask(__name__)
 app.config.update(
@@ -270,6 +274,7 @@ def describe_dataset(cursor, data, created):
 SELECT DISTINCT created_by, updated_by
 FROM patch_request
 WHERE merged = 1
+AND id > 1  -- ignore initial load
 ''', cursor=cursor)
     with open(os.path.join(os.path.dirname(__file__), 'void-stub.ttl')) as f:
         description = Graph().parse(file=f, format='turtle')
@@ -381,6 +386,85 @@ class Index(Resource):
     def get(self):
         return {}
 
+
+@app.route('/h')
+def history():
+    '''Respond with JSON-LD representation of change history'''
+    history_g = Graph()
+    changelog = Collection(history_g, URIRef('#changelog'))
+    for row in query_db('''
+SELECT
+  id,
+  created_at,
+  created_by,
+  updated_by,
+  merged_at,
+  merged_by,
+  applied_to,
+  resulted_in,
+  affected_entities
+FROM patch_request
+WHERE merged = 1
+ORDER BY id ASC
+'''):
+        change = URIRef('#change-{}'.format(row['id']))
+        patch = URIRef('#patch-{}'.format(row['id']))
+        history_g.add((patch,
+                       FOAF.page,
+                       PERIODO[prefix(url_for('patch', id=row['id']))]))
+        history_g.add((change,
+                       PROV.startedAtTime,
+                       Literal(row['created_at'], datatype=XSD.dateTime)))
+        history_g.add((change,
+                       PROV.endedAtTime,
+                       Literal(row['merged_at'], datatype=XSD.dateTime)))
+        dataset = PERIODO[prefix(url_for('abstract_dataset'))]
+        version_in = PERIODO[prefix(
+            url_for('abstract_dataset', version=row['applied_to']))]
+        history_g.add((version_in, PROV.specializationOf, dataset))
+        version_out = PERIODO[prefix(
+            url_for('abstract_dataset', version=row['resulted_in']))]
+        history_g.add((version_out, PROV.specializationOf, dataset))
+
+        history_g.add((change, PROV.used, version_in))
+        history_g.add((change, PROV.used, patch))
+        history_g.add((change, PROV.generated, version_out))
+
+        for entity_id in json.loads(row['affected_entities']):
+            entity = PERIODO[entity_id]
+            entity_version = PERIODO[
+                entity_id + '?version={}'.format(row['resulted_in'])]
+            prev_entity_version = PERIODO[
+                entity_id + '?version={}'.format(row['applied_to'])]
+            history_g.add(
+                (entity_version, PROV.specializationOf, entity))
+            history_g.add(
+                (entity_version, PROV.wasRevisionOf, prev_entity_version))
+            history_g.add((change, PROV.generated, entity_version))
+
+        for field, term in (('created_by', 'submitted'),
+                            ('updated_by', 'updated'),
+                            ('merged_by', 'merged')):
+            if row[field] == 'initial-data-loader':
+                continue
+            agent = URIRef(row[field])
+            association = URIRef('#patch-{}-{}'.format(row['id'], term))
+            history_g.add((change, PROV.wasAssociatedWith, agent))
+            history_g.add((change, PROV.qualifiedAssociation, association))
+            history_g.add((association, PROV.agent, agent))
+            history_g.add((association,
+                           PROV.hadRole,
+                           PERIODO[prefix(url_for('vocab') + '#' + term)]))
+
+        changelog.append(change)
+
+    out = history_g.serialize(
+        format='json-ld', context=provenance.CONTEXT).decode('utf-8')
+    return make_response(
+        out, 200,
+        {'Content-Type': 'application/ld+json'})
+
+
 @app.route('/v')
 def vocab():
     return app.send_static_file('vocab.ttl')
@@ -394,7 +478,7 @@ def void():
     })
 
 # URIs for abstract resources (no representations, just 303 See Other)
-@app.route('/d')
+@app.route('/d', endpoint='abstract_dataset')
 @app.route('/<string(length=%s):collection_id>'
            % (COLLECTION_SEQUENCE_LENGTH + 1))
 @app.route('/<string(length=%s):definition_id>'
@@ -448,25 +532,29 @@ class Dataset(Resource):
     @submit_patch_permission.require()
     def patch(self):
         try:
-            dataset = get_latest_dataset()
-            patch = patch_from_text(request.data)
-            affected_entities = validate_patch(patch, dataset)
+            patch_request_id = create_patch_request(
+                patch_from_text(request.data), g.identity.id)
+            return None, 202, {
+                'Location': api.url_for(PatchRequest, id=patch_request_id)
+            }
         except InvalidPatchException as e:
             return {'status': 400, 'message': str(e)}, 400
 
-        db = get_db()
-        curs = db.cursor()
-        curs.execute('''
+
+def create_patch_request(patch, user_id):
+    dataset = get_latest_dataset()
+    affected_entities = validate_patch(patch, dataset)
+    db = get_db()
+    curs = db.cursor()
+    curs.execute('''
 INSERT INTO patch_request
 (created_by, updated_by, created_from, affected_entities, original_patch)
 VALUES (?, ?, ?, ?, ?)
-        ''', (g.identity.id, g.identity.id, dataset['id'],
-              json.dumps(sorted(affected_entities)), patch.to_string()))
-        db.commit()
+    ''', (user_id, user_id, dataset['id'],
+          json.dumps(sorted(affected_entities)), patch.to_string()))
+    db.commit()
+    return curs.lastrowid
 
-        return None, 202, {
-            'Location': api.url_for(PatchRequest, id=curs.lastrowid)
-        }
 
 @api.resource('/<string(length=%s):collection_id>.json'
               % (COLLECTION_SEQUENCE_LENGTH + 1),
@@ -645,57 +733,86 @@ WHERE id = ?
         )
         db.commit()
 
+
 @api.resource('/patches/<int:id>/merge')
 class PatchMerge(Resource):
     @accept_patch_permission.require()
     def post(self, id):
-        row = query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
+        try:
+            merge_patch(id, g.identity.id)
+            return None, 204
+        except MergeError as e:
+            return {'message': e.message}, 404
+        except UnmergeablePatchError as e:
+            return {'message': e.message}, 400
 
-        if not row:
-            abort(404)
-        if row['merged']:
-            return { 'message': 'Patch is already merged.' }, 404
-        if not row['open']:
-            return { 'message': 'Closed patches cannot be merged.' }, 404
 
-        dataset = get_latest_dataset()
-        mergeable = is_mergeable(row['original_patch'], dataset)
+class MergeError(Exception):
+    def __init__(self, message):
+        self.message = message
 
-        if not mergeable:
-            return { 'message': 'Patch is not mergeable.' }, 400
 
-        data = json.loads(dataset['data'])
-        original_patch = patch_from_text(row['original_patch'])
-        applied_patch, new_ids = replace_skolem_ids(original_patch, data)
-        affected_entities = (set(json.loads(row['affected_entities']))
-                             | set(new_ids))
+class UnmergeablePatchError(MergeError):
+    pass
 
-        # Should this be ordered?
-        new_data = applied_patch.apply(data)
 
-        db = get_db()
-        curs = db.cursor()
-        curs.execute(
-            '''
-            update patch_request
-            set merged = 1,
-                open = 0,
-                merged_at = CURRENT_TIMESTAMP,
-                merged_by = ?,
-                applied_to = ?,
-                resulted_in = ?,
-                affected_entities = ?,
-                applied_patch = ?
-            where id = ?;
-            ''',
-            (g.identity.id, dataset['id'], curs.lastrowid,
-             json.dumps(list(affected_entities)), applied_patch.to_string(),
-             row['id'])
-        )
-        add_new_version_of_dataset(curs, new_data)
-        db.commit()
+def merge_patch(patch_id, user_id):
+    row = query_db(PATCH_QUERY + ' where id = ?', (patch_id,), one=True)
 
-        return None, 204
+    if not row:
+        raise MergeError('No patch with ID {}.'.format(patch_id))
+    if row['merged']:
+        raise MergeError('Patch is already merged.')
+    if not row['open']:
+        raise MergeError('Closed patches cannot be merged.')
+
+    dataset = get_latest_dataset()
+    mergeable = is_mergeable(row['original_patch'], dataset)
+
+    if not mergeable:
+        raise UnmergeablePatchError('Patch is not mergeable.')
+
+    data = json.loads(dataset['data'])
+    original_patch = patch_from_text(row['original_patch'])
+    applied_patch, new_ids = replace_skolem_ids(original_patch, data)
+    affected_entities = (set(json.loads(row['affected_entities']))
+                         | set(new_ids))
+
+    # Should this be ordered?
+    new_data = applied_patch.apply(data)
+
+    db = get_db()
+    curs = db.cursor()
+    curs.execute(
+        '''
+        UPDATE patch_request
+        SET merged = 1,
+            open = 0,
+            merged_at = CURRENT_TIMESTAMP,
+            merged_by = ?,
+            applied_to = ?,
+            affected_entities = ?,
+            applied_patch = ?
+        WHERE id = ?;
+        ''',
+        (user_id,
+         dataset['id'],
+         json.dumps(sorted(affected_entities)),
+         applied_patch.to_string(),
+         row['id'])
+    )
+    add_new_version_of_dataset(curs, new_data)
+    curs.execute(
+        '''
+        UPDATE patch_request
+        SET resulted_in = ?
+        WHERE id = ?;
+        ''',
+        (curs.lastrowid, row['id'])
+    )
+    curs.lastrowid
+    db.commit()
+
 
 def generate_state_token():
     return ''.join(random.choice(string.ascii_uppercase + string.digits)
@@ -758,15 +875,17 @@ def init_db():
             db.cursor().executescript(schema_file.read())
         db.commit()
 
+
 def load_data(datafile):
     with app.app_context():
-        db = get_db()
-        curs = db.cursor()
         with open(datafile) as f:
             data = json.load(f)
-            add_new_version_of_dataset(curs, data)
-        db.commit()
-        
+        user_id = 'initial-data-loader'
+        patch = JsonPatch.from_diff({}, data)
+        patch_request_id = create_patch_request(patch, user_id)
+        merge_patch(patch_request_id, user_id)
+
+
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:

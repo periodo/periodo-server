@@ -5,6 +5,10 @@ CREATE TABLE dataset (
   data TEXT NOT NULL,
   description TEXT NOT NULL
 );
+INSERT INTO dataset (
+  id, data, description)
+VALUES (
+  0, '{}', 'Initial empty dataset.');
 
 DROP TABLE IF EXISTS patch_request;
 CREATE TABLE patch_request (
@@ -51,6 +55,10 @@ CREATE TABLE user (
   credentials TEXT NOT NULL,
   credentials_updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+INSERT INTO USER (
+  id, name, permissions, b64token, token_expires_at_unixtime, credentials)
+VALUES (
+  'initial-data-loader', 'initial data loader', '', '', 0, '');
 
 DROP TRIGGER IF EXISTS update_user_credentials;
 CREATE TRIGGER update_user_credentials UPDATE OF credentials ON user
