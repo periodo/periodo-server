@@ -1,0 +1,23 @@
+CONTEXT = {
+    "@base": "http://n2t.net/ark:/99152/p0h",
+    "by": "prov:wasAssociatedWith",
+    "foaf": "http://xmlns.com/foaf/0.1/",
+    "generated": "prov:generated",
+    "history": "@graph",
+    "id": "@id",
+    "initialDataLoad": {"@id": "rdf:first"},
+    "mergedAt": {"@id": "prov:endedAtTime", "@type": "xsd:dateTime"},
+    "mergedPatches": {"@id": "rdf:rest"},
+    "name": "foaf:name",
+    "prov": "http://www.w3.org/ns/prov#",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "role": "prov:hadRole",
+    "roles": "prov:qualifiedAssociation",
+    "specializationOf": {"@id": "prov:specializationOf", "@type": "@id"},
+    "submittedAt": {"@id": "prov:startedAtTime", "@type": "xsd:dateTime"},
+    "type": "@type",
+    "url": {"@id": "foaf:page", "@type": "@id"},
+    "used": "prov:used",
+    "wasRevisionOf": "prov:wasRevisionOf",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+}

@@ -1,0 +1,31 @@
+[
+  {
+    "op": "add",
+    "path": "/periodCollections/p0trgkv/definitions/https:~1~1perio.do~1.well-known~1genid~16da6dc770a6f431eb2f1b5766bc5678d",
+    "value": {
+      "id": "https://perio.do/.well-known/genid/6da6dc770a6f431eb2f1b5766bc5678d",
+      "label": "Blah",
+      "localizedLabel": {
+        "eng-latn": "Blah"
+      },
+      "spatialCoverage": [
+        {
+          "@id": "http://dbpedia.org/resource/Turkey",
+          "label": "Turkey"
+        }
+      ],
+      "start": {
+        "in": {
+          "year": "1976"
+        },
+        "label": "1976 A.D."
+      },
+      "stop": {
+        "in": {
+          "year": "1977"
+        },
+        "label": "1977 A.D."
+      }
+    }
+  }
+]

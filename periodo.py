@@ -8,15 +8,17 @@ from wsgiref.handlers import format_date_time
 from base64 import b64encode
 import os
 import re
-from functools import partial
+from functools import partial, reduce
 import random
 import string
 from urllib.parse import urlencode
 
 import requests
 
-from rdflib import Graph, URIRef, Literal
-from rdflib.namespace import Namespace, RDF, DCTERMS, XSD, VOID
+from rdflib import Graph, URIRef, Literal, BNode
+from rdflib.collection import Collection
+from rdflib.namespace import Namespace, RDF, DCTERMS, XSD, VOID, FOAF
+PROV = Namespace('http://www.w3.org/ns/prov#')
 
 from jsonpatch import JsonPatch, JsonPatchException
 from jsonpointer import JsonPointerException
@@ -33,8 +35,9 @@ from werkzeug.exceptions import Unauthorized
 
 from identifier import (replace_skolem_ids, prefix,
                         COLLECTION_SEQUENCE_LENGTH,
-                        DEFINITION_SEQUENCE_LENGTH)
-
+                        DEFINITION_SEQUENCE_LENGTH,
+                        IDENTIFIER_RE)
+import provenance
 from secrets import SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET
 
 __all__ = ['init_db', 'load_data', 'app']
@@ -43,6 +46,8 @@ __all__ = ['init_db', 'load_data', 'app']
 #########
 # Setup #
 #########
+
+PERIODO = Namespace('http://n2t.net/ark:/99152/')
 
 app = Flask(__name__)
 app.config.update(
@@ -210,6 +215,16 @@ WHERE user.b64token = ?
 
 ISO_TIME_FMT = '%Y-%m-%d %H:%M:%S'
 
+CHANGE_PATH_PATTERN = re.compile(r'''
+/periodCollections/
+({id_pattern})   # match collection ID
+(?:
+  /definitions/
+  ({id_pattern}) # optionally match definition ID
+)?
+'''.format(id_pattern=IDENTIFIER_RE.pattern[1:-1]), re.VERBOSE)
+
+
 class InvalidPatchException(Exception):
     pass
 
@@ -228,9 +243,10 @@ def patch_from_text(patch_text):
     patch = JsonPatch(patch)
     return patch
 
+
 def validate_patch(patch, dataset=None):
-    dataset = dataset or get_latest_dataset()
-    
+    dataset = dataset or get_dataset()
+
     # Test to make sure it will apply
     try:
         patch.apply(json.loads(dataset['data']))
@@ -238,6 +254,13 @@ def validate_patch(patch, dataset=None):
         raise InvalidPatchException('Not a valid JSON patch.')
     except JsonPointerException:
         raise InvalidPatchException('Could not apply JSON patch to dataset.')
+
+    matches = [CHANGE_PATH_PATTERN.match(change['path']) for change in patch]
+    affected_entities = reduce(
+        lambda s, groups: s | set(groups),
+        [m.groups() for m in matches if m is not None], set())
+    affected_entities.discard(None)
+    return affected_entities
 
 patch_parser = reqparse.RequestParser()
 
@@ -251,6 +274,7 @@ def describe_dataset(cursor, data, created):
 SELECT DISTINCT created_by, updated_by
 FROM patch_request
 WHERE merged = 1
+AND id > 1  -- ignore initial load
 ''', cursor=cursor)
     with open(os.path.join(os.path.dirname(__file__), 'void-stub.ttl')) as f:
         description = Graph().parse(file=f, format='turtle')
@@ -285,9 +309,16 @@ FILTER (STRSTARTS(STR(?s), "%s"))
                  DCTERMS.contributor, URIRef(row['updated_by']))
     return description.serialize(format='turtle')
 
-def get_latest_dataset(cursor=None):
-    return query_db(
-        'SELECT * FROM dataset ORDER BY id DESC', one=True, cursor=cursor)
+
+def get_dataset(version=None, cursor=None):
+    if version is None:
+        return query_db(
+            'SELECT * FROM dataset ORDER BY id DESC',
+            one=True, cursor=cursor)
+    else:
+        return query_db(
+            'SELECT * FROM dataset WHERE dataset.id = ?', (version,),
+            one=True, cursor=cursor)
 
 def add_new_version_of_dataset(cursor, data):
     now = query_db("SELECT CURRENT_TIMESTAMP AS now", one=True, cursor=cursor)['now']
@@ -362,6 +393,85 @@ class Index(Resource):
     def get(self):
         return {}
 
+
+@app.route('/h')
+def history():
+    '''Respond with JSON-LD representation of change history'''
+    history_g = Graph()
+    changelog = Collection(history_g, URIRef('#changelog'))
+    for row in query_db('''
+SELECT
+  id,
+  created_at,
+  created_by,
+  updated_by,
+  merged_at,
+  merged_by,
+  applied_to,
+  resulted_in,
+  affected_entities
+FROM patch_request
+WHERE merged = 1
+ORDER BY id ASC
+'''):
+        change = URIRef('#change-{}'.format(row['id']))
+        patch = URIRef('#patch-{}'.format(row['id']))
+        history_g.add((patch,
+                       FOAF.page,
+                       PERIODO[prefix(url_for('patch', id=row['id']))]))
+        history_g.add((change,
+                       PROV.startedAtTime,
+                       Literal(row['created_at'], datatype=XSD.dateTime)))
+        history_g.add((change,
+                       PROV.endedAtTime,
+                       Literal(row['merged_at'], datatype=XSD.dateTime)))
+        dataset = PERIODO[prefix(url_for('abstract_dataset'))]
+        version_in = PERIODO[prefix(
+            url_for('abstract_dataset', version=row['applied_to']))]
+        history_g.add((version_in, PROV.specializationOf, dataset))
+        version_out = PERIODO[prefix(
+            url_for('abstract_dataset', version=row['resulted_in']))]
+        history_g.add((version_out, PROV.specializationOf, dataset))
+
+        history_g.add((change, PROV.used, version_in))
+        history_g.add((change, PROV.used, patch))
+        history_g.add((change, PROV.generated, version_out))
+
+        for entity_id in json.loads(row['affected_entities']):
+            entity = PERIODO[entity_id]
+            entity_version = PERIODO[
+                entity_id + '?version={}'.format(row['resulted_in'])]
+            prev_entity_version = PERIODO[
+                entity_id + '?version={}'.format(row['applied_to'])]
+            history_g.add(
+                (entity_version, PROV.specializationOf, entity))
+            history_g.add(
+                (entity_version, PROV.wasRevisionOf, prev_entity_version))
+            history_g.add((change, PROV.generated, entity_version))
+
+        for field, term in (('created_by', 'submitted'),
+                            ('updated_by', 'updated'),
+                            ('merged_by', 'merged')):
+            if row[field] == 'initial-data-loader':
+                continue
+            agent = URIRef(row[field])
+            association = URIRef('#patch-{}-{}'.format(row['id'], term))
+            history_g.add((change, PROV.wasAssociatedWith, agent))
+            history_g.add((change, PROV.qualifiedAssociation, association))
+            history_g.add((association, PROV.agent, agent))
+            history_g.add((association,
+                           PROV.hadRole,
+                           PERIODO[prefix(url_for('vocab') + '#' + term)]))
+
+        changelog.append(change)
+
+    out = history_g.serialize(
+        format='json-ld', context=provenance.CONTEXT).decode('utf-8')
+    return make_response(
+        out, 200,
+        {'Content-Type': 'application/ld+json'})
+
+
 @app.route('/v')
 def vocab():
     return app.send_static_file('vocab.ttl')
@@ -369,27 +479,48 @@ def vocab():
 # http://www.w3.org/TR/void/#well-known
 @app.route('/.well-known/void')
 def void():
-    return make_response(get_latest_dataset()['description'], 200, {
+    return make_response(get_dataset()['description'], 200, {
         'Content-Type': 'text/turtle',
         'Link': '</>; rel="alternate"; type="text/html"',
     })
 
+
 # URIs for abstract resources (no representations, just 303 See Other)
-@app.route('/d')
+
+
+@app.route('/d', endpoint='abstract_dataset')
+def see_dataset():
+    return redirect(url_for('dataset', **request.args), code=303)
+
+
 @app.route('/<string(length=%s):collection_id>'
            % (COLLECTION_SEQUENCE_LENGTH + 1))
-@app.route('/<string(length=%s):definition_id>'
-           % (COLLECTION_SEQUENCE_LENGTH + 1 + DEFINITION_SEQUENCE_LENGTH + 1))
-def see_other(**kwargs):
-    if request.path == '/d':
-        url = url_for('dataset')
-    elif request.accept_mimetypes.best == 'application/json':
-        url = request.path + '.json'
+def see_collection(collection_id):
+    if request.accept_mimetypes.best == 'application/json':
+        url = url_for('collection-json', collection_id=collection_id,
+                      **request.args)
     elif request.accept_mimetypes.best == 'application/ld+json':
-        url = request.path + '.jsonld'
+        url = url_for('collection-jsonld', collection_id=collection_id,
+                      **request.args)
     else:
         url = url_for('index', _anchor=request.path[1:])
     return redirect(url, code=303)
+
+
+@app.route('/<string(length=%s):definition_id>'
+           % (COLLECTION_SEQUENCE_LENGTH + 1 + DEFINITION_SEQUENCE_LENGTH + 1))
+def see_definition(definition_id):
+    if request.accept_mimetypes.best == 'application/json':
+        url = url_for('definition-json', definition_id=definition_id,
+                      **request.args)
+    elif request.accept_mimetypes.best == 'application/ld+json':
+        url = url_for('definition-jsonld', definition_id=definition_id,
+                      **request.args)
+    else:
+        url = url_for('index', _anchor=request.path[1:])
+    return redirect(url, code=303)
+
+
 dataset_parser = reqparse.RequestParser()
 dataset_parser.add_argument('If-Modified-Since', dest='modified', location='headers')
 dataset_parser.add_argument('version', type=int, location='args',
@@ -429,27 +560,52 @@ class Dataset(Resource):
     @submit_patch_permission.require()
     def patch(self):
         try:
-            dataset = get_latest_dataset()
-            patch = patch_from_text(request.data)
-            validate_patch(patch, dataset)
+            patch_request_id = create_patch_request(
+                patch_from_text(request.data), g.identity.id)
+            return None, 202, {
+                'Location': api.url_for(PatchRequest, id=patch_request_id)
+            }
         except InvalidPatchException as e:
-            return { 'status': 400, 'message': str(e) }, 400
+            return {'status': 400, 'message': str(e)}, 400
 
-        db = get_db()
-        curs = db.cursor()
-        curs.execute(
-'''
+
+def create_patch_request(patch, user_id):
+    dataset = get_dataset()
+    affected_entities = validate_patch(patch, dataset)
+    db = get_db()
+    curs = db.cursor()
+    curs.execute('''
 INSERT INTO patch_request
-(created_by, updated_by, created_from, original_patch)
-VALUES (?, ?, ?, ?)
-''',
-            (g.identity.id, g.identity.id, dataset['id'], patch.to_string())
-        )
-        db.commit()
+(created_by, updated_by, created_from, affected_entities, original_patch)
+VALUES (?, ?, ?, ?, ?)
+    ''', (user_id, user_id, dataset['id'],
+          json.dumps(sorted(affected_entities)), patch.to_string()))
+    db.commit()
+    return curs.lastrowid
 
-        return None, 202, {
-            'Location': api.url_for(PatchRequest, id=curs.lastrowid)
-        }
+
+def find_version_of_last_update(entity_id, version):
+    for row in query_db('''
+    SELECT affected_entities, resulted_in
+    FROM patch_request
+    WHERE merged = 1
+    AND resulted_in <= ?
+    ORDER BY id DESC''', (version,)):
+        if prefix(entity_id) in json.loads(row['affected_entities']):
+            return row['resulted_in']
+    return None
+
+
+def redirect_to_last_update(entity_id, version):
+    if version is None:
+        return None
+    v = find_version_of_last_update(entity_id, version)
+    if v is None:
+        abort(404)
+    if v == int(version):
+        return None
+    return redirect(request.path + '?version={}'.format(v), code=301)
+
 
 @api.resource('/<string(length=%s):collection_id>.json'
               % (COLLECTION_SEQUENCE_LENGTH + 1),
@@ -459,8 +615,14 @@ VALUES (?, ?, ?, ?)
               endpoint='collection-jsonld')
 class PeriodCollection(Resource):
     def get(self, collection_id):
-        dataset = get_latest_dataset()
+        version = request.args.get('version')
+        new_location = redirect_to_last_update(collection_id, version)
+        if new_location is not None:
+            return new_location
+        dataset = get_dataset(version=version)
         o = json.loads(dataset['data'])
+        if not 'periodCollections' in o:
+            abort(404)
         collection_key = prefix(collection_id)
         if not collection_key in o['periodCollections']:
             abort(404)
@@ -478,8 +640,14 @@ class PeriodCollection(Resource):
               endpoint='definition-jsonld')
 class PeriodDefinition(Resource):
     def get(self, definition_id):
-        dataset = get_latest_dataset()
+        version = request.args.get('version')
+        new_location = redirect_to_last_update(definition_id, version)
+        if new_location is not None:
+            return new_location
+        dataset = get_dataset(version=version)
         o = json.loads(dataset['data'])
+        if not 'periodCollections' in o:
+            abort(404)
         definition_key = prefix(definition_id)
         collection_key = prefix(definition_id[:5])
         if not collection_key in o['periodCollections']:
@@ -514,7 +682,7 @@ def make_dataset_url(version):
     return api.url_for(Dataset, _external=True) + '?version=' + str(version)
 
 def is_mergeable(patch_text, dataset=None):
-    dataset = dataset or get_latest_dataset()
+    dataset = dataset or get_dataset()
     patch = patch_from_text(patch_text)
     mergeable = True
     try:
@@ -608,7 +776,7 @@ class Patch(Resource):
         if not permission.can(): raise PermissionDenied(permission)
         try:
             patch = patch_from_text(request.data)
-            validate_patch(patch)
+            affected_entities = validate_patch(patch)
         except InvalidPatchException as e:
             if str(e) != 'Could not apply JSON patch to dataset.':
                 return { 'status': 400, 'message': str(e) }, 400
@@ -619,60 +787,95 @@ class Patch(Resource):
 '''
 UPDATE patch_request SET
 original_patch = ?,
+affected_entities = ?,
 updated_by = ?
 WHERE id = ?
 ''',
-            (patch.to_string(), g.identity.id, id)
+            (patch.to_string(), json.dumps(sorted(affected_entities)),
+             g.identity.id, id)
         )
         db.commit()
+
 
 @api.resource('/patches/<int:id>/merge')
 class PatchMerge(Resource):
     @accept_patch_permission.require()
     def post(self, id):
-        row = query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
+        try:
+            merge_patch(id, g.identity.id)
+            return None, 204
+        except MergeError as e:
+            return {'message': e.message}, 404
+        except UnmergeablePatchError as e:
+            return {'message': e.message}, 400
 
-        if not row:
-            abort(404)
-        if row['merged']:
-            return { 'message': 'Patch is already merged.' }, 404
-        if not row['open']:
-            return { 'message': 'Closed patches cannot be merged.' }, 404
 
-        dataset = get_latest_dataset()
-        mergeable = is_mergeable(row['original_patch'], dataset)
+class MergeError(Exception):
+    def __init__(self, message):
+        self.message = message
 
-        if not mergeable:
-            return { 'message': 'Patch is not mergeable.' }, 400
 
-        data = json.loads(dataset['data'])
-        original_patch = patch_from_text(row['original_patch'])
-        applied_patch = replace_skolem_ids(original_patch, data)
+class UnmergeablePatchError(MergeError):
+    pass
 
-        # Should this be ordered?
-        new_data = applied_patch.apply(data)
 
-        db = get_db()
-        curs = db.cursor()
-        curs.execute(
-            '''
-            update patch_request
-            set merged = 1,
-                open = 0,
-                merged_at = CURRENT_TIMESTAMP,
-                merged_by = ?,
-                applied_to = ?,
-                resulted_in = ?,
-                applied_patch = ?
-            where id = ?;
-            ''',
-            (g.identity.id, dataset['id'], curs.lastrowid,
-             applied_patch.to_string(), row['id'])
-        )
-        add_new_version_of_dataset(curs, new_data)
-        db.commit()
+def merge_patch(patch_id, user_id):
+    row = query_db(PATCH_QUERY + ' where id = ?', (patch_id,), one=True)
 
-        return None, 204
+    if not row:
+        raise MergeError('No patch with ID {}.'.format(patch_id))
+    if row['merged']:
+        raise MergeError('Patch is already merged.')
+    if not row['open']:
+        raise MergeError('Closed patches cannot be merged.')
+
+    dataset = get_dataset()
+    mergeable = is_mergeable(row['original_patch'], dataset)
+
+    if not mergeable:
+        raise UnmergeablePatchError('Patch is not mergeable.')
+
+    data = json.loads(dataset['data'])
+    original_patch = patch_from_text(row['original_patch'])
+    applied_patch, new_ids = replace_skolem_ids(original_patch, data)
+    affected_entities = (set(json.loads(row['affected_entities']))
+                         | set(new_ids))
+
+    # Should this be ordered?
+    new_data = applied_patch.apply(data)
+
+    db = get_db()
+    curs = db.cursor()
+    curs.execute(
+        '''
+        UPDATE patch_request
+        SET merged = 1,
+            open = 0,
+            merged_at = CURRENT_TIMESTAMP,
+            merged_by = ?,
+            applied_to = ?,
+            affected_entities = ?,
+            applied_patch = ?
+        WHERE id = ?;
+        ''',
+        (user_id,
+         dataset['id'],
+         json.dumps(sorted(affected_entities)),
+         applied_patch.to_string(),
+         row['id'])
+    )
+    add_new_version_of_dataset(curs, new_data)
+    curs.execute(
+        '''
+        UPDATE patch_request
+        SET resulted_in = ?
+        WHERE id = ?;
+        ''',
+        (curs.lastrowid, row['id'])
+    )
+    curs.lastrowid
+    db.commit()
+
 
 def generate_state_token():
     return ''.join(random.choice(string.ascii_uppercase + string.digits)
@@ -735,15 +938,17 @@ def init_db():
             db.cursor().executescript(schema_file.read())
         db.commit()
 
+
 def load_data(datafile):
     with app.app_context():
-        db = get_db()
-        curs = db.cursor()
         with open(datafile) as f:
             data = json.load(f)
-            add_new_version_of_dataset(curs, data)
-        db.commit()
-        
+        user_id = 'initial-data-loader'
+        patch = JsonPatch.from_diff({}, data)
+        patch_request_id = create_patch_request(patch, user_id)
+        merge_patch(patch_request_id, user_id)
+
+
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:

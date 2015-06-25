@@ -10,7 +10,7 @@ XDIGITS = '23456789bcdfghjkmnpqrstvwxz'
 COLLECTION_SEQUENCE_LENGTH = 4
 DEFINITION_SEQUENCE_LENGTH = 3
 IDENTIFIER_RE = re.compile(
-    r'^%s[%s]{%s}([%s]{1}[%s]{%s})?[%s]{1}$' % (
+    r'^%s[%s]{%s}(?:[%s]{1}[%s]{%s})?[%s]{1}$' % (
         PREFIX,
         XDIGITS, COLLECTION_SEQUENCE_LENGTH,
         XDIGITS,
@@ -27,8 +27,12 @@ def for_collection():
     return id_from_sequence(
         random_sequence(COLLECTION_SEQUENCE_LENGTH))
 
+
 def prefix(s):
-    return PREFIX + s
+    if s.startswith('/'):
+        return PREFIX + s[1:]
+    else:
+        return PREFIX + s
 
 def id_from_sequence(sequence):
     return prefix(add_check_digit(sequence))
@@ -68,38 +72,62 @@ REPLACE_DEFINITIONS_PATH = re.compile(
     r'^/periodCollections/(?P<collection_id>.*)/definitions$')
 ADD_COLLECTION_PATH = re.compile(
     r'^(?P<path_prefix>/periodCollections/)(.*)~1\.well-known~1genid~1(.*)$')
-SKOLEM_URI = re.compile(r'^(.*)/\.well-known/genid/(.*)$')
+SKOLEM_BASE = r'^(.*)/\.well-known/genid/'
+SKOLEM_URI = re.compile(SKOLEM_BASE + r'(.*)$')
+ASSIGNED_SKOLEM_URI = re.compile(SKOLEM_BASE + r'assigned/(?P<id>.*)$')
+
 
 def index_by_id(items):
     return { i['id']:i for i in items }
 
+
 def replace_skolem_ids(patch_or_obj, dataset):
 
-    existing_ids = set(chain.from_iterable(
-        ( [cid] + list(c['definitions'].keys())
-          for cid,c in dataset['periodCollections'].items() )))
+    new_ids = []
+
+    if (len(dataset) > 0):
+        existing_ids = set(chain.from_iterable(
+            ([cid] + list(c['definitions'].keys())
+             for cid, c in dataset['periodCollections'].items())))
+    else:
+        existing_ids = set()
 
     def unused_identifier(id_generator, *args):
         for i in range(10):
             new_id = id_generator(*args)
             if new_id not in existing_ids:
+                new_ids.append(new_id)
                 existing_ids.add(new_id)
                 return new_id
         raise IdentifierException(
             'Too many identifier collisions:'
             + ' {} existing ids'.format(len(existing_ids)))
 
+    def deskolemize(uri, id_generator, *args):
+        match = ASSIGNED_SKOLEM_URI.match(uri)
+        if match:  # patch for initial load, keep assigned IDs
+            assigned_id = match.group('id')
+            if assigned_id in existing_ids:
+                raise Exception('ID collision on ' + assigned_id)
+            new_ids.append(assigned_id)
+            existing_ids.add(assigned_id)
+            return assigned_id
+
+        if SKOLEM_URI.match(uri):
+            return unused_identifier(id_generator, *args)
+
+        raise Exception('non-skolem ID for new entity: ' + uri)
+
     def assign_definition_id(definition, collection_id):
-        if SKOLEM_URI.match(definition['id']):
-            definition['id'] = unused_identifier(for_definition, collection_id)
+        definition['id'] = deskolemize(
+            definition['id'], for_definition, collection_id)
         return definition
 
     def assign_collection_ids(collection):
-        if SKOLEM_URI.match(collection['id']):
-            collection['id'] = unused_identifier(for_collection)
+        collection['id'] = deskolemize(collection['id'], for_collection)
         collection['definitions'] = index_by_id(
-            [ assign_definition_id(d, collection['id'])
-              for d in collection['definitions'].values() ]) 
+            [assign_definition_id(d, collection['id'])
+             for d in collection['definitions'].values()])
         return collection
 
     def modify_operation(op):
@@ -137,13 +165,15 @@ def replace_skolem_ids(patch_or_obj, dataset):
         return new_op
 
     if hasattr(patch_or_obj, 'patch'):
-        return JsonPatch([ modify_operation(op) for op in patch_or_obj ])
+        result = JsonPatch([modify_operation(op) for op in patch_or_obj])
     else:
-        out = deepcopy(patch_or_obj)
-        out['periodCollections'] = index_by_id(
-            [ assign_collection_ids(c)
-              for c in patch_or_obj['periodCollections'].values() ])
-        return out
+        result = deepcopy(patch_or_obj)
+        result['periodCollections'] = index_by_id(
+            [assign_collection_ids(c)
+             for c in patch_or_obj['periodCollections'].values()])
+
+    return result, new_ids
+
 
 class IdentifierException(Exception):
     pass

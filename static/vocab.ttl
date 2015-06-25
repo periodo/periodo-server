@@ -3,6 +3,7 @@
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix time: <http://www.w3.org/2006/time#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
 
 <#spatialCoverageDescription> a owl:DatatypeProperty ;
     rdfs:comment "Free-text description of the spatial coverage of a resource."@en ;
@@ -34,3 +35,19 @@ time:DateTimeDescription
         owl:maxCardinality "1"^^xsd:nonNegativeInteger ;
         owl:onProperty <#latestYear>
     ] .
+
+<#submitted> a prov:Role ;
+    rdfs:comment "The role played by the agent responsible for submitting a patch."@en ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "submitted"@en .
+
+<#updated> a prov:Role ;
+    rdfs:comment "The role played by the agent responsible for updating a patch."@en ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "updated"@en .
+
+<#merged> a prov:Role ;
+    rdfs:comment "The role played by the agent responsible for merging a patch."@en ;
+    rdfs:isDefinedBy <> ;
+    rdfs:label "merged"@en .
+
