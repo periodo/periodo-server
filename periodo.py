@@ -245,7 +245,7 @@ def patch_from_text(patch_text):
 
 
 def validate_patch(patch, dataset=None):
-    dataset = dataset or get_latest_dataset()
+    dataset = dataset or get_dataset()
 
     # Test to make sure it will apply
     try:
@@ -309,9 +309,16 @@ FILTER (STRSTARTS(STR(?s), "%s"))
                  DCTERMS.contributor, URIRef(row['updated_by']))
     return description.serialize(format='turtle')
 
-def get_latest_dataset(cursor=None):
-    return query_db(
-        'SELECT * FROM dataset ORDER BY id DESC', one=True, cursor=cursor)
+
+def get_dataset(version=None, cursor=None):
+    if version is None:
+        return query_db(
+            'SELECT * FROM dataset ORDER BY id DESC',
+            one=True, cursor=cursor)
+    else:
+        return query_db(
+            'SELECT * FROM dataset WHERE dataset.id = ?', (version,),
+            one=True, cursor=cursor)
 
 def add_new_version_of_dataset(cursor, data):
     now = query_db("SELECT CURRENT_TIMESTAMP AS now", one=True, cursor=cursor)['now']
@@ -472,27 +479,48 @@ def vocab():
 # http://www.w3.org/TR/void/#well-known
 @app.route('/.well-known/void')
 def void():
-    return make_response(get_latest_dataset()['description'], 200, {
+    return make_response(get_dataset()['description'], 200, {
         'Content-Type': 'text/turtle',
         'Link': '</>; rel="alternate"; type="text/html"',
     })
 
+
 # URIs for abstract resources (no representations, just 303 See Other)
+
+
 @app.route('/d', endpoint='abstract_dataset')
+def see_dataset():
+    return redirect(url_for('dataset', **request.args), code=303)
+
+
 @app.route('/<string(length=%s):collection_id>'
            % (COLLECTION_SEQUENCE_LENGTH + 1))
-@app.route('/<string(length=%s):definition_id>'
-           % (COLLECTION_SEQUENCE_LENGTH + 1 + DEFINITION_SEQUENCE_LENGTH + 1))
-def see_other(**kwargs):
-    if request.path == '/d':
-        url = url_for('dataset')
-    elif request.accept_mimetypes.best == 'application/json':
-        url = request.path + '.json'
+def see_collection(collection_id):
+    if request.accept_mimetypes.best == 'application/json':
+        url = url_for('collection-json', collection_id=collection_id,
+                      **request.args)
     elif request.accept_mimetypes.best == 'application/ld+json':
-        url = request.path + '.jsonld'
+        url = url_for('collection-jsonld', collection_id=collection_id,
+                      **request.args)
     else:
         url = url_for('index', _anchor=request.path[1:])
     return redirect(url, code=303)
+
+
+@app.route('/<string(length=%s):definition_id>'
+           % (COLLECTION_SEQUENCE_LENGTH + 1 + DEFINITION_SEQUENCE_LENGTH + 1))
+def see_definition(definition_id):
+    if request.accept_mimetypes.best == 'application/json':
+        url = url_for('definition-json', definition_id=definition_id,
+                      **request.args)
+    elif request.accept_mimetypes.best == 'application/ld+json':
+        url = url_for('definition-jsonld', definition_id=definition_id,
+                      **request.args)
+    else:
+        url = url_for('index', _anchor=request.path[1:])
+    return redirect(url, code=303)
+
+
 dataset_parser = reqparse.RequestParser()
 dataset_parser.add_argument('If-Modified-Since', dest='modified', location='headers')
 dataset_parser.add_argument('version', type=int, location='args',
@@ -542,7 +570,7 @@ class Dataset(Resource):
 
 
 def create_patch_request(patch, user_id):
-    dataset = get_latest_dataset()
+    dataset = get_dataset()
     affected_entities = validate_patch(patch, dataset)
     db = get_db()
     curs = db.cursor()
@@ -556,6 +584,29 @@ VALUES (?, ?, ?, ?, ?)
     return curs.lastrowid
 
 
+def find_version_of_last_update(entity_id, version):
+    for row in query_db('''
+    SELECT affected_entities, resulted_in
+    FROM patch_request
+    WHERE merged = 1
+    AND resulted_in <= ?
+    ORDER BY id DESC''', (version,)):
+        if prefix(entity_id) in json.loads(row['affected_entities']):
+            return row['resulted_in']
+    return None
+
+
+def redirect_to_last_update(entity_id, version):
+    if version is None:
+        return None
+    v = find_version_of_last_update(entity_id, version)
+    if v is None:
+        abort(404)
+    if v == int(version):
+        return None
+    return redirect(request.path + '?version={}'.format(v), code=301)
+
+
 @api.resource('/<string(length=%s):collection_id>.json'
               % (COLLECTION_SEQUENCE_LENGTH + 1),
               endpoint='collection-json')
@@ -564,8 +615,14 @@ VALUES (?, ?, ?, ?, ?)
               endpoint='collection-jsonld')
 class PeriodCollection(Resource):
     def get(self, collection_id):
-        dataset = get_latest_dataset()
+        version = request.args.get('version')
+        new_location = redirect_to_last_update(collection_id, version)
+        if new_location is not None:
+            return new_location
+        dataset = get_dataset(version=version)
         o = json.loads(dataset['data'])
+        if not 'periodCollections' in o:
+            abort(404)
         collection_key = prefix(collection_id)
         if not collection_key in o['periodCollections']:
             abort(404)
@@ -583,8 +640,14 @@ class PeriodCollection(Resource):
               endpoint='definition-jsonld')
 class PeriodDefinition(Resource):
     def get(self, definition_id):
-        dataset = get_latest_dataset()
+        version = request.args.get('version')
+        new_location = redirect_to_last_update(definition_id, version)
+        if new_location is not None:
+            return new_location
+        dataset = get_dataset(version=version)
         o = json.loads(dataset['data'])
+        if not 'periodCollections' in o:
+            abort(404)
         definition_key = prefix(definition_id)
         collection_key = prefix(definition_id[:5])
         if not collection_key in o['periodCollections']:
@@ -619,7 +682,7 @@ def make_dataset_url(version):
     return api.url_for(Dataset, _external=True) + '?version=' + str(version)
 
 def is_mergeable(patch_text, dataset=None):
-    dataset = dataset or get_latest_dataset()
+    dataset = dataset or get_dataset()
     patch = patch_from_text(patch_text)
     mergeable = True
     try:
@@ -766,7 +829,7 @@ def merge_patch(patch_id, user_id):
     if not row['open']:
         raise MergeError('Closed patches cannot be merged.')
 
-    dataset = get_latest_dataset()
+    dataset = get_dataset()
     mergeable = is_mergeable(row['original_patch'], dataset)
 
     if not mergeable:

@@ -5,9 +5,14 @@ import identifier
 import tempfile
 import unittest
 import http.client
+from rdflib import ConjunctiveGraph
+from rdflib.namespace import Namespace
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
 from .filepath import filepath
+
+PERIODO = Namespace('http://n2t.net/ark:/99152/')
+PROV = Namespace('http://www.w3.org/ns/prov#')
 
 
 class TestPatchMethods(unittest.TestCase):
@@ -123,3 +128,110 @@ class TestPatchMethods(unittest.TestCase):
             self.assertEqual(4, len(affected_entities))
             for entity_id in affected_entities:
                 self.assertRegex(entity_id, identifier.IDENTIFIER_RE)
+
+    def test_versioning(self):
+        with open(filepath('test-patch-adds-items.json')) as f:
+            patch1 = f.read()
+        with open(filepath('test-patch-add-definition.json')) as f:
+            patch2 = f.read()
+        with self.app as client:
+            res = client.patch(
+                '/d/',
+                data=patch1,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            patch_url = urlparse(res.headers['Location']).path
+            res = client.post(
+                patch_url + 'merge',
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+            self.assertEqual(res.status_code, http.client.NO_CONTENT)
+            res = client.patch(
+                '/d/',
+                data=patch2,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            patch_url = urlparse(res.headers['Location']).path
+            res = client.post(
+                patch_url + 'merge',
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+            self.assertEqual(res.status_code, http.client.NO_CONTENT)
+            res = client.get('/trgkv?version=0',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.NOT_FOUND)
+            for version in range(1, 4):
+                res = client.get(
+                    '/trgkv?version={}'.format(version),
+                    headers={'Accept': 'application/json'})
+                self.assertEqual(
+                    res.status_code, http.client.SEE_OTHER)
+                self.assertEqual(
+                    '/' + res.headers['Location'].split('/')[-1],
+                    '/trgkv.json?version={}'.format(version))
+                res = client.get(
+                    '/trgkv.json?version={}'.format(version))
+                self.assertEqual(
+                    res.status_code, http.client.OK)
+                self.assertEqual(
+                    res.headers['Content-Type'], 'application/json')
+            res = client.get('/h')
+
+            g = ConjunctiveGraph()
+            g.parse(format='json-ld', data=res.get_data(as_text=True))
+
+            for o in g.objects(subject=PERIODO['p0h#change-3'],
+                               predicate=PROV.generated):
+                path = '/' + urlparse(o).path.split('/')[-1][2:]
+                if path == '/trgkv' or path == '/d':
+                    continue
+                for version in range(0, 3):
+                    res = client.get(
+                        '{}?version={}'.format(path, version),
+                        headers={'Accept': 'application/json'},
+                        follow_redirects=True)
+                    self.assertEqual(res.status_code, http.client.NOT_FOUND)
+                res = client.get('{}?version=3'.format(path),
+                                 headers={'Accept': 'application/json'})
+                self.assertEqual(res.status_code, http.client.SEE_OTHER)
+                self.assertEqual(
+                    '/' + res.headers['Location'].split('/')[-1],
+                    '{}.json?version=3'.format(path))
+                res = client.get(
+                    '{}.json?version=3'.format(path))
+                self.assertEqual(
+                    res.status_code, http.client.OK)
+                self.assertEqual(
+                    res.headers['Content-Type'], 'application/json')
+
+            for o in g.objects(subject=PERIODO['p0h#change-2'],
+                               predicate=PROV.generated):
+                path = '/' + urlparse(o).path.split('/')[-1][2:]
+                if path == '/trgkv' or path == '/d':
+                    continue
+                for version in range(0, 2):
+                    res = client.get(
+                        '{}?version={}'.format(path, version),
+                        headers={'Accept': 'application/json'},
+                        follow_redirects=True)
+                    self.assertEqual(res.status_code, http.client.NOT_FOUND)
+                res = client.get('{}?version=3'.format(path),
+                                 headers={'Accept': 'application/json'})
+                self.assertEqual(res.status_code, http.client.SEE_OTHER)
+                self.assertEqual(
+                    '/' + res.headers['Location'].split('/')[-1],
+                    '{}.json?version=3'.format(path))
+                res = client.get('{}.json?version=3'.format(path))
+                self.assertEqual(res.status_code, http.client.MOVED_PERMANENTLY)
+                self.assertEqual(
+                    '/' + res.headers['Location'].split('/')[-1],
+                    '{}.json?version=2'.format(path))
+                res = client.get(
+                    '{}.json?version=2'.format(path))
+                self.assertEqual(
+                    res.status_code, http.client.OK)
+                self.assertEqual(
+                    res.headers['Content-Type'], 'application/json')
