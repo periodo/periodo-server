@@ -1,1 +1,82 @@
-[{"value": {"note": "chronological table on p. 4", "spatialCoverage": [{"@id": "http://dbpedia.org/resource/Turkey", "label": "Turkey"}], "localizedLabel": {"eng-latn": "Herakleid"}, "label": "Herakleid", "id": "https://perio.do/.well-known/genid/53f38e07f928ecdb849c1a98bbc24917", "start": {"in": {"year": "-1184"}, "label": "1185 B.C."}, "stop": {"in": {"year": "-0679"}, "label": "680 B.C."}}, "op": "add", "path": "/periodCollections/p0trgkv/definitions/https:~1~1perio.do~1.well-known~1genid~153f38e07f928ecdb849c1a98bbc24917"}, {"value": {"definitions": {"https://perio.do/.well-known/genid/8d3df296ba8665cf4045d34a2d983c97": {"spatialCoverageDescription": "Roman Britain", "editorialNote": "May be an inference, not statement / assertion.", "spatialCoverage": [{"id": "http://dbpedia.org/resource/United_Kingdom", "label": "United Kingdom"}], "localizedLabel": {"eng-latn": "Iron Age"}, "label": "Iron Age", "id": "https://perio.do/.well-known/genid/8d3df296ba8665cf4045d34a2d983c97", "start": {"in": {"year": "-0799"}, "label": "800 B.C."}, "stop": {"in": {"year": "0043"}, "label": "43 A.D."}}}, "id": "https://perio.do/.well-known/genid/36c1db27acc00e91c8a628abcaa64eb0", "source": {"partOf": {"id": "http://www.worldcat.org/oclc/27811171", "creators": [{"id": "http://viaf.org/viaf/56699974", "name": "Salway, Peter."}], "yearPublished": 1993, "title": "The Oxford illustrated history of Roman Britain"}, "locator": "pages 11, 13"}}, "op": "add", "path": "/periodCollections/https:~1~1perio.do~1.well-known~1genid~136c1db27acc00e91c8a628abcaa64eb0"}]
+[
+  {
+    "op": "add",
+    "path": "/periodCollections/p0trgkv/definitions/https:~1~1perio.do~1.well-known~1genid~153f38e07f928ecdb849c1a98bbc24917",
+    "value": {
+      "id": "https://perio.do/.well-known/genid/53f38e07f928ecdb849c1a98bbc24917",
+      "label": "Herakleid",
+      "localizedLabel": {
+        "eng-latn": "Herakleid"
+      },
+      "note": "chronological table on p. 4",
+      "spatialCoverage": [
+        {
+          "@id": "http://dbpedia.org/resource/Turkey",
+          "label": "Turkey"
+        }
+      ],
+      "start": {
+        "in": {
+          "year": "-1184"
+        },
+        "label": "1185 B.C."
+      },
+      "stop": {
+        "in": {
+          "year": "-0679"
+        },
+        "label": "680 B.C."
+      }
+    }
+  },
+  {
+    "op": "add",
+    "path": "/periodCollections/https:~1~1perio.do~1.well-known~1genid~136c1db27acc00e91c8a628abcaa64eb0",
+    "value": {
+      "definitions": {
+        "https://perio.do/.well-known/genid/8d3df296ba8665cf4045d34a2d983c97": {
+          "editorialNote": "May be an inference, not statement / assertion.",
+          "id": "https://perio.do/.well-known/genid/8d3df296ba8665cf4045d34a2d983c97",
+          "label": "Iron Age",
+          "localizedLabel": {
+            "eng-latn": "Iron Age"
+          },
+          "spatialCoverage": [
+            {
+              "id": "http://dbpedia.org/resource/United_Kingdom",
+              "label": "United Kingdom"
+            }
+          ],
+          "spatialCoverageDescription": "Roman Britain",
+          "start": {
+            "in": {
+              "year": "-0799"
+            },
+            "label": "800 B.C."
+          },
+          "stop": {
+            "in": {
+              "year": "0043"
+            },
+            "label": "43 A.D."
+          }
+        }
+      },
+      "id": "https://perio.do/.well-known/genid/36c1db27acc00e91c8a628abcaa64eb0",
+      "source": {
+        "locator": "pages 11, 13",
+        "partOf": {
+          "creators": [
+            {
+              "id": "http://viaf.org/viaf/56699974",
+              "name": "Salway, Peter."
+            }
+          ],
+          "id": "http://www.worldcat.org/oclc/27811171",
+          "title": "The Oxford illustrated history of Roman Britain",
+          "yearPublished": 1993
+        }
+      }
+    }
+  }
+]
