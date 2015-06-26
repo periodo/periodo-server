@@ -3,8 +3,7 @@ from flask import url_for
 from rdflib import Graph, URIRef, Literal
 from rdflib.collection import Collection
 from rdflib.namespace import Namespace, XSD, FOAF
-from periodo import database
-from periodo.identifier import prefix
+from periodo import database, identifier
 
 PROV = Namespace('http://www.w3.org/ns/prov#')
 PERIODO = Namespace('http://n2t.net/ark:/99152/')
@@ -57,18 +56,18 @@ ORDER BY id ASC
         patch = URIRef('#patch-{}'.format(row['id']))
         g.add((patch,
                FOAF.page,
-               PERIODO[prefix(url_for('patch', id=row['id']))]))
+               PERIODO[identifier.prefix(url_for('patch', id=row['id']))]))
         g.add((change,
                PROV.startedAtTime,
                Literal(row['created_at'], datatype=XSD.dateTime)))
         g.add((change,
                PROV.endedAtTime,
                Literal(row['merged_at'], datatype=XSD.dateTime)))
-        dataset = PERIODO[prefix(url_for('abstract_dataset'))]
-        version_in = PERIODO[prefix(
+        dataset = PERIODO[identifier.prefix(url_for('abstract_dataset'))]
+        version_in = PERIODO[identifier.prefix(
             url_for('abstract_dataset', version=row['applied_to']))]
         g.add((version_in, PROV.specializationOf, dataset))
-        version_out = PERIODO[prefix(
+        version_out = PERIODO[identifier.prefix(
             url_for('abstract_dataset', version=row['resulted_in']))]
         g.add((version_out, PROV.specializationOf, dataset))
 
@@ -100,7 +99,7 @@ ORDER BY id ASC
             g.add((association, PROV.agent, agent))
             g.add((association,
                    PROV.hadRole,
-                   PERIODO[prefix(url_for('vocab') + '#' + term)]))
+                   PERIODO[identifier.prefix(url_for('vocab') + '#' + term)]))
 
         changelog.append(change)
 
