@@ -1,7 +1,6 @@
 import json
 from jsonpatch import JsonPatch
-from periodo import app, database
-from periodo.patch import create_patch_request, merge_patch
+from periodo import app, database, patching
 
 
 def init_db():
@@ -18,6 +17,6 @@ def load_data(datafile):
             data = json.load(f)
         user_id = 'initial-data-loader'
         patch = JsonPatch.from_diff({}, data)
-        patch_request_id = create_patch_request(patch, user_id)
-        merge_patch(patch_request_id, user_id)
+        patch_request_id = patching.create_request(patch, user_id)
+        patching.merge(patch_request_id, user_id)
         database.commit()

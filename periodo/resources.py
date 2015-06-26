@@ -1,18 +1,16 @@
+import datetime
 import json
 from collections import OrderedDict
 from email.utils import parsedate
-from flask import request, g, abort, url_for
+from flask import request, g, abort, url_for, redirect
 from flask.ext.restful import fields, Resource, marshal, marshal_with, reqparse
-from periodo import api, database, auth, identifier
-from periodo.patch import (
-    patch_from_text, validate_patch, create_patch_request, is_mergeable,
-    merge_patch, InvalidPatchError, MergeError, UnmergeablePatchError)
-from periodo.helpers import (
-    iso_to_timestamp, attach_to_dataset, redirect_to_last_update)
+from periodo import api, database, auth, identifier, patching
 from time import mktime
 from urllib.parse import urlencode
 
 from wsgiref.handlers import format_date_time
+
+ISO_TIME_FMT = '%Y-%m-%d %H:%M:%S'
 
 index_fields = {
     'dataset': fields.Url('dataset', absolute=True),
@@ -21,17 +19,29 @@ index_fields = {
 }
 
 
-@api.resource('/')
-class Index(Resource):
-    @marshal_with(index_fields)
-    def get(self):
-        return {}
-
 dataset_parser = reqparse.RequestParser()
 dataset_parser.add_argument(
     'If-Modified-Since', dest='modified', location='headers')
 dataset_parser.add_argument('version', type=int, location='args',
                             help='Invalid version number')
+
+
+def attach_to_dataset(o):
+    o['primaryTopicOf'] = {'id': identifier.prefix(request.path[1:]),
+                           'inDataset': identifier.prefix('d')}
+    return o
+
+
+def iso_to_timestamp(iso_timestr, fmt=ISO_TIME_FMT):
+    dt = datetime.datetime.strptime(iso_timestr, fmt)
+    return mktime(dt.timetuple())
+
+
+@api.resource('/')
+class Index(Resource):
+    @marshal_with(index_fields)
+    def get(self):
+        return {}
 
 
 @api.resource('/d/', '/d.json', '/d.jsonld')
@@ -71,14 +81,26 @@ class Dataset(Resource):
     @auth.submit_patch_permission.require()
     def patch(self):
         try:
-            patch_request_id = create_patch_request(
-                patch_from_text(request.data), g.identity.id)
+            patch_request_id = patching.create_request(
+                patching.from_text(request.data), g.identity.id)
             database.commit()
             return None, 202, {
                 'Location': api.url_for(PatchRequest, id=patch_request_id)
             }
-        except InvalidPatchError as e:
+        except patching.InvalidPatchError as e:
             return {'status': 400, 'message': str(e)}, 400
+
+
+def redirect_to_last_update(entity_id, version):
+    if version is None:
+        return None
+    v = database.find_version_of_last_update(
+        identifier.prefix(entity_id), version)
+    if v is None:
+        abort(404)
+    if v == int(version):
+        return None
+    return redirect(request.path + '?version={}'.format(v), code=301)
 
 
 @api.resource('/<string(length=%s):collection_id>.json'
@@ -257,7 +279,7 @@ class PatchRequest(Resource):
         if not row:
             abort(404)
         data = process_patch_row(row)
-        data['mergeable'] = is_mergeable(data['original_patch'])
+        data['mergeable'] = patching.is_mergeable(data['original_patch'])
         headers = {}
 
         try:
@@ -275,19 +297,20 @@ class Patch(Resource):
     def get(self, id):
         row = database.query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
         if row['merged']:
-            patch = row['applied_patch']
+            p = row['applied_patch']
         else:
-            patch = row['original_patch']
-        return json.loads(patch), 200
+            p = row['original_patch']
+        return json.loads(p), 200
 
     def put(self, id):
         permission = auth.UpdatePatchPermission(id)
         if not permission.can():
             raise auth.PermissionDenied(permission)
         try:
-            patch = patch_from_text(request.data)
-            affected_entities = validate_patch(patch, database.get_dataset())
-        except InvalidPatchError as e:
+            patch = patching.from_text(request.data)
+            affected_entities = patching.validate(
+                patch, database.get_dataset())
+        except patching.InvalidPatchError as e:
             if str(e) != 'Could not apply JSON patch to dataset.':
                 return {'status': 400, 'message': str(e)}, 400
 
@@ -310,10 +333,10 @@ class PatchMerge(Resource):
     @auth.accept_patch_permission.require()
     def post(self, id):
         try:
-            merge_patch(id, g.identity.id)
+            patching.merge(id, g.identity.id)
             database.commit()
             return None, 204
-        except MergeError as e:
+        except patching.MergeError as e:
             return {'message': e.message}, 404
-        except UnmergeablePatchError as e:
+        except patching.UnmergeablePatchError as e:
             return {'message': e.message}, 400

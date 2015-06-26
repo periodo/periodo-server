@@ -3,8 +3,7 @@ import re
 from functools import reduce
 from jsonpatch import JsonPatch, JsonPatchException
 from jsonpointer import JsonPointerException
-from periodo import database
-from periodo.helpers import add_new_version_of_dataset
+from periodo import database, void
 from periodo.identifier import replace_skolem_ids, IDENTIFIER_RE
 
 CHANGE_PATH_PATTERN = re.compile(r'''
@@ -30,7 +29,7 @@ class UnmergeablePatchError(MergeError):
     pass
 
 
-def patch_from_text(patch_text):
+def from_text(patch_text):
     patch_text = patch_text or ''
     if isinstance(patch_text, bytes):
         patch_text = patch_text.decode()
@@ -42,7 +41,7 @@ def patch_from_text(patch_text):
     return patch
 
 
-def validate_patch(patch, dataset):
+def validate(patch, dataset):
     # Test to make sure it will apply
     try:
         patch.apply(json.loads(dataset['data']))
@@ -59,9 +58,9 @@ def validate_patch(patch, dataset):
     return affected_entities
 
 
-def create_patch_request(patch, user_id):
+def create_request(patch, user_id):
     dataset = database.get_dataset()
-    affected_entities = validate_patch(patch, dataset)
+    affected_entities = validate(patch, dataset)
     cursor = database.get_db().cursor()
     cursor.execute('''
 INSERT INTO patch_request
@@ -72,7 +71,16 @@ VALUES (?, ?, ?, ?, ?)
     return cursor.lastrowid
 
 
-def merge_patch(patch_id, user_id):
+def add_new_version_of_dataset(data):
+    now = database.query_db("SELECT CURRENT_TIMESTAMP AS now", one=True)['now']
+    cursor = database.get_db().cursor()
+    cursor.execute(
+        'INSERT into DATASET (data, description, created) VALUES (?,?,?)',
+        (json.dumps(data), void.describe_dataset(data, now), now))
+    return cursor.lastrowid
+
+
+def merge(patch_id, user_id):
     row = database.query_db(
         'SELECT * FROM patch_request WHERE id = ?', (patch_id,), one=True)
 
@@ -90,7 +98,7 @@ def merge_patch(patch_id, user_id):
         raise UnmergeablePatchError('Patch is not mergeable.')
 
     data = json.loads(dataset['data'])
-    original_patch = patch_from_text(row['original_patch'])
+    original_patch = from_text(row['original_patch'])
     applied_patch, new_ids = replace_skolem_ids(original_patch, data)
     affected_entities = (set(json.loads(row['affected_entities']))
                          | set(new_ids))
@@ -131,7 +139,7 @@ def merge_patch(patch_id, user_id):
 
 def is_mergeable(patch_text, dataset=None):
     dataset = dataset or database.get_dataset()
-    patch = patch_from_text(patch_text)
+    patch = from_text(patch_text)
     mergeable = True
     try:
         patch.apply(json.loads(dataset['data']))

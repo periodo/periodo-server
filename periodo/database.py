@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from periodo import app
 from flask import g
@@ -26,6 +27,19 @@ def get_dataset(version=None):
     else:
         return query_db(
             'SELECT * FROM dataset WHERE dataset.id = ?', (version,), one=True)
+
+
+def find_version_of_last_update(entity_id, version):
+    cursor = get_db().cursor()
+    for row in cursor.execute('''
+    SELECT affected_entities, resulted_in
+    FROM patch_request
+    WHERE merged = 1
+    AND resulted_in <= ?
+    ORDER BY id DESC''', (version,)).fetchall():
+        if entity_id in json.loads(row['affected_entities']):
+            return row['resulted_in']
+    return None
 
 
 def commit():

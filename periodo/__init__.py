@@ -31,7 +31,6 @@ def add_cors_headers(response):
 
 # end app setup ---------------------------------------------------------------
 
-import periodo.database
 import periodo.auth
 
 
@@ -66,10 +65,6 @@ def load_identity():
 
 # end api setup ---------------------------------------------------------------
 
-import periodo.identifier
-import periodo.helpers
-import periodo.commands
-import periodo.provenance
 import periodo.routes
 import periodo.representations
 import periodo.resources
