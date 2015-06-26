@@ -1,5 +1,4 @@
 import os
-import periodo
 import tempfile
 import unittest
 import http.client
@@ -8,6 +7,7 @@ from rdflib.namespace import Namespace
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
 from .filepath import filepath
+from periodo import app, database, commands, auth
 
 VOID = Namespace('http://rdfs.org/ns/void#')
 SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
@@ -19,33 +19,35 @@ PROV = Namespace('http://www.w3.org/ns/prov#')
 class TestProvenance(unittest.TestCase):
 
     def setUp(self):
-        self.db_fd, periodo.app.config['DATABASE'] = tempfile.mkstemp()
-        periodo.app.config['TESTING'] = True
-        self.app = periodo.app.test_client()
-        periodo.init_db()
-        periodo.load_data(filepath('test-data.json'))
-        self.user_identity = periodo.add_user_or_update_credentials({
-            'name': 'Regular Gal',
-            'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
-            'expires_in': 631138518,
-            'orcid': '1234-5678-9101-112X',
-        })
-        self.admin_identity = periodo.add_user_or_update_credentials({
-            'name': 'Super Admin',
-            'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
-            'expires_in': 3600,
-            'orcid': '1211-1098-7654-321X',
-        }, (ActionNeed('accept-patch'),))
+        self.db_fd, app.config['DATABASE'] = tempfile.mkstemp()
+        app.config['TESTING'] = True
+        self.client = app.test_client()
+        commands.init_db()
+        commands.load_data(filepath('test-data.json'))
+        with app.app_context():
+            self.user_identity = auth.add_user_or_update_credentials({
+                'name': 'Regular Gal',
+                'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
+                'expires_in': 631138518,
+                'orcid': '1234-5678-9101-112X',
+            })
+            self.admin_identity = auth.add_user_or_update_credentials({
+                'name': 'Super Admin',
+                'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
+                'expires_in': 3600,
+                'orcid': '1211-1098-7654-321X',
+            }, (ActionNeed('accept-patch'),))
+            database.commit()
 
     def tearDown(self):
         os.close(self.db_fd)
-        os.unlink(periodo.app.config['DATABASE'])
+        os.unlink(app.config['DATABASE'])
 
     def test_get_history(self):
         with open(filepath('test-patch-adds-items.json')) as f:
             patch = f.read()
 
-        with self.app as client:
+        with self.client as client:
             res1 = client.patch(
                 '/d/',
                 data=patch,
@@ -62,11 +64,9 @@ class TestProvenance(unittest.TestCase):
             self.assertEqual(
                 res2.headers['Content-Type'], 'application/ld+json')
             jsonld = res2.get_data(as_text=True)
-            #print(jsonld)
 
         g = ConjunctiveGraph()
         g.parse(format='json-ld', data=jsonld)
-        #print(g.serialize(format='turtle').decode('utf-8'))
 
         # Initial data load
         self.assertIn(  # None means any
