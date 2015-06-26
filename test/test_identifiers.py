@@ -65,7 +65,7 @@ class TestIdentifiers(unittest.TestCase):
             data = json.load(f)
         with open(filepath('test-patch-adds-items.json')) as f:
             original_patch = JsonPatch(json.load(f))
-        applied_patch, new_ids = identifier.replace_skolem_ids(
+        applied_patch, id_map = identifier.replace_skolem_ids(
             original_patch, data)
         self.assertRegex(
             applied_patch.patch[0]['path'],
@@ -75,7 +75,8 @@ class TestIdentifiers(unittest.TestCase):
             applied_patch.patch[0]['value']['id'],
             r'^p0trgkv[%s]{4}$' % identifier.XDIGITS)
         identifier.check(applied_patch.patch[0]['value']['id'])
-        self.assertTrue(applied_patch.patch[0]['value']['id'] in new_ids)
+        self.assertTrue(
+            applied_patch.patch[0]['value']['id'] in id_map.values())
 
         self.assertRegex(
             applied_patch.patch[1]['path'],
@@ -85,7 +86,7 @@ class TestIdentifiers(unittest.TestCase):
             r'^p0[%s]{5}$' % identifier.XDIGITS)
         collection_id = applied_patch.patch[1]['value']['id']
         identifier.check(collection_id)
-        self.assertTrue(collection_id in new_ids)
+        self.assertTrue(collection_id in id_map.values())
         defs = applied_patch.patch[1]['value']['definitions']
         self.assertRegex(
             list(defs.keys())[0],
@@ -100,14 +101,14 @@ class TestIdentifiers(unittest.TestCase):
             data = json.load(f)
         with open(filepath('test-patch-replaces-definitions.json')) as f:
             original_patch = JsonPatch(json.load(f))
-        applied_patch, new_ids = identifier.replace_skolem_ids(
+        applied_patch, id_map = identifier.replace_skolem_ids(
             original_patch, data)
         self.assertEqual(
             applied_patch.patch[0]['path'],
             original_patch.patch[0]['path'])
         definition_id, definition = list(
             applied_patch.patch[0]['value'].items())[0]
-        self.assertTrue(definition_id in new_ids)
+        self.assertTrue(definition_id in id_map.values())
         self.assertRegex(
             definition_id,
             r'^p0trgkv[%s]{4}$' % identifier.XDIGITS)
@@ -119,7 +120,7 @@ class TestIdentifiers(unittest.TestCase):
             data = json.load(f)
         with open(filepath('test-patch-replaces-collections.json')) as f:
             original_patch = JsonPatch(json.load(f))
-        applied_patch, new_ids = identifier.replace_skolem_ids(
+        applied_patch, id_map = identifier.replace_skolem_ids(
             original_patch, data)
         self.assertEqual(
             applied_patch.patch[0]['path'],
@@ -127,7 +128,7 @@ class TestIdentifiers(unittest.TestCase):
 
         collection_id, collection = list(
             applied_patch.patch[0]['value'].items())[0]
-        self.assertTrue(collection_id in new_ids)
+        self.assertTrue(collection_id in id_map.values())
         self.assertRegex(
             collection_id,
             r'^p0[%s]{5}$' % identifier.XDIGITS)
@@ -137,7 +138,7 @@ class TestIdentifiers(unittest.TestCase):
         definition_id, definition = list(
             applied_patch.patch[0]['value'][collection_id]['definitions']
             .items())[0]
-        self.assertTrue(definition_id in new_ids)
+        self.assertTrue(definition_id in id_map.values())
         self.assertRegex(
             definition_id,
             r'^%s[%s]{4}$' % (collection_id, identifier.XDIGITS))

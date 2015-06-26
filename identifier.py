@@ -83,7 +83,7 @@ def index_by_id(items):
 
 def replace_skolem_ids(patch_or_obj, dataset):
 
-    new_ids = []
+    id_map = {}
 
     if (len(dataset) > 0):
         existing_ids = set(chain.from_iterable(
@@ -96,27 +96,24 @@ def replace_skolem_ids(patch_or_obj, dataset):
         for i in range(10):
             new_id = id_generator(*args)
             if new_id not in existing_ids:
-                new_ids.append(new_id)
-                existing_ids.add(new_id)
                 return new_id
         raise IdentifierException(
             'Too many identifier collisions:'
             + ' {} existing ids'.format(len(existing_ids)))
 
-    def deskolemize(uri, id_generator, *args):
-        match = ASSIGNED_SKOLEM_URI.match(uri)
+    def deskolemize(skolem_uri, id_generator, *args):
+        match = ASSIGNED_SKOLEM_URI.match(skolem_uri)
         if match:  # patch for initial load, keep assigned IDs
-            assigned_id = match.group('id')
-            if assigned_id in existing_ids:
-                raise Exception('ID collision on ' + assigned_id)
-            new_ids.append(assigned_id)
-            existing_ids.add(assigned_id)
-            return assigned_id
-
-        if SKOLEM_URI.match(uri):
-            return unused_identifier(id_generator, *args)
-
-        raise Exception('non-skolem ID for new entity: ' + uri)
+            permanent_id = match.group('id')
+            if permanent_id in existing_ids:
+                raise Exception('ID collision on ' + permanent_id)
+        elif SKOLEM_URI.match(skolem_uri):
+            permanent_id = unused_identifier(id_generator, *args)
+        else:
+            raise Exception('non-skolem ID for new entity: ' + skolem_uri)
+        id_map[skolem_uri] = permanent_id
+        existing_ids.add(permanent_id)
+        return permanent_id
 
     def assign_definition_id(definition, collection_id):
         definition['id'] = deskolemize(
@@ -172,7 +169,7 @@ def replace_skolem_ids(patch_or_obj, dataset):
             [assign_collection_ids(c)
              for c in patch_or_obj['periodCollections'].values()])
 
-    return result, new_ids
+    return result, id_map
 
 
 class IdentifierException(Exception):
