@@ -673,6 +673,7 @@ patch_list_fields = OrderedDict((
     ('updated_at', fields.String),
     ('created_from', fields.String),
     ('applied_to', fields.String),
+    ('identifier_map', fields.Raw),
     ('text', fields.Url('patch', absolute=True)),
     ('open', fields.Boolean),
     ('merged', fields.Boolean)
@@ -695,7 +696,14 @@ def is_mergeable(patch_text, dataset=None):
 def process_patch_row(row):
     d = dict(row)
     d['created_from'] = make_dataset_url(row['created_from'])
-    d['applied_to'] = make_dataset_url(row['created_from']) if row['applied_to'] else None
+    if row['applied_to'] is None:
+        d['applied_to'] = None
+    else:
+        d['applied_to'] = make_dataset_url(row['applied_to'])
+    if row['identifier_map'] is None:
+        d['identifier_map'] = None
+    else:
+        d['identifier_map'] = json.loads(row['identifier_map'])
     return d
 
 patch_list_parser = reqparse.RequestParser()
@@ -868,9 +876,9 @@ def merge_patch(patch_id, user_id):
 
     data = json.loads(dataset['data'])
     original_patch = patch_from_text(row['original_patch'])
-    applied_patch, new_ids = replace_skolem_ids(original_patch, data)
+    applied_patch, id_map = replace_skolem_ids(original_patch, data)
     affected_entities = (set(json.loads(row['affected_entities']))
-                         | set(new_ids))
+                         | set(id_map.values()))
 
     # Should this be ordered?
     new_data = applied_patch.apply(data)
@@ -886,12 +894,14 @@ def merge_patch(patch_id, user_id):
             merged_by = ?,
             applied_to = ?,
             affected_entities = ?,
+            identifier_map = ?,
             applied_patch = ?
         WHERE id = ?;
         ''',
         (user_id,
          dataset['id'],
          json.dumps(sorted(affected_entities)),
+         json.dumps(id_map),
          applied_patch.to_string(),
          row['id'])
     )
