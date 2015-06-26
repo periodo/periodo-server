@@ -1,9 +1,8 @@
-import os
 import json
-import identifier
 import unittest
 from jsonpatch import JsonPatch
 from .filepath import filepath
+from periodo import identifier
 
 
 class TestIdentifiers(unittest.TestCase):
