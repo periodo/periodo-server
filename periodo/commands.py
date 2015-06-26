@@ -1,7 +1,7 @@
 import json
 from jsonpatch import JsonPatch
 from periodo import app, database
-from periodo.helpers import create_patch_request, merge_patch
+from periodo.patch import create_patch_request, merge_patch
 
 
 def init_db():

@@ -4,11 +4,11 @@ from email.utils import parsedate
 from flask import request, g, abort, url_for
 from flask.ext.restful import fields, Resource, marshal, marshal_with, reqparse
 from periodo import api, database, auth, identifier
+from periodo.patch import (
+    patch_from_text, validate_patch, create_patch_request, is_mergeable,
+    merge_patch, InvalidPatchError, MergeError, UnmergeablePatchError)
 from periodo.helpers import (
-    iso_to_timestamp, attach_to_dataset, create_patch_request, patch_from_text,
-    InvalidPatchException, redirect_to_last_update, validate_patch,
-    process_patch_row, is_mergeable, merge_patch, MergeError,
-    UnmergeablePatchError)
+    iso_to_timestamp, attach_to_dataset, redirect_to_last_update)
 from time import mktime
 from urllib.parse import urlencode
 
@@ -77,7 +77,7 @@ class Dataset(Resource):
             return None, 202, {
                 'Location': api.url_for(PatchRequest, id=patch_request_id)
             }
-        except InvalidPatchException as e:
+        except InvalidPatchError as e:
             return {'status': 400, 'message': str(e)}, 400
 
 
@@ -165,6 +165,18 @@ patch_list_parser.add_argument('open', type=str, choices=('true', 'false'))
 patch_list_parser.add_argument('merged', type=str, choices=('true', 'false'))
 patch_list_parser.add_argument('limit', type=int, default=25)
 patch_list_parser.add_argument('from', type=int, default=0)
+
+
+def make_dataset_url(version):
+    return url_for('dataset', _external=True) + '?version=' + str(version)
+
+
+def process_patch_row(row):
+    d = dict(row)
+    d['created_from'] = make_dataset_url(row['created_from'])
+    d['applied_to'] = make_dataset_url(
+        row['created_from']) if row['applied_to'] else None
+    return d
 
 
 @api.resource('/patches/')
@@ -275,7 +287,7 @@ class Patch(Resource):
         try:
             patch = patch_from_text(request.data)
             affected_entities = validate_patch(patch, database.get_dataset())
-        except InvalidPatchException as e:
+        except InvalidPatchError as e:
             if str(e) != 'Could not apply JSON patch to dataset.':
                 return {'status': 400, 'message': str(e)}, 400
 
