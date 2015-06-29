@@ -108,6 +108,7 @@ def registered():
         allow_redirects=True, data=data)
     credentials = response.json()
     identity = auth.add_user_or_update_credentials(credentials)
+    database.get_db().commit()
     return make_response(
         """
         <!doctype html>
