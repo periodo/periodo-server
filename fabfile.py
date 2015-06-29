@@ -29,6 +29,14 @@ def load_data(datafile):
 
 
 @task
+def set_permissions(orcid, *permissions):
+    local('./bin/python3 -c "from periodo.commands import set_permissions; '
+          + 'set_permissions(\'{}\', {})"'.format(
+              orcid,
+              'None' if not permissions else list(permissions)))
+
+
+@task
 def test():
     local('bin/python3 -m unittest discover')
 
