@@ -1,6 +1,6 @@
-import datetime
 import json
 from collections import OrderedDict
+from datetime import datetime
 from email.utils import parsedate
 from flask import request, g, abort, url_for, redirect
 from flask.ext.restful import fields, Resource, marshal, marshal_with, reqparse
@@ -9,8 +9,6 @@ from time import mktime
 from urllib.parse import urlencode
 
 from wsgiref.handlers import format_date_time
-
-ISO_TIME_FMT = '%Y-%m-%d %H:%M:%S'
 
 PATCH_QUERY = """
 SELECT *
@@ -23,12 +21,18 @@ index_fields = {
     'register': fields.Url('register', absolute=True),
 }
 
+
+# http://www.w3.org/TR/NOTE-datetime
+class W3CDTF(fields.Raw):
+    def format(self, value):
+        datetime.utcfromtimestamp(value).isoformat()
+
 patch_list_fields = OrderedDict((
     ('url', fields.Url('patchrequest', absolute=True)),
     ('created_by', fields.String),
-    ('created_at', fields.String),
+    ('created_at', W3CDTF),
     ('updated_by', fields.String),
-    ('updated_at', fields.String),
+    ('updated_at', W3CDTF),
     ('created_from', fields.String),
     ('applied_to', fields.String),
     ('identifier_map', fields.Raw),
@@ -65,11 +69,6 @@ def attach_to_dataset(o):
     o['primaryTopicOf'] = {'id': identifier.prefix(request.path[1:]),
                            'inDataset': identifier.prefix('d')}
     return o
-
-
-def iso_to_timestamp(iso_timestr, fmt=ISO_TIME_FMT):
-    dt = datetime.datetime.strptime(iso_timestr, fmt)
-    return mktime(dt.timetuple())
 
 
 def redirect_to_last_update(entity_id, version):
@@ -129,7 +128,7 @@ class Dataset(Resource):
                 return {'status': 501,
                         'message': 'No dataset loaded yet.'}, 501
 
-        last_modified = iso_to_timestamp(dataset['created'])
+        last_modified = dataset['created_at']
         modified_check = mktime(parsedate(
             args['modified'])) if args['modified'] else 0
 

@@ -89,7 +89,7 @@ def add_user_or_update_credentials(credentials, extra_permissions=()):
     name,
     permissions,
     b64token,
-    token_expires_at_unixtime,
+    token_expires_at,
     credentials)
     VALUES (?, ?, ?, ?, strftime('%s','now') + ?, ?) ''',
                    (orcid,
@@ -103,7 +103,7 @@ def add_user_or_update_credentials(credentials, extra_permissions=()):
         UPDATE user SET
         name = ?,
         b64token = ?,
-        token_expires_at_unixtime = strftime('%s','now') + ?,
+        token_expires_at = strftime('%s','now') + ?,
         credentials = ?
         WHERE id = ?''',
                        (credentials['name'],
@@ -123,7 +123,7 @@ def get_identity(b64token, cursor=None):
     user.id AS user_id,
     user.permissions AS user_permissions,
     patch_request.id AS patch_request_id,
-    strftime("%s","now") > token_expires_at_unixtime AS token_expired
+    strftime("%s","now") > token_expires_at AS token_expired
     FROM user LEFT JOIN patch_request
     ON user.id = patch_request.created_by AND patch_request.open = 1
     WHERE user.b64token = ?''', (b64token,)).fetchall()

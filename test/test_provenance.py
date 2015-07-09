@@ -3,7 +3,7 @@ import tempfile
 import unittest
 import http.client
 from rdflib import ConjunctiveGraph, URIRef
-from rdflib.namespace import Namespace
+from rdflib.namespace import Namespace, XSD
 from urllib.parse import urlparse
 from flask.ext.principal import ActionNeed
 from .filepath import filepath
@@ -14,6 +14,8 @@ SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
 PERIODO = Namespace('http://n2t.net/ark:/99152/')
 FOAF = Namespace('http://xmlns.com/foaf/0.1/')
 PROV = Namespace('http://www.w3.org/ns/prov#')
+
+W3CDTF = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}'
 
 
 class TestProvenance(unittest.TestCase):
@@ -105,6 +107,16 @@ class TestProvenance(unittest.TestCase):
             (PERIODO['p0h#change-2'], PROV.startedAtTime, None), g)
         self.assertIn(  # None means any
             (PERIODO['p0h#change-2'], PROV.endedAtTime, None), g)
+        start = g.value(
+            subject=PERIODO['p0h#change-2'],
+            predicate=PROV.startedAtTime)
+        self.assertEqual(start.datatype, XSD.dateTime)
+        self.assertRegex(start.value.isoformat(), W3CDTF)
+        end = g.value(
+            subject=PERIODO['p0h#change-2'],
+            predicate=PROV.endedAtTime)
+        self.assertEqual(end.datatype, XSD.dateTime)
+        self.assertRegex(end.value.isoformat(), W3CDTF)
         self.assertIn(
             (PERIODO['p0h#change-2'], PROV.wasAssociatedWith,
              URIRef('http://orcid.org/1234-5678-9101-112X')), g)
