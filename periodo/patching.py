@@ -72,10 +72,11 @@ VALUES (?, ?, ?, ?, ?)
 
 
 def add_new_version_of_dataset(data):
-    now = database.query_db("SELECT CURRENT_TIMESTAMP AS now", one=True)['now']
+    now = database.query_db(
+        "SELECT CAST(strftime('%s', 'now') AS INTEGER) AS now", one=True)['now']
     cursor = database.get_db().cursor()
     cursor.execute(
-        'INSERT into DATASET (data, description, created) VALUES (?,?,?)',
+        'INSERT into DATASET (data, description, created_at) VALUES (?,?,?)',
         (json.dumps(data), void.describe_dataset(data, now), now))
     return cursor.lastrowid
 
@@ -113,7 +114,7 @@ def merge(patch_id, user_id):
         UPDATE patch_request
         SET merged = 1,
             open = 0,
-            merged_at = CURRENT_TIMESTAMP,
+            merged_at = strftime('%s', 'now'),
             merged_by = ?,
             applied_to = ?,
             affected_entities = ?,

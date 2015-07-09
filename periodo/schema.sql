@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS dataset;
 CREATE TABLE dataset (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at INTEGER DEFAULT (strftime('%s', 'now')),
   data TEXT NOT NULL,
   description TEXT NOT NULL
 );
@@ -13,14 +13,14 @@ VALUES (
 DROP TABLE IF EXISTS patch_request;
 CREATE TABLE patch_request (
   id integer PRIMARY KEY AUTOINCREMENT,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
   created_by TEXT NOT NULL,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
   updated_by TEXT NOT NULL,
 
   open BOOLEAN NOT NULL DEFAULT 1,
   merged BOOLEAN NOT NULL DEFAULT 0,
-  merged_at TIMESTAMP,
+  merged_at INTEGER,
   merged_by TEXT,
 
   created_from INTEGER NOT NULL,
@@ -43,7 +43,9 @@ CREATE TABLE patch_request (
 DROP TRIGGER IF EXISTS update_patch;
 CREATE TRIGGER update_patch UPDATE OF original_patch ON patch_request
 BEGIN
-  UPDATE patch_request SET updated_at = CURRENT_TIMESTAMP WHERE id = old.id;
+  UPDATE patch_request
+  SET updated_at = (strftime('%s', 'now'))
+  WHERE id = old.id;
 END;
 
 DROP TABLE IF EXISTS user;
@@ -52,18 +54,19 @@ CREATE TABLE user (
   name TEXT NOT NULL,
   permissions TEXT NOT NULL DEFAULT '[["action", "submit-patch"]]',
   b64token TEXT UNIQUE NOT NULL,
-  token_expires_at_unixtime INTEGER NOT NULL,
+  token_expires_at INTEGER NOT NULL,
   credentials TEXT NOT NULL,
-  credentials_updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  credentials_updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
 INSERT INTO USER (
-  id, name, permissions, b64token, token_expires_at_unixtime, credentials)
+  id, name, permissions, b64token, token_expires_at, credentials)
 VALUES (
   'initial-data-loader', 'initial data loader', '', '', 0, '');
 
 DROP TRIGGER IF EXISTS update_user_credentials;
 CREATE TRIGGER update_user_credentials UPDATE OF credentials ON user
 BEGIN
-  UPDATE user SET credentials_updated_at = CURRENT_TIMESTAMP WHERE id = old.id;
+  UPDATE user
+  SET credentials_updated_at = (strftime('%s', 'now'))
+  WHERE id = old.id;
 END;
-

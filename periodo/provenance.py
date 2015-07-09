@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from flask import url_for
 from rdflib import Graph, URIRef, Literal
 from rdflib.collection import Collection
@@ -59,10 +60,12 @@ ORDER BY id ASC
                PERIODO[identifier.prefix(url_for('patch', id=row['id']))]))
         g.add((change,
                PROV.startedAtTime,
-               Literal(row['created_at'], datatype=XSD.dateTime)))
+               Literal(datetime.utcfromtimestamp(row['created_at']).isoformat(),
+                       datatype=XSD.dateTime)))
         g.add((change,
                PROV.endedAtTime,
-               Literal(row['merged_at'], datatype=XSD.dateTime)))
+               Literal(datetime.utcfromtimestamp(row['merged_at']).isoformat(),
+                       datatype=XSD.dateTime)))
         dataset = PERIODO[identifier.prefix(url_for('abstract_dataset'))]
         version_in = PERIODO[identifier.prefix(
             url_for('abstract_dataset', version=row['applied_to']))]

@@ -1,11 +1,12 @@
 import json
 import os
+from datetime import datetime
 from periodo import database
 from rdflib import Graph, URIRef, Literal
 from rdflib.namespace import Namespace, RDF, DCTERMS, XSD, VOID
 
 
-def describe_dataset(data, created):
+def describe_dataset(data, created_at):
     cursor = database.get_db().cursor()
     contributors = cursor.execute('''
     SELECT DISTINCT created_by, updated_by
@@ -32,7 +33,9 @@ def describe_dataset(data, created):
     def add_to_description(p, o):
         description.add((ns.d, p, o))
     add_to_description(
-        DCTERMS.modified, Literal(created, datatype=XSD.dateTime))
+        DCTERMS.modified,
+        Literal(datetime.utcfromtimestamp(created_at).isoformat(),
+                datatype=XSD.dateTime))
     add_to_description(
         VOID.triples, Literal(len(dataset_g), datatype=XSD.integer))
     for row in contributors:
