@@ -11,25 +11,25 @@ PERIODO = Namespace('http://n2t.net/ark:/99152/')
 
 CONTEXT = {
     "@base": "http://n2t.net/ark:/99152/p0h",
-    "by": "prov:wasAssociatedWith",
+    "by": {"@id": "prov:wasAssociatedWith", "@type": "@id"},
     "foaf": "http://xmlns.com/foaf/0.1/",
-    "generated": "prov:generated",
+    "generated": {"@id": "prov:generated", "@type": "@id"},
     "history": "@graph",
     "id": "@id",
-    "initialDataLoad": {"@id": "rdf:first"},
+    "initialDataLoad": {"@id": "rdf:first", "@type": "@id"},
     "mergedAt": {"@id": "prov:endedAtTime", "@type": "xsd:dateTime"},
     "mergedPatches": {"@id": "rdf:rest"},
     "name": "foaf:name",
     "prov": "http://www.w3.org/ns/prov#",
     "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-    "role": "prov:hadRole",
-    "roles": "prov:qualifiedAssociation",
+    "role": {"@id": "prov:hadRole", "@type": "@id"},
+    "roles": {"@id": "prov:qualifiedAssociation", "@type": "@id"},
     "specializationOf": {"@id": "prov:specializationOf", "@type": "@id"},
     "submittedAt": {"@id": "prov:startedAtTime", "@type": "xsd:dateTime"},
     "type": "@type",
     "url": {"@id": "foaf:page", "@type": "@id"},
-    "used": "prov:used",
-    "wasRevisionOf": "prov:wasRevisionOf",
+    "used": {"@id": "prov:used", "@type": "@id"},
+    "wasRevisionOf": {"@id": "prov:wasRevisionOf", "@type": "@id"},
     "xsd": "http://www.w3.org/2001/XMLSchema#"
 }
 
