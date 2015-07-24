@@ -32,12 +32,14 @@ def get_dataset(version=None):
 def find_version_of_last_update(entity_id, version):
     cursor = get_db().cursor()
     for row in cursor.execute('''
-    SELECT affected_entities, resulted_in
+    SELECT created_entities, updated_entities, resulted_in
     FROM patch_request
     WHERE merged = 1
     AND resulted_in <= ?
     ORDER BY id DESC''', (version,)).fetchall():
-        if entity_id in json.loads(row['affected_entities']):
+        if entity_id in json.loads(row['created_entities']):
+            return row['resulted_in']
+        if entity_id in json.loads(row['updated_entities']):
             return row['resulted_in']
     return None
 

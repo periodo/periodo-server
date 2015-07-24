@@ -11,25 +11,24 @@ PERIODO = Namespace('http://n2t.net/ark:/99152/')
 
 CONTEXT = {
     "@base": "http://n2t.net/ark:/99152/p0h",
-    "by": "prov:wasAssociatedWith",
+    "by": {"@id": "prov:wasAssociatedWith", "@type": "@id"},
     "foaf": "http://xmlns.com/foaf/0.1/",
-    "generated": "prov:generated",
+    "generated": {"@id": "prov:generated", "@type": "@id"},
     "history": "@graph",
-    "id": "@id",
-    "initialDataLoad": {"@id": "rdf:first"},
+    "initialDataLoad": {"@id": "rdf:first", "@type": "@id"},
     "mergedAt": {"@id": "prov:endedAtTime", "@type": "xsd:dateTime"},
     "mergedPatches": {"@id": "rdf:rest"},
     "name": "foaf:name",
     "prov": "http://www.w3.org/ns/prov#",
     "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-    "role": "prov:hadRole",
-    "roles": "prov:qualifiedAssociation",
+    "role": {"@id": "prov:hadRole", "@type": "@id"},
+    "roles": {"@id": "prov:qualifiedAssociation", "@type": "@id"},
     "specializationOf": {"@id": "prov:specializationOf", "@type": "@id"},
     "submittedAt": {"@id": "prov:startedAtTime", "@type": "xsd:dateTime"},
     "type": "@type",
     "url": {"@id": "foaf:page", "@type": "@id"},
-    "used": "prov:used",
-    "wasRevisionOf": "prov:wasRevisionOf",
+    "used": {"@id": "prov:used", "@type": "@id"},
+    "wasRevisionOf": {"@id": "prov:wasRevisionOf", "@type": "@id"},
     "xsd": "http://www.w3.org/2001/XMLSchema#"
 }
 
@@ -48,7 +47,8 @@ SELECT
   merged_by,
   applied_to,
   resulted_in,
-  affected_entities
+  created_entities,
+  updated_entities
 FROM patch_request
 WHERE merged = 1
 ORDER BY id ASC
@@ -78,17 +78,23 @@ ORDER BY id ASC
         g.add((change, PROV.used, patch))
         g.add((change, PROV.generated, version_out))
 
-        for entity_id in json.loads(row['affected_entities']):
+        def add_entity_version(entity_id):
             entity = PERIODO[entity_id]
             entity_version = PERIODO[
                 entity_id + '?version={}'.format(row['resulted_in'])]
+            g.add((entity_version, PROV.specializationOf, entity))
+            g.add((change, PROV.generated, entity_version))
+            return entity_version
+
+        for entity_id in json.loads(row['created_entities']):
+            add_entity_version(entity_id)
+
+        for entity_id in json.loads(row['updated_entities']):
+            entity_version = add_entity_version(entity_id)
             prev_entity_version = PERIODO[
                 entity_id + '?version={}'.format(row['applied_to'])]
             g.add(
-                (entity_version, PROV.specializationOf, entity))
-            g.add(
                 (entity_version, PROV.wasRevisionOf, prev_entity_version))
-            g.add((change, PROV.generated, entity_version))
 
         for field, term in (('created_by', 'submitted'),
                             ('updated_by', 'updated'),
@@ -106,4 +112,13 @@ ORDER BY id ASC
 
         changelog.append(change)
 
-    return g.serialize(format='json-ld', context=CONTEXT).decode('utf-8')
+    def ordering(o):
+        if o['@id'] == '#changelog':
+            # sort first
+            return ' '
+        return o['@id']
+
+    jsonld = json.loads(
+        g.serialize(format='json-ld', context=CONTEXT).decode('utf-8'))
+    jsonld['history'] = sorted(jsonld['history'], key=ordering)
+    return json.dumps(jsonld, sort_keys=True)

@@ -308,7 +308,7 @@ class Patch(Resource):
             raise auth.PermissionDenied(permission)
         try:
             patch = patching.from_text(request.data)
-            affected_entities = patching.validate(
+            updated_entities = patching.validate(
                 patch, database.get_dataset())
         except patching.InvalidPatchError as e:
             if str(e) != 'Could not apply JSON patch to dataset.':
@@ -319,10 +319,10 @@ class Patch(Resource):
         curs.execute('''
 UPDATE patch_request SET
 original_patch = ?,
-affected_entities = ?,
+updated_entities = ?,
 updated_by = ?
 WHERE id = ?
-        ''', (patch.to_string(), json.dumps(sorted(affected_entities)),
+        ''', (patch.to_string(), json.dumps(sorted(updated_entities)),
               g.identity.id, id)
         )
         db.commit()

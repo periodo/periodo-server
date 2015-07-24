@@ -51,23 +51,23 @@ def validate(patch, dataset):
         raise InvalidPatchError('Could not apply JSON patch to dataset.')
 
     matches = [CHANGE_PATH_PATTERN.match(change['path']) for change in patch]
-    affected_entities = reduce(
+    updated_entities = reduce(
         lambda s, groups: s | set(groups),
         [m.groups() for m in matches if m is not None], set())
-    affected_entities.discard(None)
-    return affected_entities
+    updated_entities.discard(None)
+    return updated_entities
 
 
 def create_request(patch, user_id):
     dataset = database.get_dataset()
-    affected_entities = validate(patch, dataset)
+    updated_entities = validate(patch, dataset)
     cursor = database.get_db().cursor()
     cursor.execute('''
 INSERT INTO patch_request
-(created_by, updated_by, created_from, affected_entities, original_patch)
+(created_by, updated_by, created_from, updated_entities, original_patch)
 VALUES (?, ?, ?, ?, ?)
     ''', (user_id, user_id, dataset['id'],
-          json.dumps(sorted(affected_entities)), patch.to_string()))
+          json.dumps(sorted(updated_entities)), patch.to_string()))
     return cursor.lastrowid
 
 
@@ -101,8 +101,7 @@ def merge(patch_id, user_id):
     data = json.loads(dataset['data'])
     original_patch = from_text(row['original_patch'])
     applied_patch, id_map = replace_skolem_ids(original_patch, data)
-    affected_entities = (set(json.loads(row['affected_entities']))
-                         | set(id_map.values()))
+    created_entities = set(id_map.values())
 
     # Should this be ordered?
     new_data = applied_patch.apply(data)
@@ -117,14 +116,14 @@ def merge(patch_id, user_id):
             merged_at = strftime('%s', 'now'),
             merged_by = ?,
             applied_to = ?,
-            affected_entities = ?,
+            created_entities = ?,
             identifier_map = ?,
             applied_patch = ?
         WHERE id = ?;
         ''',
         (user_id,
          dataset['id'],
-         json.dumps(sorted(affected_entities)),
+         json.dumps(sorted(created_entities)),
          json.dumps(id_map),
          applied_patch.to_string(),
          row['id'])
