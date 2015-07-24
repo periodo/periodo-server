@@ -15,7 +15,6 @@ CONTEXT = {
     "foaf": "http://xmlns.com/foaf/0.1/",
     "generated": {"@id": "prov:generated", "@type": "@id"},
     "history": "@graph",
-    "id": "@id",
     "initialDataLoad": {"@id": "rdf:first", "@type": "@id"},
     "mergedAt": {"@id": "prov:endedAtTime", "@type": "xsd:dateTime"},
     "mergedPatches": {"@id": "rdf:rest"},
@@ -113,4 +112,13 @@ ORDER BY id ASC
 
         changelog.append(change)
 
-    return g.serialize(format='json-ld', context=CONTEXT).decode('utf-8')
+    def ordering(o):
+        if o['@id'] == '#changelog':
+            # sort first
+            return ' '
+        return o['@id']
+
+    jsonld = json.loads(
+        g.serialize(format='json-ld', context=CONTEXT).decode('utf-8'))
+    jsonld['history'] = sorted(jsonld['history'], key=ordering)
+    return json.dumps(jsonld, sort_keys=True)
