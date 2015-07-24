@@ -48,7 +48,8 @@ SELECT
   merged_by,
   applied_to,
   resulted_in,
-  affected_entities
+  created_entities,
+  updated_entities
 FROM patch_request
 WHERE merged = 1
 ORDER BY id ASC
@@ -78,17 +79,23 @@ ORDER BY id ASC
         g.add((change, PROV.used, patch))
         g.add((change, PROV.generated, version_out))
 
-        for entity_id in json.loads(row['affected_entities']):
+        def add_entity_version(entity_id):
             entity = PERIODO[entity_id]
             entity_version = PERIODO[
                 entity_id + '?version={}'.format(row['resulted_in'])]
+            g.add((entity_version, PROV.specializationOf, entity))
+            g.add((change, PROV.generated, entity_version))
+            return entity_version
+
+        for entity_id in json.loads(row['created_entities']):
+            add_entity_version(entity_id)
+
+        for entity_id in json.loads(row['updated_entities']):
+            entity_version = add_entity_version(entity_id)
             prev_entity_version = PERIODO[
                 entity_id + '?version={}'.format(row['applied_to'])]
             g.add(
-                (entity_version, PROV.specializationOf, entity))
-            g.add(
                 (entity_version, PROV.wasRevisionOf, prev_entity_version))
-            g.add((change, PROV.generated, entity_version))
 
         for field, term in (('created_by', 'submitted'),
                             ('updated_by', 'updated'),
