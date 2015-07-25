@@ -51,10 +51,14 @@ class TestPatchMethods(unittest.TestCase):
                 content_type='application/json',
                 headers={'Authorization': 'Bearer '
                          + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-            affected_entities = database.query_db(
-                'SELECT affected_entities FROM patch_request WHERE id = 1',
-                one=True)['affected_entities']
-            self.assertEqual(affected_entities, '["p0trgkv", "p0trgkvwbjd"]')
+            created_entities = database.query_db(
+                'SELECT created_entities FROM patch_request WHERE id = 1',
+                one=True)['created_entities']
+            self.assertEqual(created_entities, '["p0trgkv", "p0trgkvwbjd"]')
+            updated_entities = database.query_db(
+                'SELECT updated_entities FROM patch_request WHERE id = 1',
+                one=True)['updated_entities']
+            self.assertEqual(updated_entities, '[]')
 
     def test_submit_patch(self):
         with self.client as client:
@@ -66,10 +70,14 @@ class TestPatchMethods(unittest.TestCase):
                          + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
             self.assertEqual(res.status_code, http.client.ACCEPTED)
             patch_id = int(res.headers['Location'].split('/')[-2])
-            affected_entities = database.query_db(
-                'SELECT affected_entities FROM patch_request WHERE id = ?',
-                (patch_id,), one=True)['affected_entities']
-            self.assertEqual(affected_entities, '["p0trgkv", "p0trgkvwbjd"]')
+            updated_entities = database.query_db(
+                'SELECT updated_entities FROM patch_request WHERE id = ?',
+                (patch_id,), one=True)['updated_entities']
+            self.assertEqual(updated_entities, '["p0trgkv", "p0trgkvwbjd"]')
+            created_entities = database.query_db(
+                'SELECT created_entities FROM patch_request WHERE id = ?',
+                (patch_id,), one=True)['created_entities']
+            self.assertEqual(created_entities, '[]')
 
     def test_update_patch(self):
         res = self.client.patch(
@@ -108,10 +116,14 @@ class TestPatchMethods(unittest.TestCase):
                 headers={'Authorization': 'Bearer '
                          + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
             patch_id = int(res.headers['Location'].split('/')[-2])
-            affected_entities = database.query_db(
-                'SELECT affected_entities FROM patch_request WHERE id = ?',
-                (patch_id,), one=True)['affected_entities']
-            self.assertEqual(affected_entities, '["p0trgkv"]')
+            updated_entities = database.query_db(
+                'SELECT updated_entities FROM patch_request WHERE id = ?',
+                (patch_id,), one=True)['updated_entities']
+            self.assertEqual(updated_entities, '["p0trgkv"]')
+            created_entities = database.query_db(
+                'SELECT created_entities FROM patch_request WHERE id = ?',
+                (patch_id,), one=True)['created_entities']
+            self.assertEqual(created_entities, '[]')
             patch_url = urlparse(res.headers['Location']).path
             res = client.post(
                 patch_url + 'merge',
@@ -123,11 +135,15 @@ class TestPatchMethods(unittest.TestCase):
                 (patch_id,), one=True)
             self.assertEqual(1, row['applied_to'])
             self.assertEqual(2, row['resulted_in'])
-            affected_entities = json.loads(database.query_db(
-                'SELECT affected_entities FROM patch_request WHERE id = ?',
-                (patch_id,), one=True)['affected_entities'])
-            self.assertEqual(4, len(affected_entities))
-            for entity_id in affected_entities:
+            updated_entities = database.query_db(
+                'SELECT updated_entities FROM patch_request WHERE id = ?',
+                (patch_id,), one=True)['updated_entities']
+            self.assertEqual(updated_entities, '["p0trgkv"]')
+            created_entities = json.loads(database.query_db(
+                'SELECT created_entities FROM patch_request WHERE id = ?',
+                (patch_id,), one=True)['created_entities'])
+            self.assertEqual(3, len(created_entities))
+            for entity_id in created_entities:
                 self.assertRegex(entity_id, identifier.IDENTIFIER_RE)
 
     def test_versioning(self):
