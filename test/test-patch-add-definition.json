@@ -5,8 +5,9 @@
     "value": {
       "id": "https://perio.do/.well-known/genid/6da6dc770a6f431eb2f1b5766bc5678d",
       "label": "Blah",
-      "localizedLabel": {
-        "eng-latn": "Blah"
+      "language": "eng-latn",
+      "localizedLabels": {
+        "eng-latn": [ "Blah" ]
       },
       "spatialCoverage": [
         {

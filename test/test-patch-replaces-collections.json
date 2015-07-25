@@ -11,7 +11,8 @@
             "spatialCoverage": [
               {"id": "http://dbpedia.org/resource/United_Kingdom", "label": "United Kingdom"}
             ],
-            "localizedLabel": {"eng-latn": "Iron Age"},
+            "language": "eng-latn",
+            "localizedLabels": {"eng-latn": ["Iron Age"]},
             "label": "Iron Age",
             "id": "https://perio.do/.well-known/genid/8d3df296ba8665cf4045d34a2d983c97",
             "start": {"in": {"year": "-0799"}, "label": "800 B.C."},

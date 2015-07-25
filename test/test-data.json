@@ -1,13 +1,17 @@
 {
   "@context": {
     "@base": "http://n2t.net/ark:/99152/",
+    "PeriodCollection": "http://www.w3.org/2004/02/skos/core#ConceptScheme",
+    "PeriodDefinition": "http://www.w3.org/2004/02/skos/core#Concept",
     "abstract": "http://purl.org/dc/terms/abstract",
-    "alternateLabel": {
-      "@id": "http://www.w3.org/2004/02/skos/core#altLabel",
-      "@language": "eng-latn"
+    "contributors": {
+      "@container": "@set",
+      "@id": "http://purl.org/dc/terms/contributor"
     },
-    "contributors": "http://purl.org/dc/terms/contributor",
-    "creators": "http://purl.org/dc/terms/creator",
+    "creators": {
+      "@container": "@set",
+      "@id": "http://purl.org/dc/terms/creator"
+    },
     "dateAccessed": {
       "@id": "http://purl.org/dc/terms/date",
       "@type": "http://www.w3.org/2001/XMLSchema#date"
@@ -16,21 +20,24 @@
       "@container": "@index",
       "@reverse": "http://www.w3.org/2004/02/skos/core#inScheme"
     },
-    "earliestYear": "periodo:earliestYear",
-    "editorialNote": "http://www.w3.org/2004/02/skos/core#note",
+    "earliestYear": {
+      "@id": "periodo:earliestYear",
+      "@type": "http://www.w3.org/2001/XMLSchema#gYear"
+    },
+    "editorialNote": "http://www.w3.org/2004/02/skos/core#editorialNote",
     "id": "@id",
     "in": "http://www.w3.org/2006/time#hasDateTimeDescription",
     "inDataset": {
       "@id": "http://rdfs.org/ns/void#inDataset",
       "@type": "@id"
     },
-    "primaryTopicOf": {
-      "@id": "http://xmlns.com/foaf/0.1/isPrimaryTopicOf",
-      "@type": "@id"
-    },
     "label": "http://www.w3.org/2004/02/skos/core#prefLabel",
-    "latestYear": "periodo:latestYear",
-    "localizedLabel": {
+    "language": "http://purl.org/dc/terms/language",
+    "latestYear": {
+      "@id": "periodo:latestYear",
+      "@type": "http://www.w3.org/2001/XMLSchema#gYear"
+    },
+    "localizedLabels": {
       "@container": "@language",
       "@id": "http://www.w3.org/2004/02/skos/core#altLabel"
     },
@@ -41,19 +48,24 @@
       "@id": "http://purl.org/dc/terms/isPartOf",
       "@type": "@id"
     },
-    "PeriodCollection": "http://www.w3.org/2004/02/skos/core#ConceptScheme",
     "periodCollections": {
       "@container": "@index",
       "@id": "http://www.w3.org/2000/01/rdf-schema#member"
     },
-    "PeriodDefinition": "http://www.w3.org/2004/02/skos/core#Concept",
     "periodo": "http://n2t.net/ark:/99152/p0v#",
+    "primaryTopicOf": {
+      "@id": "http://xmlns.com/foaf/0.1/isPrimaryTopicOf",
+      "@type": "@id"
+    },
     "sameAs": {
       "@id": "http://www.w3.org/2002/07/owl#sameAs",
       "@type": "@id"
     },
     "source": "http://purl.org/dc/terms/source",
-    "spatialCoverage": "http://purl.org/dc/terms/spatial",
+    "spatialCoverage": {
+      "@container": "@set",
+      "@id": "http://purl.org/dc/terms/spatial"
+    },
     "spatialCoverageDescription": "periodo:spatialCoverageDescription",
     "start": "http://www.w3.org/2006/time#intervalStartedBy",
     "stop": "http://www.w3.org/2006/time#intervalFinishedBy",
@@ -81,8 +93,9 @@
           "id": "https://perio.do/.well-known/genid/assigned/p0trgkvwbjd",
           "type": "PeriodDefinition",
           "label": "Archaic",
-          "localizedLabel": {
-            "eng-latn": "Archaic"
+          "language": "eng-latn",
+          "localizedLabels": {
+            "eng-latn": [ "Archaic" ]
           },
           "note": "chronological table on p. 4; not dividing the archaic period by dynasties (all Mermnad, not usually used to refer to material) or using \"Orientalizing\" (since Lydia the source of much of what is called \"Orientalizing\" in Greece)",
           "spatialCoverage": [
