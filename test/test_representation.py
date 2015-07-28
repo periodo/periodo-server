@@ -239,3 +239,5 @@ WHERE {
                        FOAF.isPrimaryTopicOf, PERIODO['p0trgkvwbjd.json']), g)
         self.assertIn((PERIODO['p0trgkvwbjd.json'],
                        VOID.inDataset, PERIODO['p0d']), g)
+        self.assertIn((PERIODO['p0trgkvwbjd'],
+                       SKOS.inScheme, PERIODO['p0trgkv']), g)

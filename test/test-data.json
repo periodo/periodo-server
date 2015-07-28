@@ -4,6 +4,10 @@
     "PeriodCollection": "http://www.w3.org/2004/02/skos/core#ConceptScheme",
     "PeriodDefinition": "http://www.w3.org/2004/02/skos/core#Concept",
     "abstract": "http://purl.org/dc/terms/abstract",
+    "collection": {
+      "@id": "http://www.w3.org/2004/02/skos/core#inScheme",
+      "@type": "@id"
+    },
     "contributors": {
       "@container": "@set",
       "@id": "http://purl.org/dc/terms/contributor"

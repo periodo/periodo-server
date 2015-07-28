@@ -202,6 +202,7 @@ class PeriodDefinition(Resource):
         if definition_key not in collection['definitions']:
             abort(404)
         definition = collection['definitions'][definition_key]
+        definition['collection'] = collection_key
         definition['@context'] = o['@context']
         return attach_to_dataset(definition)
 
