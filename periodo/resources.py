@@ -373,6 +373,7 @@ class PatchMessages(Resource):
             patching.add_comment(id,
                                  g.identity.id,
                                  message)
+            database.commit()
             return None, 200, {
                 'Location': api.url_for(PatchRequest, id=id)
             }
