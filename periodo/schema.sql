@@ -49,6 +49,18 @@ BEGIN
   WHERE id = old.id;
 END;
 
+DROP TABLE IF EXISTS patch_request_comment;
+CREATE TABLE patch_request_comment (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  posted INTEGER DEFAULT (strftime('%s', 'now')),
+  patch_request_id INTEGER NOT NULL,
+  author TEXT NOT NULL,
+  message TEXT NOT NULL,
+
+  FOREIGN KEY (patch_request_id) REFERENCES patch_request(id),
+  FOREIGN KEY (author) REFERENCES user(id)
+);
+
 DROP TABLE IF EXISTS user;
 CREATE TABLE user (
   id TEXT PRIMARY KEY NOT NULL,

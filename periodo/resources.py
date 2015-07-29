@@ -347,6 +347,34 @@ class PatchMerge(Resource):
 class PatchReject(Resource):
     @auth.accept_patch_permission.require()
     def post(self, id):
-        patching.reject(id, g.identity.id)
-        database.commit()
-        return None, 204
+        try:
+            patching.reject(id, g.identity.id)
+            database.commit()
+            return None, 204
+        except patching.MergeError as e:
+            return {'message': e.message}, 404
+
+
+@api.resource('/patches/<int:id>/messages')
+class PatchMessages(Resource):
+    @auth.submit_patch_permission.require()
+    def post(self, id):
+        data = request.data or ''
+        if isinstance(data, bytes):
+            data = data.decode()
+
+        try:
+            data = json.loads(data)
+            message = data['message']
+        except:
+            return {'message': 'No message present in request data.'}, 400
+
+        try:
+            patching.add_comment(id,
+                                 g.identity.id,
+                                 message)
+            return None, 200, {
+                'Location': api.url_for(PatchRequest, id=id)
+            }
+        except patching.MergeError as e:
+            return {'message': e.message}, 404

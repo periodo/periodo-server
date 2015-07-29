@@ -170,6 +170,36 @@ class TestPatchMethods(unittest.TestCase):
             self.assertEqual(0, row['open'])
             self.assertEqual(0, row['merged'])
 
+    def test_comment_on_patch(self):
+        with open(filepath('test-patch-adds-items.json')) as f:
+            patch = f.read()
+        with self.client as client:
+            res = client.patch(
+                '/d/',
+                data=patch,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            patch_id = int(res.headers['Location'].split('/')[-2])
+            patch_url = urlparse(res.headers['Location']).path
+            res = client.post(
+                patch_url + 'messages',
+                data=json.dumps({ 'message': 'This is a comment' }),
+                content_type='application/json',
+                headers={'Authorization': 'Bearer ' +
+                         'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'}
+            )
+
+            self.assertEqual(res.status_code, http.client.OK)
+
+            row = database.query_db(
+                'SELECT * FROM patch_request_comment WHERE patch_request_id=?',
+                (patch_id,), one=True)
+            self.assertEqual('http://orcid.org/1234-5678-9101-112X',
+                             row['author'])
+            self.assertEqual(patch_id, row['patch_request_id'])
+            self.assertEqual('This is a comment', row['message'])
+
     def test_versioning(self):
         with open(filepath('test-patch-adds-items.json')) as f:
             patch1 = f.read()

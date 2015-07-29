@@ -71,6 +71,25 @@ VALUES (?, ?, ?, ?, ?)
     return cursor.lastrowid
 
 
+def add_comment(patch_id, user_id, message):
+    row = database.query_db(
+        'SELECT * FROM patch_request WHERE id = ?', (patch_id,), one=True)
+
+    if not row:
+        raise MergeError('No patch with ID {}.'.format(patch_id))
+
+    db = database.get_db()
+    curs = db.cursor()
+    curs.execute(
+        '''
+        INSERT INTO patch_request_comment
+        (patch_request_id, author, message)
+        VALUES (?, ?, ?)
+        ''',
+        (patch_id, user_id, message)
+    )
+
+
 def add_new_version_of_dataset(data):
     now = database.query_db(
         "SELECT CAST(strftime('%s', 'now') AS INTEGER) AS now", one=True)['now']
