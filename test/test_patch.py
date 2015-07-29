@@ -184,13 +184,14 @@ class TestPatchMethods(unittest.TestCase):
             patch_url = urlparse(res.headers['Location']).path
             res = client.post(
                 patch_url + 'messages',
-                data=json.dumps({ 'message': 'This is a comment' }),
+                data=json.dumps({'message': 'This is a comment'}),
                 content_type='application/json',
                 headers={'Authorization': 'Bearer ' +
                          'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'}
             )
 
             self.assertEqual(res.status_code, http.client.OK)
+            self.assertEqual(patch_url, urlparse(res.headers['Location']).path)
 
             row = database.query_db(
                 'SELECT * FROM patch_request_comment WHERE patch_request_id=?',
@@ -199,6 +200,10 @@ class TestPatchMethods(unittest.TestCase):
                              row['author'])
             self.assertEqual(patch_id, row['patch_request_id'])
             self.assertEqual('This is a comment', row['message'])
+
+            res = client.get(patch_url)
+            comments = json.loads(res.get_data(as_text=True)).get('comments')
+            self.assertEqual(1, len(comments))
 
     def test_versioning(self):
         with open(filepath('test-patch-adds-items.json')) as f:

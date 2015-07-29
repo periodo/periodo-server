@@ -41,9 +41,16 @@ patch_list_fields = OrderedDict((
     ('merged', fields.Boolean)
 ))
 
+comment_fields = OrderedDict((
+    ('author', fields.String),
+    ('posted_at', W3CDTF),
+    ('message', fields.String)
+))
+
 patch_fields = patch_list_fields.copy()
 patch_fields.update((
     ('mergeable', fields.Boolean),
+    ('comments', fields.List(fields.Nested(comment_fields))),
 ))
 
 patch_list_parser = reqparse.RequestParser()
@@ -282,6 +289,17 @@ class PatchRequest(Resource):
         data = process_patch_row(row)
         data['mergeable'] = patching.is_mergeable(data['original_patch'])
         headers = {}
+
+        comments = database.query_db(
+            '''
+            SELECT author, message, posted_at
+            FROM patch_request_comment
+            WHERE patch_request_id=?
+            ORDER BY posted_at ASC
+            ''',
+            (id,)
+        )
+        data['comments'] = [dict(row) for row in comments]
 
         try:
             if auth.accept_patch_permission.can():
