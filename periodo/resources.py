@@ -25,7 +25,7 @@ index_fields = {
 # http://www.w3.org/TR/NOTE-datetime
 class W3CDTF(fields.Raw):
     def format(self, value):
-        datetime.utcfromtimestamp(value).isoformat()
+        return datetime.utcfromtimestamp(value).isoformat()
 
 patch_list_fields = OrderedDict((
     ('url', fields.Url('patchrequest', absolute=True)),
