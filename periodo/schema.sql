@@ -52,7 +52,7 @@ END;
 DROP TABLE IF EXISTS patch_request_comment;
 CREATE TABLE patch_request_comment (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  posted INTEGER DEFAULT (strftime('%s', 'now')),
+  posted_at INTEGER DEFAULT (strftime('%s', 'now')),
   patch_request_id INTEGER NOT NULL,
   author TEXT NOT NULL,
   message TEXT NOT NULL,
