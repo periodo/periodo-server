@@ -80,6 +80,31 @@ def add_new_version_of_dataset(data):
         (json.dumps(data), void.describe_dataset(data, now), now))
     return cursor.lastrowid
 
+def reject(patch_id, user_id):
+    row = database.query_db(
+        'SELECT * FROM patch_request WHERE id = ?', (patch_id,), one=True)
+
+    if not row:
+        raise MergeError('No patch with ID {}.'.format(patch_id))
+    if row['merged']:
+        raise MergeError('Patch is already merged.')
+    if not row['open']:
+        raise MergeError('Closed patches cannot be merged.')
+
+    db = database.get_db()
+    curs = db.cursor()
+    curs.execute(
+        '''
+        UPDATE patch_request
+        SET merged = 0,
+            open = 0,
+            merged_at = strftime('%s', 'now'),
+            merged_by = ?
+        WHERE id = ?;
+        ''',
+        (user_id, row['id'],)
+    )
+
 
 def merge(patch_id, user_id):
     row = database.query_db(

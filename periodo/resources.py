@@ -341,3 +341,12 @@ class PatchMerge(Resource):
             return {'message': e.message}, 404
         except patching.UnmergeablePatchError as e:
             return {'message': e.message}, 400
+
+
+@api.resource('/patches/<int:id>/reject')
+class PatchReject(Resource):
+    @auth.accept_patch_permission.require()
+    def post(self, id):
+        patching.reject(id, g.identity.id)
+        database.commit()
+        return None, 204

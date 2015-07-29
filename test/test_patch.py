@@ -146,6 +146,30 @@ class TestPatchMethods(unittest.TestCase):
             for entity_id in created_entities:
                 self.assertRegex(entity_id, identifier.IDENTIFIER_RE)
 
+    def test_reject_patch(self):
+        with open(filepath('test-patch-adds-items.json')) as f:
+            patch = f.read()
+        with self.client as client:
+            res = client.patch(
+                '/d/',
+                data=patch,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            patch_id = int(res.headers['Location'].split('/')[-2])
+            patch_url = urlparse(res.headers['Location']).path
+            res = client.post(
+                patch_url + 'reject',
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+            self.assertEqual(res.status_code, http.client.NO_CONTENT)
+            row = database.query_db(
+                'SELECT open, merged FROM patch_request WHERE id=?',
+                (patch_id,), one=True)
+
+            self.assertEqual(0, row['open'])
+            self.assertEqual(0, row['merged'])
+
     def test_versioning(self):
         with open(filepath('test-patch-adds-items.json')) as f:
             patch1 = f.read()
