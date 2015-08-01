@@ -65,7 +65,7 @@ class TestIdentifiers(unittest.TestCase):
         with open(filepath('test-patch-adds-items.json')) as f:
             original_patch = JsonPatch(json.load(f))
         applied_patch, id_map = identifier.replace_skolem_ids(
-            original_patch, data)
+            original_patch, data, [])
         self.assertRegex(
             applied_patch.patch[0]['path'],
             r'^/periodCollections/p0trgkv/definitions/p0trgkv[%s]{4}$'
@@ -101,7 +101,7 @@ class TestIdentifiers(unittest.TestCase):
         with open(filepath('test-patch-replaces-definitions.json')) as f:
             original_patch = JsonPatch(json.load(f))
         applied_patch, id_map = identifier.replace_skolem_ids(
-            original_patch, data)
+            original_patch, data, [])
         self.assertEqual(
             applied_patch.patch[0]['path'],
             original_patch.patch[0]['path'])
@@ -120,7 +120,7 @@ class TestIdentifiers(unittest.TestCase):
         with open(filepath('test-patch-replaces-collections.json')) as f:
             original_patch = JsonPatch(json.load(f))
         applied_patch, id_map = identifier.replace_skolem_ids(
-            original_patch, data)
+            original_patch, data, [])
         self.assertEqual(
             applied_patch.patch[0]['path'],
             original_patch.patch[0]['path'])
