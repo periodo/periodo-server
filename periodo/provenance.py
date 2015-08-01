@@ -16,6 +16,7 @@ CONTEXT = {
     "generated": {"@id": "prov:generated", "@type": "@id"},
     "history": "@graph",
     "initialDataLoad": {"@id": "rdf:first", "@type": "@id"},
+    "invalidated": {"@id": "prov:invalidated", "@type": "@id"},
     "mergedAt": {"@id": "prov:endedAtTime", "@type": "xsd:dateTime"},
     "mergedPatches": {"@id": "rdf:rest"},
     "name": "foaf:name",
@@ -48,7 +49,8 @@ SELECT
   applied_to,
   resulted_in,
   created_entities,
-  updated_entities
+  updated_entities,
+  removed_entities
 FROM patch_request
 WHERE merged = 1
 ORDER BY id ASC
@@ -95,6 +97,9 @@ ORDER BY id ASC
                 entity_id + '?version={}'.format(row['applied_to'])]
             g.add(
                 (entity_version, PROV.wasRevisionOf, prev_entity_version))
+
+        for entity_id in json.loads(row['removed_entities']):
+            g.add((change, PROV.invalidated, PERIODO[entity_id]))
 
         for field, term in (('created_by', 'submitted'),
                             ('updated_by', 'updated'),

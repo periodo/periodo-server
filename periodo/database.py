@@ -1,3 +1,4 @@
+import itertools
 import json
 import sqlite3
 from periodo import app
@@ -42,6 +43,12 @@ def find_version_of_last_update(entity_id, version):
         if entity_id in json.loads(row['updated_entities']):
             return row['resulted_in']
     return None
+
+
+def get_removed_entity_keys():
+    return set(itertools.chain(
+        *[json.loads(row['removed_entities']) for row in query_db('''
+SELECT removed_entities FROM patch_request WHERE merged = 1''')]))
 
 
 def commit():

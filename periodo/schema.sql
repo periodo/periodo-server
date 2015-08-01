@@ -28,6 +28,7 @@ CREATE TABLE patch_request (
   resulted_in INTEGER,
   created_entities TEXT NOT NULL DEFAULT '[]',
   updated_entities TEXT NOT NULL,
+  removed_entities TEXT NOT NULL,
   identifier_map TEXT,
 
   original_patch TEXT NOT NULL,

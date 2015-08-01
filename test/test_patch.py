@@ -253,3 +253,145 @@ class TestPatchMethods(unittest.TestCase):
                     res.status_code, http.client.OK)
                 self.assertEqual(
                     res.headers['Content-Type'], 'application/json')
+
+    def test_remove_definition(self):
+        with open(filepath('test-patch-remove-definition.json')) as f:
+            patch1 = f.read()
+        with self.client as client:
+            res = client.patch(
+                '/d/',
+                data=patch1,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            patch_url = urlparse(res.headers['Location']).path
+            res = client.post(
+                patch_url + 'merge',
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+            self.assertEqual(res.status_code, http.client.NO_CONTENT)
+            removed_entities = database.get_removed_entity_keys()
+            self.assertEqual(removed_entities, set(['p0trgkvwbjd']))
+            res = client.get('/trgkvwbjd',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.GONE)
+            res = client.get('/trgkvwbjd.json',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.GONE)
+            res = client.get('/trgkvwbjd?version=0',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.NOT_FOUND)
+            res = client.get('/trgkvwbjd.json?version=0',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.NOT_FOUND)
+            res = client.get('/trgkvwbjd?version=1',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            res = client.get('/trgkvwbjd.json?version=1',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+
+            res = client.get('/h')
+
+            g = ConjunctiveGraph()
+            g.parse(format='json-ld', data=res.get_data(as_text=True))
+
+            invalidated = g.value(subject=PERIODO['p0h#change-2'],
+                                  predicate=PROV.invalidated,
+                                  any=False)
+            self.assertEqual(invalidated, PERIODO['p0trgkvwbjd'])
+
+            generated = list(g.objects(subject=PERIODO['p0h#change-2'],
+                                       predicate=PROV.generated))
+            self.assertEqual(len(generated), 2)
+            self.assertIn(PERIODO['p0d?version=2'], generated)
+            self.assertIn(PERIODO['p0trgkv?version=2'], generated)
+
+    def test_remove_collection(self):
+        with open(filepath('test-patch-remove-collection.json')) as f:
+            patch1 = f.read()
+        with self.client as client:
+            res = client.patch(
+                '/d/',
+                data=patch1,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            patch_url = urlparse(res.headers['Location']).path
+            res = client.post(
+                patch_url + 'merge',
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+            self.assertEqual(res.status_code, http.client.NO_CONTENT)
+            removed_entities = database.get_removed_entity_keys()
+            self.assertEqual(removed_entities, set(['p0trgkv', 'p0trgkvwbjd']))
+            res = client.get('/trgkv',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.GONE)
+            res = client.get('/trgkv.json',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.GONE)
+            res = client.get('/trgkv?version=0',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.NOT_FOUND)
+            res = client.get('/trgkv.json?version=0',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.NOT_FOUND)
+            res = client.get('/trgkv?version=1',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            res = client.get('/trgkv.json?version=1',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            res = client.get('/trgkvwbjd',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.GONE)
+            res = client.get('/trgkvwbjd.json',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.GONE)
+            res = client.get('/trgkvwbjd?version=0',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.NOT_FOUND)
+            res = client.get('/trgkvwbjd.json?version=0',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.NOT_FOUND)
+            res = client.get('/trgkvwbjd?version=1',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            res = client.get('/trgkvwbjd.json?version=1',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+
+            res = client.get('/h')
+
+            g = ConjunctiveGraph()
+            g.parse(format='json-ld', data=res.get_data(as_text=True))
+
+            invalidated = list(g.objects(subject=PERIODO['p0h#change-2'],
+                                         predicate=PROV.invalidated))
+            self.assertEqual(len(invalidated), 2)
+            self.assertIn(PERIODO['p0trgkv'], invalidated)
+            self.assertIn(PERIODO['p0trgkvwbjd'], invalidated)
+
+            generated = g.value(subject=PERIODO['p0h#change-2'],
+                                predicate=PROV.generated,
+                                any=False)
+            self.assertEqual(generated, PERIODO['p0d?version=2'])

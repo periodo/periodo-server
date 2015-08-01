@@ -97,6 +97,13 @@ def process_patch_row(row):
     return d
 
 
+def abort_gone_or_not_found(entity_key):
+    if entity_key in database.get_removed_entity_keys():
+        abort(410)
+    else:
+        abort(404)
+
+
 @api.resource('/')
 class Index(Resource):
     @marshal_with(index_fields)
@@ -169,7 +176,7 @@ class PeriodCollection(Resource):
             abort(404)
         collection_key = identifier.prefix(collection_id)
         if collection_key not in o['periodCollections']:
-            abort(404)
+            abort_gone_or_not_found(collection_key)
         collection = o['periodCollections'][collection_key]
         collection['@context'] = o['@context']
         return attach_to_dataset(collection)
@@ -196,11 +203,11 @@ class PeriodDefinition(Resource):
         definition_key = identifier.prefix(definition_id)
         collection_key = identifier.prefix(definition_id[:5])
         if collection_key not in o['periodCollections']:
-            abort(404)
+            abort_gone_or_not_found(collection_key)
         collection = o['periodCollections'][collection_key]
 
         if definition_key not in collection['definitions']:
-            abort(404)
+            abort_gone_or_not_found(definition_key)
         definition = collection['definitions'][definition_key]
         definition['@context'] = o['@context']
         return attach_to_dataset(definition)
@@ -308,8 +315,7 @@ class Patch(Resource):
             raise auth.PermissionDenied(permission)
         try:
             patch = patching.from_text(request.data)
-            updated_entities = patching.validate(
-                patch, database.get_dataset())
+            affected_entities = patching.validate(patch, database.get_dataset())
         except patching.InvalidPatchError as e:
             if str(e) != 'Could not apply JSON patch to dataset.':
                 return {'status': 400, 'message': str(e)}, 400
@@ -320,9 +326,12 @@ class Patch(Resource):
 UPDATE patch_request SET
 original_patch = ?,
 updated_entities = ?,
+removed_entities = ?,
 updated_by = ?
 WHERE id = ?
-        ''', (patch.to_string(), json.dumps(sorted(updated_entities)),
+        ''', (patch.to_string(),
+              json.dumps(sorted(affected_entities['updated'])),
+              json.dumps(sorted(affected_entities['removed'])),
               g.identity.id, id)
         )
         db.commit()

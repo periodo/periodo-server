@@ -41,33 +41,67 @@ def from_text(patch_text):
     return patch
 
 
+def definitions_of(collection, data):
+    return set(data['periodCollections'][collection]['definitions'].keys())
+
+
+def analyze_change_path(path):
+    match = CHANGE_PATH_PATTERN.match(path)
+    return match.groups() if match else [None, None]
+
+
+def analyze_change(change, data):
+    o = {'updated': [], 'removed': []}
+    [collection, definition] = analyze_change_path(change['path'])
+    if change['op'] == 'remove':
+        if definition:
+            o['removed'] = [definition]
+            o['updated'] = [collection]
+        elif collection:
+            o['removed'] = set([collection]) | definitions_of(collection, data)
+    else:
+        if definition:
+            o['updated'] = [definition, collection]
+        elif collection:
+            o['updated'] = [collection]
+    return o
+
+
+def affected_entities(patch, data):
+    def analyze(results, change):
+        o = analyze_change(change, data)
+        results['updated'] |= set(o['updated'])
+        results['removed'] |= set(o['removed'])
+        return results
+    return reduce(analyze, patch, {'updated': set(), 'removed': set()})
+
+
 def validate(patch, dataset):
+    data = json.loads(dataset['data'])
     # Test to make sure it will apply
     try:
-        patch.apply(json.loads(dataset['data']))
+        patch.apply(data)
     except JsonPatchException:
         raise InvalidPatchError('Not a valid JSON patch.')
     except JsonPointerException:
         raise InvalidPatchError('Could not apply JSON patch to dataset.')
 
-    matches = [CHANGE_PATH_PATTERN.match(change['path']) for change in patch]
-    updated_entities = reduce(
-        lambda s, groups: s | set(groups),
-        [m.groups() for m in matches if m is not None], set())
-    updated_entities.discard(None)
-    return updated_entities
+    return affected_entities(patch, data)
 
 
 def create_request(patch, user_id):
     dataset = database.get_dataset()
-    updated_entities = validate(patch, dataset)
+    affected_entities = validate(patch, dataset)
     cursor = database.get_db().cursor()
     cursor.execute('''
 INSERT INTO patch_request
-(created_by, updated_by, created_from, updated_entities, original_patch)
-VALUES (?, ?, ?, ?, ?)
+(created_by, updated_by, created_from, updated_entities, removed_entities,
+ original_patch)
+VALUES (?, ?, ?, ?, ?, ?)
     ''', (user_id, user_id, dataset['id'],
-          json.dumps(sorted(updated_entities)), patch.to_string()))
+          json.dumps(sorted(affected_entities['updated'])),
+          json.dumps(sorted(affected_entities['removed'])),
+          patch.to_string()))
     return cursor.lastrowid
 
 
@@ -100,7 +134,8 @@ def merge(patch_id, user_id):
 
     data = json.loads(dataset['data'])
     original_patch = from_text(row['original_patch'])
-    applied_patch, id_map = replace_skolem_ids(original_patch, data)
+    applied_patch, id_map = replace_skolem_ids(
+        original_patch, data, database.get_removed_entity_keys())
     created_entities = set(id_map.values())
 
     # Should this be ordered?

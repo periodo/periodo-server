@@ -46,6 +46,13 @@ def prefix(s):
         return PREFIX + s
 
 
+def unprefix(s):
+    if s.startswith(PREFIX):
+        return s[len(PREFIX):]
+    else:
+        return s
+
+
 def id_from_sequence(sequence):
     return prefix(add_check_digit(sequence))
 
@@ -88,16 +95,15 @@ def index_by_id(items):
     return {i['id']: i for i in items}
 
 
-def replace_skolem_ids(patch_or_obj, dataset):
+def replace_skolem_ids(patch_or_obj, dataset, removed_entity_keys):
 
     id_map = {}
 
+    existing_ids = set([unprefix(key) for key in removed_entity_keys])
     if (len(dataset) > 0):
-        existing_ids = set(chain.from_iterable(
+        existing_ids |= set(chain.from_iterable(
             ([cid] + list(c['definitions'].keys())
              for cid, c in dataset['periodCollections'].items())))
-    else:
-        existing_ids = set()
 
     def unused_identifier(id_generator, *args):
         for i in range(10):
