@@ -108,9 +108,9 @@ orcid:0000-0002-4871-039X a foaf:Person ;
    void:linkPredicate owl:sameAs .
 <http://purl.org/heritagedata/schemes/eh_period> a void:Dataset ;
    dcterms:description "English Heritage Periods List"@en ;
-   void:uriSpace "http://heritagedata.org/live/schemes/eh_period/concepts/" .
+   void:uriSpace "http://purl.org/heritagedata/schemes/eh_period" .
 
-<p0#sameas-links-to-pleiades> a void:Dataset ;
+<p0#sameas-links-to-pleiades> a void:Linkset ;
    void:subset <p0d> ;
    void:subjectsTarget <p0d> ;
    void:objectsTarget [
