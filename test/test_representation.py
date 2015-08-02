@@ -103,6 +103,36 @@ WHERE {
             q, initBindings={'class': SKOS.ConceptScheme})))['count'].value
         self.assertEqual(scheme_count, 1)
 
+    def test_dataset_description_linksets(self):
+        res = self.client.get('/.well-known/void')
+        self.assertEqual(res.status_code, http.client.OK)
+        self.assertEqual(res.headers['Content-Type'], 'text/turtle')
+        g = Graph()
+        g.parse(format='turtle', data=res.get_data(as_text=True))
+        # http://dbpedia.org/void/Dataset
+        q = sparql.prepareQuery('''
+SELECT ?triples
+WHERE {
+  ?linkset a void:Linkset .
+  ?linkset void:subset <http://n2t.net/ark:/99152/p0d> .
+  ?linkset void:subjectsTarget <http://n2t.net/ark:/99152/p0d> .
+  ?linkset void:linkPredicate ?predicate .
+  ?linkset void:objectsTarget ?dataset .
+  ?linkset void:triples ?triples .
+}
+''', initNs={'void': VOID})
+        dbpedia = URIRef('http://dbpedia.org/void/Dataset')
+        triples = next(iter(g.query(
+            q, initBindings={'dataset': dbpedia,
+                             'predicate': DCTERMS.spatial})))['triples'].value
+        self.assertEqual(triples, 1)
+
+        worldcat = URIRef('http://purl.oclc.org/dataset/WorldCat')
+        triples = next(iter(g.query(
+            q, initBindings={'dataset': worldcat,
+                             'predicate': DCTERMS.isPartOf})))['triples'].value
+        self.assertEqual(triples, 1)
+
     def test_add_contributors_to_dataset_description(self):
         contribution = (URIRef('http://n2t.net/ark:/99152/p0d'),
                         DCTERMS.contributor,

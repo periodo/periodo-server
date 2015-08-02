@@ -3,6 +3,7 @@
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix orcid: <http://orcid.org/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix void: <http://rdfs.org/ns/void#> .
@@ -62,3 +63,58 @@ orcid:0000-0002-3617-9378 a foaf:Person ;
 orcid:0000-0002-4871-039X a foaf:Person ;
    rdfs:label "Sarah A. Buchanan" ;
    foaf:mbox <mailto:sarahab@utexas.edu> .
+
+
+<p0#source-links-to-worldcat>a void:Linkset ;
+   void:subset <p0d> ;
+   void:subjectsTarget <p0d> ;
+   void:objectsTarget <http://purl.oclc.org/dataset/WorldCat> ;
+   void:linkPredicate dcterms:source .
+<http://purl.oclc.org/dataset/WorldCat> a void:Dataset ;
+   dcterms:description "WorldCat"@en ;
+   void:uriSpace "http://www.worldcat.org/oclc/" .
+
+<p0#ispartof-links-to-worldcat>a void:Linkset ;
+   void:subset <p0d> ;
+   void:subjectsTarget <p0d> ;
+   void:objectsTarget <http://purl.oclc.org/dataset/WorldCat> ;
+   void:linkPredicate dcterms:isPartOf .
+<http://purl.oclc.org/dataset/WorldCat> a void:Dataset ;
+   dcterms:description "WorldCat"@en ;
+   void:uriSpace "http://www.worldcat.org/oclc/" .
+
+<p0#ispartof-links-to-crossref> a void:Linkset ;
+   void:subset <p0d> ;
+   void:subjectsTarget <p0d> ;
+   void:objectsTarget [
+      dcterms:description "CrossRef DOI Resolver"@en ;
+      void:uriSpace "http://dx.doi.org/"
+   ] ;
+   void:linkPredicate dcterms:isPartOf .
+
+<p0#spatial-links-to-dbpedia>a void:Linkset ;
+   void:subset <p0d> ;
+   void:subjectsTarget <p0d> ;
+   void:objectsTarget <http://dbpedia.org/void/Dataset> ;
+   void:linkPredicate dcterms:spatial .
+<http://dbpedia.org/void/Dataset> a void:Dataset ;
+   dcterms:description "DBpedia"@en ;
+   void:uriSpace "http://dbpedia.org/resource/" .
+
+<p0#sameas-links-to-english-heritage-periods-list>a void:Linkset ;
+   void:subset <p0d> ;
+   void:subjectsTarget <p0d> ;
+   void:objectsTarget <http://purl.org/heritagedata/schemes/eh_period> ;
+   void:linkPredicate owl:sameAs .
+<http://purl.org/heritagedata/schemes/eh_period> a void:Dataset ;
+   dcterms:description "English Heritage Periods List"@en ;
+   void:uriSpace "http://heritagedata.org/live/schemes/eh_period/concepts/" .
+
+<p0#sameas-links-to-pleiades> a void:Dataset ;
+   void:subset <p0d> ;
+   void:subjectsTarget <p0d> ;
+   void:objectsTarget [
+      dcterms:description "Pleiades Time Periods"@en ;
+      void:uriSpace "http://pleiades.stoa.org/vocabularies/time-periods/"
+   ] ;
+   void:linkPredicate owl:sameAs .
