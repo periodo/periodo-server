@@ -5,7 +5,7 @@ from email.utils import parsedate
 from flask import request, g, abort, url_for, redirect
 from flask.ext.restful import fields, Resource, marshal, marshal_with, reqparse
 from periodo import api, database, auth, identifier, patching
-from time import mktime
+from calendar import timegm
 from urllib.parse import urlencode
 
 from wsgiref.handlers import format_date_time
@@ -143,14 +143,19 @@ class Dataset(Resource):
                         'message': 'No dataset loaded yet.'}, 501
 
         last_modified = dataset['created_at']
-        modified_check = mktime(parsedate(
+        modified_check = timegm(parsedate(
             args['modified'])) if args['modified'] else 0
 
         if modified_check >= last_modified:
             return None, 304
 
-        return attach_to_dataset(json.loads(dataset['data'])), 200, {
-            'Last-Modified': format_date_time(last_modified)}
+        headers = {}
+        headers['Last-Modified'] = format_date_time(last_modified)
+
+        if not args['version']:
+            headers['Cache-control'] = 'public, max-age=0'
+
+        return attach_to_dataset(json.loads(dataset['data'])), 200, headers
 
     @auth.submit_patch_permission.require()
     def patch(self):
