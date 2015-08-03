@@ -120,16 +120,7 @@ class Dataset(Resource):
     def get(self):
         args = dataset_parser.parse_args()
 
-        query = 'select * from dataset '
-        query_args = ()
-
-        if args['version']:
-            query += ' where id = (?) '
-            query_args += (args['version'],)
-        else:
-            query += 'ORDER BY id DESC'
-
-        dataset = database.query_db(query, query_args, one=True)
+        dataset = database.get_dataset(args.get('version', None))
 
         if not dataset:
             if args['version']:
