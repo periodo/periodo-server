@@ -142,6 +142,8 @@ class Dataset(Resource):
 
         if not args['version']:
             headers['Cache-control'] = 'public, max-age=0'
+        else:
+            headers['Cache-control'] = 'public, max-age=604800'
 
         return attach_to_dataset(json.loads(dataset['data'])), 200, headers
 
