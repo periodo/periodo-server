@@ -1,7 +1,7 @@
 import json
 from collections import OrderedDict
 from datetime import datetime
-from flask import request, g, abort, url_for, redirect
+from flask import request, g, abort, url_for, redirect, make_response
 from flask.ext.restful import fields, Resource, marshal, marshal_with, reqparse
 from periodo import api, database, auth, identifier, patching
 from urllib.parse import urlencode
@@ -137,7 +137,6 @@ class Dataset(Resource):
             return None, 304
 
         headers = {}
-        headers['ETag'] = dataset_etag
         headers['Last-Modified'] = format_date_time(dataset['created_at'])
 
         if not args['version']:
@@ -145,7 +144,15 @@ class Dataset(Resource):
         else:
             headers['Cache-control'] = 'public, max-age=604800'
 
-        return attach_to_dataset(json.loads(dataset['data'])), 200, headers
+        response = make_response(
+            json.dumps(attach_to_dataset(json.loads(dataset['data']))),
+            200,
+            headers
+        )
+
+        response.set_etag(dataset_etag, weak=True)
+
+        return response
 
     @auth.submit_patch_permission.require()
     def patch(self):
