@@ -1,11 +1,9 @@
 import json
 from collections import OrderedDict
 from datetime import datetime
-from email.utils import parsedate
 from flask import request, g, abort, url_for, redirect
 from flask.ext.restful import fields, Resource, marshal, marshal_with, reqparse
 from periodo import api, database, auth, identifier, patching
-from time import mktime
 from urllib.parse import urlencode
 
 from wsgiref.handlers import format_date_time
@@ -66,8 +64,7 @@ patch_list_parser.add_argument('limit', type=int, default=25)
 patch_list_parser.add_argument('from', type=int, default=0)
 
 dataset_parser = reqparse.RequestParser()
-dataset_parser.add_argument(
-    'If-Modified-Since', dest='modified', location='headers')
+dataset_parser.add_argument('If-None-Match', dest='etag', location='headers')
 dataset_parser.add_argument('version', type=int, location='args',
                             help='Invalid version number')
 
@@ -123,16 +120,7 @@ class Dataset(Resource):
     def get(self):
         args = dataset_parser.parse_args()
 
-        query = 'select * from dataset '
-        query_args = ()
-
-        if args['version']:
-            query += ' where id = (?) '
-            query_args += (args['version'],)
-        else:
-            query += 'ORDER BY id DESC'
-
-        dataset = database.query_db(query, query_args, one=True)
+        dataset = database.get_dataset(args.get('version', None))
 
         if not dataset:
             if args['version']:
@@ -142,15 +130,22 @@ class Dataset(Resource):
                 return {'status': 501,
                         'message': 'No dataset loaded yet.'}, 501
 
-        last_modified = dataset['created_at']
-        modified_check = mktime(parsedate(
-            args['modified'])) if args['modified'] else 0
+        requested_etag = args.get('etag')
+        dataset_etag = 'periodo-dataset-version-{}'.format(dataset['id'])
 
-        if modified_check >= last_modified:
+        if requested_etag == dataset_etag:
             return None, 304
 
-        return attach_to_dataset(json.loads(dataset['data'])), 200, {
-            'Last-Modified': format_date_time(last_modified)}
+        headers = {}
+        headers['ETag'] = dataset_etag
+        headers['Last-Modified'] = format_date_time(dataset['created_at'])
+
+        if not args['version']:
+            headers['Cache-control'] = 'public, max-age=0'
+        else:
+            headers['Cache-control'] = 'public, max-age=604800'
+
+        return attach_to_dataset(json.loads(dataset['data'])), 200, headers
 
     @auth.submit_patch_permission.require()
     def patch(self):
