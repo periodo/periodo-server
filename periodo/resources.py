@@ -1,11 +1,9 @@
 import json
 from collections import OrderedDict
 from datetime import datetime
-from email.utils import parsedate
 from flask import request, g, abort, url_for, redirect
 from flask.ext.restful import fields, Resource, marshal, marshal_with, reqparse
 from periodo import api, database, auth, identifier, patching
-from calendar import timegm
 from urllib.parse import urlencode
 
 from wsgiref.handlers import format_date_time
@@ -66,8 +64,7 @@ patch_list_parser.add_argument('limit', type=int, default=25)
 patch_list_parser.add_argument('from', type=int, default=0)
 
 dataset_parser = reqparse.RequestParser()
-dataset_parser.add_argument(
-    'If-Modified-Since', dest='modified', location='headers')
+dataset_parser.add_argument('If-None-Match', dest='etag', location='headers')
 dataset_parser.add_argument('version', type=int, location='args',
                             help='Invalid version number')
 
@@ -142,15 +139,15 @@ class Dataset(Resource):
                 return {'status': 501,
                         'message': 'No dataset loaded yet.'}, 501
 
-        last_modified = dataset['created_at']
-        modified_check = timegm(parsedate(
-            args['modified'])) if args['modified'] else 0
+        requested_etag = args.get('etag')
+        dataset_etag = 'periodo-dataset-version-{}'.format(dataset['id'])
 
-        if modified_check >= last_modified:
+        if requested_etag == dataset_etag:
             return None, 304
 
         headers = {}
-        headers['Last-Modified'] = format_date_time(last_modified)
+        headers['ETag'] = dataset_etag
+        headers['Last-Modified'] = format_date_time(dataset['created_at'])
 
         if not args['version']:
             headers['Cache-control'] = 'public, max-age=0'
