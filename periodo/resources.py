@@ -1,9 +1,8 @@
 import json
 from collections import OrderedDict
-from datetime import datetime
 from flask import request, g, abort, url_for, redirect, make_response
 from flask.ext.restful import fields, Resource, marshal, marshal_with, reqparse
-from periodo import api, database, auth, identifier, patching
+from periodo import api, database, auth, identifier, patching, utils
 from urllib.parse import urlencode
 
 from wsgiref.handlers import format_date_time
@@ -23,7 +22,7 @@ index_fields = {
 # http://www.w3.org/TR/NOTE-datetime
 class W3CDTF(fields.Raw):
     def format(self, value):
-        return datetime.utcfromtimestamp(value).isoformat()
+        return utils.isoformat(value)
 
 patch_list_fields = OrderedDict((
     ('url', fields.Url('patchrequest', absolute=True)),
