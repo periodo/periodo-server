@@ -1,7 +1,6 @@
 import json
 import os
-from datetime import datetime
-from periodo import database
+from periodo import database, utils
 from rdflib import Graph, URIRef, Literal
 from rdflib.namespace import Namespace, RDF, DCTERMS, XSD, VOID
 
@@ -55,8 +54,7 @@ WHERE {
 
     add_to_description(
         DCTERMS.modified,
-        Literal(datetime.utcfromtimestamp(created_at).isoformat(),
-                datatype=XSD.dateTime))
+        Literal(utils.isoformat(created_at), datatype=XSD.dateTime))
 
     add_to_description(
         VOID.triples, Literal(len(dataset_g), datatype=XSD.integer))

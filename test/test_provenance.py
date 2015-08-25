@@ -15,7 +15,7 @@ PERIODO = Namespace('http://n2t.net/ark:/99152/')
 FOAF = Namespace('http://xmlns.com/foaf/0.1/')
 PROV = Namespace('http://www.w3.org/ns/prov#')
 
-W3CDTF = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}'
+W3CDTF = r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00.00$'
 
 
 class TestProvenance(unittest.TestCase):

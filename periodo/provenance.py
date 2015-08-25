@@ -1,10 +1,9 @@
 import json
-from datetime import datetime
 from flask import url_for
 from rdflib import Graph, URIRef, Literal
 from rdflib.collection import Collection
 from rdflib.namespace import Namespace, XSD, FOAF
-from periodo import database, identifier
+from periodo import database, identifier, utils
 
 PROV = Namespace('http://www.w3.org/ns/prov#')
 PERIODO = Namespace('http://n2t.net/ark:/99152/')
@@ -62,11 +61,11 @@ ORDER BY id ASC
                PERIODO[identifier.prefix(url_for('patch', id=row['id']))]))
         g.add((change,
                PROV.startedAtTime,
-               Literal(datetime.utcfromtimestamp(row['created_at']).isoformat(),
+               Literal(utils.isoformat(row['created_at']),
                        datatype=XSD.dateTime)))
         g.add((change,
                PROV.endedAtTime,
-               Literal(datetime.utcfromtimestamp(row['merged_at']).isoformat(),
+               Literal(utils.isoformat(row['merged_at']),
                        datatype=XSD.dateTime)))
         dataset = PERIODO[identifier.prefix(url_for('abstract_dataset'))]
         version_in = PERIODO[identifier.prefix(
