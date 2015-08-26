@@ -1,6 +1,6 @@
 import json
 from collections import OrderedDict
-from flask import request, g, abort, url_for, redirect, make_response
+from flask import request, g, abort, url_for, redirect
 from flask.ext.restful import fields, Resource, marshal, marshal_with, reqparse
 from periodo import api, database, auth, identifier, patching, utils
 from urllib.parse import urlencode
@@ -143,12 +143,8 @@ class Dataset(Resource):
         else:
             headers['Cache-control'] = 'public, max-age=604800'
 
-        response = make_response(
-            json.dumps(attach_to_dataset(json.loads(dataset['data']))),
-            200,
-            headers
-        )
-
+        response = api.make_response(
+            attach_to_dataset(json.loads(dataset['data'])), 200, headers)
         response.set_etag(dataset_etag, weak=True)
 
         return response
