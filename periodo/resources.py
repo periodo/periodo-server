@@ -2,7 +2,7 @@ import json
 from collections import OrderedDict
 from flask import request, g, abort, url_for, redirect
 from flask.ext.restful import fields, Resource, marshal, marshal_with, reqparse
-from periodo import api, database, auth, identifier, patching, utils
+from periodo import api, database, auth, identifier, patching, utils, nanopub
 from urllib.parse import urlencode
 
 from wsgiref.handlers import format_date_time
@@ -217,6 +217,14 @@ class PeriodDefinition(Resource):
         definition['@context'] = o['@context']
         return attach_to_dataset(definition)
 
+
+@api.resource('/<string(length=%s):definition_id>/nanopub<int:version>'
+              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
+                 identifier.DEFINITION_SEQUENCE_LENGTH + 1),
+              endpoint='definition-nanopub')
+class PeriodNanopublication(Resource):
+    def get(self, definition_id, version):
+        return nanopub.make_nanopub(definition_id, version)
 
 @api.resource('/patches/')
 class PatchList(Resource):
