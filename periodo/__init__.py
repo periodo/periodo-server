@@ -21,6 +21,22 @@ app.config.update(
         'index.html'))
 )
 
+if not app.debug:
+    import platform
+    socket = None
+    if (platform.system() == 'Linux'):
+        socket = '/dev/log'
+    elif (platform.system() == 'Darwin'):
+        socket = '/var/run/syslog'
+    if socket:
+        import logging
+        from logging.handlers import SysLogHandler
+        handler = SysLogHandler(address=socket)
+        handler.setLevel(logging.WARNING)
+        handler.setFormatter(
+            logging.Formatter('%(name)s: [%(levelname)s] %(message)s'))
+        app.logger.addHandler(handler)
+
 
 @app.after_request
 def add_cors_headers(response):

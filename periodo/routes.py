@@ -107,6 +107,9 @@ def registered():
         headers={'Accept': 'application/json'},
         allow_redirects=True, data=data)
     credentials = response.json()
+    if not response.status_code == 200:
+        app.logger.error('Response to request for ORCID credentials was not OK')
+        app.logger.error(response.text)
     identity = auth.add_user_or_update_credentials(credentials)
     database.get_db().commit()
     return make_response(
