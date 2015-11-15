@@ -57,6 +57,10 @@ def make_nanopub(definition_id, version):
     context = data['@context'].copy()
     context['np'] = 'http://nanopub.org/nschema#'
     context['pub'] = data['@context']['@base'] + nanopub_uri + '#'
+    context['prov'] = 'http://www.w3.org/ns/prov#'
+
+    # TODO: Pop "source" from definition and include it in the provenance
+    # graph?
 
     return {
         "@context": context,
@@ -76,17 +80,22 @@ def make_nanopub(definition_id, version):
                 "@graph": [definition]
             },
             {
-                "@id": "pub:pubinfo",
-                "@graph": [source]
+                "@id": "pub:provenance",
+                "@graph": [
+                    {
+                        "@id": 'pub:assertion',
+                        "dc:source": source
+                    }
+                ]
             },
             {
-                "@id": "provenance",
+                "@id": "pub:pubinfo",
                 "@graph": [
                     {
                         "@id": nanopub_uri,
-                        "np:wasGeneratedBy": as_uri(patch_uri),
-                        "np:asGeneratedAtTime": result['merged_at'],
-                        "np:wasAttributedTo": [
+                        "prov:wasGeneratedBy": as_uri(patch_uri),
+                        "prov:asGeneratedAtTime": result['merged_at'],
+                        "prov:wasAttributedTo": [
                             as_uri(result['merged_by']),
                             as_uri(result['created_by'])
                         ]
