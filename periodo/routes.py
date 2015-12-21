@@ -106,11 +106,14 @@ def registered():
         'https://pub.orcid.org/oauth/token',
         headers={'Accept': 'application/json'},
         allow_redirects=True, data=data)
-    credentials = response.json()
     if not response.status_code == 200:
         app.logger.error('Response to request for ORCID credentials was not OK')
         app.logger.error('Request: %s', data)
         app.logger.error('Response: %s', response.text)
+    credentials = response.json()
+    if 'name' not in credentials or len(credentials['name']) == 0:
+        # User has made their name private, so just use their ORCID as name
+        credentials['name'] = credentials['orcid']
     identity = auth.add_user_or_update_credentials(credentials)
     database.get_db().commit()
     return make_response(
