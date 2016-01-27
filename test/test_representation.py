@@ -162,6 +162,11 @@ WHERE {
         self.assertEqual(res.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res.headers['Location']).path, '/d/')
 
+    def test_dataset_html_redirect(self):
+        res = self.client.get('/d/', headers={'Accept': 'text/html'})
+        self.assertEqual(res.status_code, http.client.TEMPORARY_REDIRECT)
+        self.assertEqual(urlparse(res.headers['Location']).path, '/d.jsonld')
+
     def test_dataset_data(self):
         res1 = self.client.get('/d/')
         self.assertEqual(res1.status_code, http.client.OK)
