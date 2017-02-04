@@ -12,4 +12,6 @@ local/*
 
 db.sqlite
 periodo/secrets.py
-periodo/static/html
+periodo/static
+
+!bin/ttlcat

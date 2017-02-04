@@ -57,3 +57,9 @@ def get_latest_client():
     local('mkdir -p periodo/static/html')
     local('unzip client.zip -d periodo/static/html')
     local('rm client.zip')
+
+
+@task
+def update_vocab():
+    local('cat vocab/*.ttl ../periodo-validation/shapes/*.ttl'
+          + '| ./bin/ttlcat > periodo/static/vocab.ttl')

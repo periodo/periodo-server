@@ -1,26 +1,28 @@
-@base <http://n2t.net/ark:/99152/p0v> .
+@base <http://n2t.net/ark:/99152/> .
+
+@prefix periodo: <p0v#> .
+
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix time: <http://www.w3.org/2006/time#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix prov: <http://www.w3.org/ns/prov#> .
 
-<#spatialCoverageDescription> a owl:DatatypeProperty ;
+periodo:spatialCoverageDescription a owl:DatatypeProperty ;
     rdfs:comment "Free-text description of the spatial coverage of a resource."@en ;
-    rdfs:isDefinedBy <> ;
+    rdfs:isDefinedBy <http://n2t.net/ark:/99152/p0v> ;
     rdfs:label "spatial coverage description"@en ;
     rdfs:range xsd:string .
 
-<#earliestYear> a owl:DatatypeProperty ;
+periodo:earliestYear a owl:DatatypeProperty ;
     rdfs:comment "The earliest Gregorian year referred to in the description of a temporal interval."@en ;
-    rdfs:isDefinedBy <> ;
+    rdfs:isDefinedBy <http://n2t.net/ark:/99152/p0v> ;
     rdfs:label "earliest year"@en ;
     rdfs:domain time:DateTimeDescription ;
     rdfs:range xsd:gYear .
 
-<#latestYear> a owl:DatatypeProperty ;
+periodo:latestYear a owl:DatatypeProperty ;
     rdfs:comment "The latest Gregorian year referred to in the description of a temporal interval."@en ;
-    rdfs:isDefinedBy <> ;
+    rdfs:isDefinedBy <http://n2t.net/ark:/99152/p0v> ;
     rdfs:label "latest year"@en ;
     rdfs:domain time:DateTimeDescription ;
     rdfs:range xsd:gYear .
@@ -29,25 +31,9 @@ time:DateTimeDescription
     rdfs:subClassOf [
         a owl:Restriction ;
         owl:maxCardinality "1"^^xsd:nonNegativeInteger ;
-        owl:onProperty <#earliestYear>
+        owl:onProperty periodo:earliestYear
     ], [
         a owl:Restriction ;
         owl:maxCardinality "1"^^xsd:nonNegativeInteger ;
-        owl:onProperty <#latestYear>
+        owl:onProperty periodo:latestYear
     ] .
-
-<#submitted> a prov:Role ;
-    rdfs:comment "The role played by the agent responsible for submitting a patch."@en ;
-    rdfs:isDefinedBy <> ;
-    rdfs:label "submitted"@en .
-
-<#updated> a prov:Role ;
-    rdfs:comment "The role played by the agent responsible for updating a patch."@en ;
-    rdfs:isDefinedBy <> ;
-    rdfs:label "updated"@en .
-
-<#merged> a prov:Role ;
-    rdfs:comment "The role played by the agent responsible for merging a patch."@en ;
-    rdfs:isDefinedBy <> ;
-    rdfs:label "merged"@en .
-
