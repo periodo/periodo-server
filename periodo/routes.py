@@ -28,6 +28,8 @@ def vocab():
 
 # http://www.w3.org/TR/void/#well-known
 @app.route('/.well-known/void')
+# N2T resolver strips hyphens so handle this too
+@app.route('/.wellknown/void')
 def void():
     return make_response(database.get_dataset()['description'], 200, {
         'Content-Type': 'text/turtle',
