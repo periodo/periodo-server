@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request
-from flask.ext.principal import Principal
-from flask.ext.restful import Api
+from flask_principal import Principal
+from flask_restful import Api
 from periodo.secrets import SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET
 
 app = Flask(__name__)

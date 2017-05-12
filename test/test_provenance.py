@@ -5,7 +5,7 @@ import http.client
 from rdflib import ConjunctiveGraph, URIRef
 from rdflib.namespace import Namespace, XSD
 from urllib.parse import urlparse
-from flask.ext.principal import ActionNeed
+from flask_principal import ActionNeed
 from .filepath import filepath
 from periodo import app, database, commands, auth
 

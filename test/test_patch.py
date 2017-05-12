@@ -6,7 +6,7 @@ import http.client
 from rdflib import ConjunctiveGraph
 from rdflib.namespace import Namespace
 from urllib.parse import urlparse
-from flask.ext.principal import ActionNeed
+from flask_principal import ActionNeed
 from .filepath import filepath
 from periodo import app, database, identifier, commands, auth
 

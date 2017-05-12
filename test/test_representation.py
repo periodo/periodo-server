@@ -6,7 +6,7 @@ from rdflib import Graph, URIRef
 from rdflib.plugins import sparql
 from rdflib.namespace import Namespace, RDF, DCTERMS, OWL
 from urllib.parse import urlparse
-from flask.ext.principal import ActionNeed
+from flask_principal import ActionNeed
 from .filepath import filepath
 from periodo import app, commands, database, auth
 

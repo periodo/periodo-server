@@ -3,9 +3,9 @@ import json
 from base64 import b64encode
 from functools import partial
 from flask import request, make_response
-from flask.ext.principal import (Permission, PermissionDenied,
-                                 ActionNeed, ItemNeed,
-                                 Identity, AnonymousIdentity)
+from flask_principal import (Permission, PermissionDenied,
+                             ActionNeed, ItemNeed,
+                             Identity, AnonymousIdentity)
 from periodo import database
 from werkzeug.exceptions import Unauthorized
 

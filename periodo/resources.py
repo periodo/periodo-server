@@ -1,7 +1,7 @@
 import json
 from collections import OrderedDict
 from flask import request, g, abort, url_for, redirect
-from flask.ext.restful import fields, Resource, marshal, marshal_with, reqparse
+from flask_restful import fields, Resource, marshal, marshal_with, reqparse
 from periodo import api, database, auth, identifier, patching, utils, nanopub
 from urllib.parse import urlencode
 

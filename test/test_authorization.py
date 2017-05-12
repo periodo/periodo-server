@@ -3,7 +3,7 @@ import tempfile
 import unittest
 import http.client
 from urllib.parse import urlparse
-from flask.ext.principal import ActionNeed
+from flask_principal import ActionNeed
 from periodo import app, commands, auth, database
 from .filepath import filepath
 
