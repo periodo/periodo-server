@@ -23,7 +23,20 @@ def history():
 
 @app.route('/v')
 def vocab():
+    if request.accept_mimetypes.best == 'text/turtle':
+        return app.send_static_file('vocab.ttl')
+    else:
+        return app.send_static_file('vocab.html')
+
+
+@app.route('/v.ttl')
+def vocab_as_turtle():
     return app.send_static_file('vocab.ttl')
+
+
+@app.route('/v.html')
+def vocab_as_html():
+    return app.send_static_file('vocab.html')
 
 
 # http://www.w3.org/TR/void/#well-known

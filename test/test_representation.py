@@ -49,10 +49,26 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         res1 = self.client.get('/v', buffered=True)
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'],
+                         'text/html; charset=utf-8')
+
+        res2 = self.client.get(
+            '/v', headers={'Accept': 'text/turtle'}, buffered=True)
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'],
                          'text/turtle; charset=utf-8')
 
+        res3 = self.client.get('/v.ttl', buffered=True)
+        self.assertEqual(res3.status_code, http.client.OK)
+        self.assertEqual(res3.headers['Content-Type'],
+                         'text/turtle; charset=utf-8')
+
+        res4 = self.client.get('/v.html', buffered=True)
+        self.assertEqual(res4.status_code, http.client.OK)
+        self.assertEqual(res4.headers['Content-Type'],
+                         'text/html; charset=utf-8')
+
         g = Graph()
-        g.parse(format='turtle', data=res1.get_data(as_text=True))
+        g.parse(format='turtle', data=res3.get_data(as_text=True))
         self.assertIn(
             (PERIODO['p0v#spatialCoverageDescription'],
              RDF.type, OWL.DatatypeProperty), g)

@@ -63,3 +63,8 @@ def get_latest_client():
 def update_vocab():
     local('cat vocab/*.ttl ../periodo-validation/shapes/*.ttl'
           + '| ./bin/ttlcat > periodo/static/vocab.ttl')
+    local('./bin/pygmentize'
+          + ' -O full,nobackground,style=friendly,'
+          + 'title=\'This is the <a href="http://perio.do">PeriodO</a> '
+          + 'vocabulary.<br>Download it as <a href="v.ttl">text/turtle</a>.\''
+          + ' -o periodo/static/vocab.html periodo/static/vocab.ttl')
