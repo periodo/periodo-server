@@ -8,7 +8,7 @@ CLIENT_REPO := '../periodo-client'
 VALIDATION_REPO := '../periodo-validation'
 
 VOCAB_FILES := $(shell find vocab -name *.ttl)
-SHAPE_FILES := $(shell find $(VALIDATION_REPO) -name *.ttl)
+SHAPE_FILES := $(shell find $(VALIDATION_REPO)/shapes -name *.ttl)
 
 .PHONY: all
 all: setup periodo/static/vocab.ttl $(DB)
