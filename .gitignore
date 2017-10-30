@@ -3,12 +3,7 @@
 *.swp
 .Python
 
-bin/*
-build/*
-include/*
-lib/*
-local
-local/*
+venv
 
 db.sqlite
 periodo/secrets.py
