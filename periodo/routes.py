@@ -7,8 +7,9 @@ from periodo import app, database, provenance, identifier, auth
 from urllib.parse import urlencode
 
 if app.config['HTML_REPR_EXISTS']:
-    @app.route('/lib/<path:path>')
-    @app.route('/dist/<path:path>')
+    @app.route('/images/<path:path>')
+    @app.route('/periodo-client.js')
+    @app.route('/periodo-client-<path:path>.js')
     @app.route('/favicon.ico')
     @app.route('/index.html')
     def static_proxy(path=None):
