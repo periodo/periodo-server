@@ -61,5 +61,5 @@ link_client_repository: clean_static_html
 	ln -s $(abspath $(CLIENT_REPO)) periodo/static/html
 
 .PHONY: test
-test: setup
+test: setup periodo/static/vocab.ttl
 	$(PYTHON3) -m unittest discover
