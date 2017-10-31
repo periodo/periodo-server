@@ -5,10 +5,9 @@ PIP3 := $(VENV_DIR)/bin/pip3
 PYTHON3 := $(VENV_DIR)/bin/python3
 
 CLIENT_REPO := '../periodo-client'
-VALIDATION_REPO := '../periodo-validation'
 
 VOCAB_FILES := $(shell find vocab -name *.ttl)
-SHAPE_FILES := $(shell find $(VALIDATION_REPO)/shapes -name *.ttl)
+SHAPE_FILES := $(shell find shapes -name *.ttl)
 
 .PHONY: all
 all: setup periodo/static/vocab.ttl $(DB)

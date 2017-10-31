@@ -1,0 +1,44 @@
+@base <http://n2t.net/ark:/99152/> .
+
+@prefix periodo: <p0v#> .
+
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix time: <http://www.w3.org/2006/time#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+periodo:IntervalShape
+  rdf:type sh:NodeShape ;
+  rdfs:label "Interval shape" ;
+  sh:closed "true"^^xsd:boolean ;
+  sh:ignoredProperties (
+    rdf:type
+    ) ;
+  sh:property
+    periodo:IntervalPreferredLabelShape ,
+    periodo:IntervalDateTimeDescriptionShape
+  .
+
+periodo:IntervalPreferredLabelShape
+  rdf:type sh:PropertyShape ;
+  sh:path skos:prefLabel ;
+  sh:name "preferred label" ;
+  sh:description "Description of the interval as given in the source" ;
+  sh:datatype xsd:string ;
+  sh:minCount 1 ;
+  sh:maxCount 1 ;
+  .
+
+periodo:IntervalDateTimeDescriptionShape
+  rdf:type sh:PropertyShape ;
+  sh:path time:hasDateTimeDescription ;
+  sh:name "date-time description" ;
+  sh:description "Bibliographic description of the source" ;
+  sh:nodeKind sh:BlankNode ;
+  sh:node periodo:DateTimeDescriptionShape ;
+# Temporarily disabled
+#  sh:minCount 1 ;
+  sh:maxCount 1 ;
+  .

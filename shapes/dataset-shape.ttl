@@ -1,0 +1,56 @@
+@base <http://n2t.net/ark:/99152/> .
+
+@prefix periodo: <p0v#> .
+
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+periodo:DatasetShape
+  rdf:type sh:NodeShape ;
+  rdfs:label "PeriodO dataset shape" ;
+  sh:targetNode <p0d/#periodCollections> ;
+  sh:closed "true"^^xsd:boolean ;
+  sh:property
+    periodo:DatasetTypeShape ,
+    periodo:DatasetMemberShape ,
+    periodo:DatasetIsPrimaryTopicOfShape
+  .
+
+periodo:DatasetTypeShape
+  rdf:type sh:PropertyShape ;
+  sh:path rdf:type ;
+  sh:name "type" ;
+  sh:description "RDF type of this dataset" ;
+  sh:nodeKind sh:IRI ;
+# Temporarily disabled
+#  sh:hasValue rdf:Bag ;
+  sh:minCount 1 ;
+  sh:maxCount 1 ;
+  sh:message "Problem with dataset type" ;
+  .
+
+periodo:DatasetMemberShape
+  rdf:type sh:PropertyShape ;
+  sh:path rdfs:member ;
+  sh:name "member" ;
+  sh:description "A period collection in this dataset" ;
+  sh:nodeKind sh:IRI ;
+  sh:class skos:ConceptScheme ;
+  sh:message "Problem with dataset member" ;
+  .
+
+periodo:DatasetIsPrimaryTopicOfShape
+  rdf:type sh:PropertyShape ;
+  sh:path foaf:isPrimaryTopicOf ;
+  sh:name "is primary topic of" ;
+  sh:description "Link to JSON representation of this dataset" ;
+  sh:nodeKind sh:IRI ;
+  sh:hasValue <p0d.json> ;
+  sh:minCount 1 ;
+  sh:maxCount 1 ;
+  sh:message "Problem with dataset link to JSON representation" ;
+  .
