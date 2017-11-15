@@ -5,8 +5,6 @@ A web server for serving and accepting patches for [PeriodO](http://perio.do/) d
 
 # Setup
 
-Before running the PeriodO server, you will need to clone the [PeriodO validation](https://github.com/periodo/periodo-validation) repository. It is assumed that this project will be located in a sibling directory to this one. (That is, if this project is in `/home/patrick/Code/periodo-server`, then it is expected that the validation project is in `/home/patrick/Code/periodo-validation`). If it is elsewhere, you will need to add `VALIDATION_REPO=...(your path)...` to invocations of `make`.
-
 Running `make` by itself will install required packages, initialize the database if it does not yet exist, and generate the RDF representing the vocabulary terms and SHACL shapes used in PeriodO data.
 
 ## Serving the browser client application
