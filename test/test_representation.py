@@ -98,7 +98,7 @@ WHERE {
 ''', initNs={'void': VOID, 'skos': SKOS})
         concept_count = next(iter(g.query(
             q, initBindings={'class': SKOS.Concept})))['count'].value
-        self.assertEqual(concept_count, 1)
+        self.assertEqual(concept_count, 3)
         scheme_count = next(iter(g.query(
             q, initBindings={'class': SKOS.ConceptScheme})))['count'].value
         self.assertEqual(scheme_count, 1)
@@ -125,7 +125,7 @@ WHERE {
         triples = next(iter(g.query(
             q, initBindings={'dataset': dbpedia,
                              'predicate': DCTERMS.spatial})))['triples'].value
-        self.assertEqual(triples, 1)
+        self.assertEqual(triples, 3)
 
         worldcat = URIRef('http://purl.oclc.org/dataset/WorldCat')
         triples = next(iter(g.query(

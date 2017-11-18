@@ -205,7 +205,7 @@ class PeriodDefinition(Resource):
             return attach_to_dataset(
                 database.get_definition(definition_id, version))
         except database.MissingKeyError as e:
-            abort_gone_or_not_found(e.missing_key)
+            abort_gone_or_not_found(e.key)
 
 
 @api.resource('/<string(length=%s):definition_id>/nanopub<int:version>'
