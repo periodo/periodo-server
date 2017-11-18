@@ -62,11 +62,24 @@ CREATE TABLE patch_request_comment (
   FOREIGN KEY (author) REFERENCES user(id)
 );
 
+DROP TABLE IF EXISTS bag;
+CREATE TABLE bag (
+  uuid TEXT NOT NULL,
+  version integer NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  created_by TEXT NOT NULL,
+  owners TEXT NOT NULL,
+  data TEXT NOT NULL,
+
+  PRIMARY KEY(uuid, version),
+  FOREIGN KEY(created_by) REFERENCES user(id)
+);
+
 DROP TABLE IF EXISTS user;
 CREATE TABLE user (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
-  permissions TEXT NOT NULL DEFAULT '[["action", "submit-patch"]]',
+  permissions TEXT NOT NULL DEFAULT '[["action", "submit-patch", "update-bag"]]',
   b64token TEXT UNIQUE NOT NULL,
   token_expires_at INTEGER NOT NULL,
   credentials TEXT NOT NULL,

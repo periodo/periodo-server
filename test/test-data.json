@@ -93,6 +93,65 @@
   "periodCollections": {
     "https://perio.do/.well-known/genid/assigned/p0trgkv": {
       "definitions": {
+        "https://perio.do/.well-known/genid/assigned/p0trgkvkhrv": {
+          "id": "https://perio.do/.well-known/genid/assigned/p0trgkvkhrv",
+          "label": "Iron Age",
+          "language": "eng-latn",
+          "localizedLabels": {
+            "eng-latn": [
+              "Iron Age"
+            ]
+          },
+          "spatialCoverage": [
+            {
+              "id": "http://dbpedia.org/resource/Spain",
+              "label": "Spain"
+            }
+          ],
+          "start": {
+            "in": {
+              "year": "-0799"
+            },
+            "label": "800 B.C."
+          },
+          "stop": {
+            "in": {
+              "year": "-0549"
+            },
+            "label": "550 B.C."
+          },
+          "type": "PeriodDefinition"
+        },
+        "https://perio.do/.well-known/genid/assigned/p0trgkv4kxb": {
+          "id": "https://perio.do/.well-known/genid/assigned/p0trgkv4kxb",
+          "label": "Herakleid",
+          "language": "eng-latn",
+          "localizedLabels": {
+            "eng-latn": [
+              "Herakleid"
+            ]
+          },
+          "note": "chronological table on p. 4",
+          "spatialCoverage": [
+            {
+              "id": "http://dbpedia.org/resource/Turkey",
+              "label": "Turkey"
+            }
+          ],
+          "start": {
+            "in": {
+              "year": "-1184"
+            },
+            "label": "1185 B.C."
+          },
+          "stop": {
+            "in": {
+              "year": "-0679"
+            },
+            "label": "680 B.C."
+          },
+          "type": "PeriodDefinition"
+        },
         "https://perio.do/.well-known/genid/assigned/p0trgkvwbjd": {
           "id": "https://perio.do/.well-known/genid/assigned/p0trgkvwbjd",
           "type": "PeriodDefinition",

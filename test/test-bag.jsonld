@@ -1,0 +1,164 @@
+{
+  "@context": {
+    "@base": "http://n2t.net/ark:/99152/",
+    "PeriodCollection": "http://www.w3.org/2004/02/skos/core#ConceptScheme",
+    "PeriodDefinition": "http://www.w3.org/2004/02/skos/core#Concept",
+    "abstract": "http://purl.org/dc/terms/abstract",
+    "collection": {
+      "@id": "http://www.w3.org/2004/02/skos/core#inScheme",
+      "@type": "@id"
+    },
+    "contributors": {
+      "@container": "@set",
+      "@id": "http://purl.org/dc/terms/contributor"
+    },
+    "creators": {
+      "@container": "@set",
+      "@id": "http://purl.org/dc/terms/creator"
+    },
+    "dateAccessed": {
+      "@id": "http://purl.org/dc/terms/date",
+      "@type": "http://www.w3.org/2001/XMLSchema#date"
+    },
+    "definitions": {
+      "@container": "@index",
+      "@reverse": "http://www.w3.org/2004/02/skos/core#inScheme"
+    },
+    "earliestYear": {
+      "@id": "periodo:earliestYear",
+      "@type": "http://www.w3.org/2001/XMLSchema#gYear"
+    },
+    "editorialNote": "http://www.w3.org/2004/02/skos/core#editorialNote",
+    "id": "@id",
+    "in": "http://www.w3.org/2006/time#hasDateTimeDescription",
+    "inDataset": {
+      "@id": "http://rdfs.org/ns/void#inDataset",
+      "@type": "@id"
+    },
+    "label": "http://www.w3.org/2004/02/skos/core#prefLabel",
+    "language": "http://purl.org/dc/terms/language",
+    "latestYear": {
+      "@id": "periodo:latestYear",
+      "@type": "http://www.w3.org/2001/XMLSchema#gYear"
+    },
+    "localizedLabels": {
+      "@container": "@language",
+      "@id": "http://www.w3.org/2004/02/skos/core#altLabel"
+    },
+    "locator": "http://purl.org/ontology/bibo/locator",
+    "name": "http://xmlns.com/foaf/0.1/name",
+    "note": "http://www.w3.org/2004/02/skos/core#note",
+    "partOf": {
+      "@id": "http://purl.org/dc/terms/isPartOf",
+      "@type": "@id"
+    },
+    "periodCollections": {
+      "@container": "@index",
+      "@id": "http://www.w3.org/2000/01/rdf-schema#member"
+    },
+    "periodo": "http://n2t.net/ark:/99152/p0v#",
+    "primaryTopicOf": {
+      "@id": "http://xmlns.com/foaf/0.1/isPrimaryTopicOf",
+      "@type": "@id"
+    },
+    "sameAs": {
+      "@id": "http://www.w3.org/2002/07/owl#sameAs",
+      "@type": "@id"
+    },
+    "source": "http://purl.org/dc/terms/source",
+    "spatialCoverage": {
+      "@container": "@set",
+      "@id": "http://purl.org/dc/terms/spatial"
+    },
+    "spatialCoverageDescription": "periodo:spatialCoverageDescription",
+    "start": "http://www.w3.org/2006/time#intervalStartedBy",
+    "stop": "http://www.w3.org/2006/time#intervalFinishedBy",
+    "title": "http://purl.org/dc/terms/title",
+    "type": "@type",
+    "url": {
+      "@id": "http://xmlns.com/foaf/0.1/page",
+      "@type": "@id"
+    },
+    "year": {
+      "@id": "http://www.w3.org/2006/time#year",
+      "@type": "http://www.w3.org/2001/XMLSchema#gYear"
+    },
+    "yearPublished": {
+      "@id": "http://purl.org/dc/terms/issued",
+      "@type": "http://www.w3.org/2001/XMLSchema#gYear"
+    },
+    "items": {
+      "@container": "@index",
+      "@id": "http://www.w3.org/2000/01/rdf-schema#member"
+    },
+    "creator": {
+      "@id": "http://purl.org/dc/terms/creator",
+      "@type": "@id"
+    }
+  },
+  "@id": "p0bags/6f2c64e2-c65f-4e2d-b028-f89dfb71ce69",
+  "creator": "http://orcid.org/1234-5678-9101-112X",
+  "title": "Minimal bag of periods",
+  "items": {
+    "p0trgkv4kxb": {
+      "id": "p0trgkv4kxb",
+      "collection": "p0trgkv",
+      "label": "Herakleid",
+      "language": "eng-latn",
+      "localizedLabels": {
+        "eng-latn": [
+          "Herakleid"
+        ]
+      },
+      "note": "chronological table on p. 4",
+      "spatialCoverage": [
+        {
+          "id": "http://dbpedia.org/resource/Turkey",
+          "label": "Turkey"
+        }
+      ],
+      "start": {
+        "in": {
+          "year": "-1184"
+        },
+        "label": "1185 B.C."
+      },
+      "stop": {
+        "in": {
+          "year": "-0679"
+        },
+        "label": "680 B.C."
+      },
+      "type": "PeriodDefinition"
+    },
+    "p0trgkvwbjd": {
+      "id": "p0trgkvwbjd",
+      "collection": "p0trgkv",
+      "type": "PeriodDefinition",
+      "label": "Archaic",
+      "language": "eng-latn",
+      "localizedLabels": {
+        "eng-latn": [ "Archaic" ]
+      },
+      "note": "chronological table on p. 4; not dividing the archaic period by dynasties (all Mermnad, not usually used to refer to material) or using \"Orientalizing\" (since Lydia the source of much of what is called \"Orientalizing\" in Greece)",
+      "spatialCoverage": [
+        {
+          "@id": "http://dbpedia.org/resource/Turkey",
+          "label": "Turkey"
+        }
+      ],
+      "start": {
+        "in": {
+          "year": "-0679"
+        },
+        "label": "680 B.C."
+      },
+      "stop": {
+        "in": {
+          "year": "-0546"
+        },
+        "label": "547 B.C."
+      }
+    }
+  }
+}

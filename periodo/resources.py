@@ -200,22 +200,11 @@ class PeriodDefinition(Resource):
         new_location = redirect_to_last_update(definition_id, version)
         if new_location is not None:
             return new_location
-        dataset = database.get_dataset(version=version)
-        o = json.loads(dataset['data'])
-        if 'periodCollections' not in o:
-            abort(404)
-        definition_key = identifier.prefix(definition_id)
-        collection_key = identifier.prefix(definition_id[:5])
-        if collection_key not in o['periodCollections']:
-            abort_gone_or_not_found(collection_key)
-        collection = o['periodCollections'][collection_key]
-
-        if definition_key not in collection['definitions']:
-            abort_gone_or_not_found(definition_key)
-        definition = collection['definitions'][definition_key]
-        definition['collection'] = collection_key
-        definition['@context'] = o['@context']
-        return attach_to_dataset(definition)
+        try:
+            return attach_to_dataset(
+                database.get_definition(definition_id, version))
+        except database.MissingKeyError as e:
+            abort_gone_or_not_found(e.missing_key)
 
 
 @api.resource('/<string(length=%s):definition_id>/nanopub<int:version>'
@@ -411,3 +400,70 @@ class PatchMessages(Resource):
             }
         except patching.MergeError as e:
             return {'message': e.message}, 404
+
+
+BAG_CONTEXT = {
+    'items': {
+        '@container': '@index',
+        '@id': 'http://www.w3.org/2000/01/rdf-schema#member',
+    },
+    'creator': {
+        '@id': 'http://purl.org/dc/terms/creator',
+        '@type': '@id'
+    }
+}
+
+bag_parser = reqparse.RequestParser()
+bag_parser.add_argument(
+    'version', type=int, location='args', help='Invalid version number')
+
+
+@api.resource('/bags/<uuid:uuid>')
+class Bag(Resource):
+    @auth.update_bag_permission.require()
+    def put(self, uuid):
+
+        data = request.get_json()
+
+        title = str(data.get('title', ''))
+        if len(title) == 0:
+            return {'message': 'A bag must have a title'}, 400
+
+        items = data.get('items', [])
+        if not isinstance(items, list) or len(items) < 2:
+            return {'message': 'A bag must have at least two items'}, 400
+
+        try:
+            defs, ctx = database.\
+                        get_definitions_and_context(items, raiseErrors=True)
+        except database.MissingKeyError as e:
+            return {'message': 'No resource with key: ' + e.key}, 400
+
+        bag = database.get_bag(uuid)
+        if bag and g.identity.id not in json.loads(bag['owners']):
+            return None, 403
+
+        version = database.create_or_update_bag(uuid, g.identity.id, data)
+        return None, 201, {
+            'Location': api.url_for(Bag, uuid=uuid, version=version)
+        }
+
+    def get(self, uuid):
+        args = bag_parser.parse_args()
+        bag = database.get_bag(uuid, version=args.get('version', None))
+        if not bag:
+            abort(404)
+        data = json.loads(bag['data'])
+
+        defs, defs_ctx = database.get_definitions_and_context(data['items'])
+
+        context = data.get('@context', {})
+        context.update(defs_ctx)
+        context.update(BAG_CONTEXT)
+
+        data['@context'] = context
+        data['@id'] = 'p0bags/%s' % uuid
+        data['creator'] = bag['created_by']
+        data['items'] = defs
+
+        return data, 200
