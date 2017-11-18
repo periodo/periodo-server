@@ -79,7 +79,7 @@ DROP TABLE IF EXISTS user;
 CREATE TABLE user (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
-  permissions TEXT NOT NULL DEFAULT '[["action", "submit-patch", "update-bag"]]',
+  permissions TEXT NOT NULL DEFAULT '[["action", "submit-patch", "create-bag"]]',
   b64token TEXT UNIQUE NOT NULL,
   token_expires_at INTEGER NOT NULL,
   credentials TEXT NOT NULL,

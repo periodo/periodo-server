@@ -42,7 +42,7 @@ class TestAuthentication(unittest.TestCase):
             self.assertEqual(row['name'], 'Testy Testerson')
             self.assertEqual(
                 row['permissions'],
-                '[["action", "submit-patch"], ["action", "update-bag"]]')
+                '[["action", "submit-patch"], ["action", "create-bag"]]')
             self.assertEqual(
                 row['b64token'],
                 b'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4')

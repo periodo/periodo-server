@@ -34,7 +34,7 @@ class TestBags(unittest.TestCase):
                 'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
                 'expires_in': 3600,
                 'orcid': '1211-1098-7654-321X',
-            }, (ActionNeed('update-bag'),))
+            }, (ActionNeed('create-bag'),))
             database.commit()
 
     def tearDown(self):

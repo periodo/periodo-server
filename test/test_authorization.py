@@ -54,7 +54,7 @@ class TestAuthorization(unittest.TestCase):
                 (self.admin_identity.id,), one=True)
             self.assertEqual(
                 row['permissions'],
-                '[["action", "submit-patch"], ["action", "update-bag"], '
+                '[["action", "submit-patch"], ["action", "create-bag"], '
                 + '["action", "accept-patch"]]')
 
     def test_unauthorized_user(self):
