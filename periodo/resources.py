@@ -24,6 +24,7 @@ class W3CDTF(fields.Raw):
     def format(self, value):
         return utils.isoformat(value)
 
+
 patch_list_fields = OrderedDict((
     ('url', fields.Url('patchrequest', absolute=True)),
     ('created_by', fields.String),
@@ -215,6 +216,7 @@ class PeriodNanopublication(Resource):
     def get(self, definition_id, version):
         return nanopub.make_nanopub(definition_id, version)
 
+
 @api.resource('/patches/')
 class PatchList(Resource):
     def get(self):
@@ -328,7 +330,8 @@ class Patch(Resource):
             raise auth.PermissionDenied(permission)
         try:
             patch = patching.from_text(request.data)
-            affected_entities = patching.validate(patch, database.get_dataset())
+            affected_entities = patching.validate(
+                patch, database.get_dataset())
         except patching.InvalidPatchError as e:
             if str(e) != 'Could not apply JSON patch to dataset.':
                 return {'status': 400, 'message': str(e)}, 400
