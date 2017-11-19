@@ -17,7 +17,7 @@ If you are working on the client, and want to see your changes reflected from re
 
 You can create a "bag" of definition URIs by sending an authenticated `PUT` request to `http://n2t.net/ark:/99152/p0bags/[UUID]`, where `[UUID]` is a [UUID (universally unique identifier)](https://en.wikipedia.org/wiki/Universally_unique_identifier) that you generate. The body of the request should be a JSON object with at least the keys `title` and `items`. The value of the `items` key must be either a list of PeriodO period identifiers, or an objects with PeriodO period identifiers as keys:
 
-```bash
+```
 $ export BAG_UUID=$(uuid)
 $ export AUTH_TOKEN=$(get_token_somehow)
 $ curl -L -X PUT\
@@ -29,10 +29,10 @@ $ curl -L -X PUT\
 
 A `GET` request for a bag returns a JSON-LD representation including the full details of the bag's period definitions:
 
-```bash
+```
 $ curl -L -X GET "http://n2t.net/ark:/99152/p0bags/$BAG_UUID" | jq .
 ```
-```json
+```
 {
   "@context": { ... },
   "@id": "p0bags/...",
