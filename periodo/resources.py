@@ -63,10 +63,6 @@ patch_list_parser.add_argument('merged', type=str, choices=('true', 'false'))
 patch_list_parser.add_argument('limit', type=int, default=25)
 patch_list_parser.add_argument('from', type=int, default=0)
 
-dataset_parser = reqparse.RequestParser()
-dataset_parser.add_argument('If-None-Match', dest='etag', location='headers')
-dataset_parser.add_argument('version', type=int, location='args',
-                            help='Invalid version number')
 versioned_parser = reqparse.RequestParser()
 versioned_parser.add_argument(
     'version', type=int, location='args', help='Invalid version number')
@@ -121,7 +117,7 @@ class Index(Resource):
 @api.resource('/d/', '/d.json', '/d.jsonld')
 class Dataset(Resource):
     def get(self):
-        args = dataset_parser.parse_args()
+        args = versioned_parser.parse_args()
 
         dataset = database.get_dataset(args.get('version', None))
 
@@ -133,10 +129,8 @@ class Dataset(Resource):
                 return {'status': 501,
                         'message': 'No dataset loaded yet.'}, 501
 
-        requested_etag = args.get('etag')
         dataset_etag = 'periodo-dataset-version-{}'.format(dataset['id'])
-
-        if requested_etag == dataset_etag:
+        if request.if_none_match.contains_weak(dataset_etag):
             return None, 304
 
         headers = {}

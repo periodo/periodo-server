@@ -198,6 +198,14 @@ WHERE {
         self.assertIn((PERIODO['p0d/'],
                        VOID.inDataset, PERIODO['p0d']), g)
 
+    def test_if_none_match(self):
+        res1 = self.client.get('/d/')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.get_etag(), ('periodo-dataset-version-1', True))
+        res2 = self.client.get('/d/', headers={
+            'If-None-Match': 'W/"periodo-dataset-version-1"'})
+        self.assertEqual(res2.status_code, http.client.NOT_MODIFIED)
+
     def test_period_collection(self):
         res1 = self.client.get('/trgkv')
         self.assertEqual(res1.status_code, http.client.SEE_OTHER)
