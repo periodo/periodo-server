@@ -433,7 +433,7 @@ class Bag(Resource):
             return {'message': 'A bag must have a title'}, 400
 
         items = data.get('items', [])
-        if not isinstance(items, list) or len(items) < 2:
+        if len(items) < 2:
             return {'message': 'A bag must have at least two items'}, 400
 
         try:

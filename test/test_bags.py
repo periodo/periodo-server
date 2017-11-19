@@ -194,6 +194,55 @@ class TestBags(unittest.TestCase):
                 json.loads(updated_bag_jsonld),
                 json.loads(res.get_data(as_text=True)))
 
+    def test_update_bag_using_jsonld(self):
+        with open(filepath('test-bag.json')) as f:
+            bag_json = f.read()
+        with open(filepath('test-bag.jsonld')) as f:
+            bag_jsonld = f.read()
+        with open(filepath('test-bag-updated.jsonld')) as f:
+            updated_bag_jsonld = f.read()
+        with self.client as client:
+            id = UUID('6f2c64e2-c65f-4e2d-b028-f89dfb71ce69')
+            res = client.put(
+                '/bags/%s' % id,
+                data=bag_json,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            self.assertEqual(res.status_code, http.client.CREATED)
+            bag_url_v0 = urlparse(res.headers['Location'])
+            self.assertEqual('/bags/%s' % id, bag_url_v0.path)
+            self.assertEqual('version=0', bag_url_v0.query)
+
+            res = client.put(
+                '/bags/%s' % id,
+                data=updated_bag_jsonld,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            self.assertEqual(res.status_code, http.client.CREATED)
+            bag_url_v1 = urlparse(res.headers['Location'])
+            self.assertEqual('/bags/%s' % id, bag_url_v1.path)
+            self.assertEqual('version=1', bag_url_v1.query)
+
+            res = client.get('/bags/%s' % id)
+            self.maxDiff = None
+            self.assertEqual(
+                json.loads(updated_bag_jsonld),
+                json.loads(res.get_data(as_text=True)))
+
+            res = client.get('/bags/%s?version=0' % id)
+            self.maxDiff = None
+            self.assertEqual(
+                json.loads(bag_jsonld),
+                json.loads(res.get_data(as_text=True)))
+
+            res = client.get('/bags/%s?version=1' % id)
+            self.maxDiff = None
+            self.assertEqual(
+                json.loads(updated_bag_jsonld),
+                json.loads(res.get_data(as_text=True)))
+
     def test_update_bag_must_be_owner(self):
         with open(filepath('test-bag.json')) as f:
             bag_json = f.read()
