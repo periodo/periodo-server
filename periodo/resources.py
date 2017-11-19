@@ -416,6 +416,10 @@ BAG_CONTEXT = {
     'creator': {
         '@id': 'http://purl.org/dc/terms/creator',
         '@type': '@id'
+    },
+    'wasRevisionOf': {
+        '@id': 'http://www.w3.org/ns/prov#wasRevisionOf',
+        '@type': '@id'
     }
 }
 

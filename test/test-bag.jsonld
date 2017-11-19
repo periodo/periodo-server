@@ -79,6 +79,10 @@
       "@id": "http://xmlns.com/foaf/0.1/page",
       "@type": "@id"
     },
+    "wasRevisionOf": {
+      "@id": "http://www.w3.org/ns/prov#wasRevisionOf",
+      "@type": "@id"
+    },
     "year": {
       "@id": "http://www.w3.org/2006/time#year",
       "@type": "http://www.w3.org/2001/XMLSchema#gYear"

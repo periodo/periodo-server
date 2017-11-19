@@ -99,6 +99,9 @@ def create_or_update_bag(uuid, creator_id, data):
     WHERE uuid = ?''', (uuid.hex,))
     row = c.fetchone()
     version = 0 if row['max_version'] is None else row['max_version'] + 1
+    if version > 0:
+        data['wasRevisionOf'] = identifier.prefix('bags/{}?version={}'.format(
+            uuid, row['max_version']))
     c.execute('''
     INSERT INTO bag (
                uuid,
