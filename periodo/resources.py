@@ -67,6 +67,9 @@ dataset_parser = reqparse.RequestParser()
 dataset_parser.add_argument('If-None-Match', dest='etag', location='headers')
 dataset_parser.add_argument('version', type=int, location='args',
                             help='Invalid version number')
+versioned_parser = reqparse.RequestParser()
+versioned_parser.add_argument(
+    'version', type=int, location='args', help='Invalid version number')
 
 
 def attach_to_dataset(o):
@@ -416,10 +419,6 @@ BAG_CONTEXT = {
     }
 }
 
-bag_parser = reqparse.RequestParser()
-bag_parser.add_argument(
-    'version', type=int, location='args', help='Invalid version number')
-
 
 @api.resource('/bags/<uuid:uuid>')
 class Bag(Resource):
@@ -452,12 +451,24 @@ class Bag(Resource):
         }
 
     def get(self, uuid):
-        args = bag_parser.parse_args()
+        args = versioned_parser.parse_args()
         bag = database.get_bag(uuid, version=args.get('version', None))
+
         if not bag:
             abort(404)
-        data = json.loads(bag['data'])
 
+        bag_etag = 'bag-{}-version-{}'.format(uuid, bag['version'])
+        if request.if_none_match.contains_weak(bag_etag):
+            return None, 304
+
+        headers = {}
+        headers['Last-Modified'] = format_date_time(bag['created_at'])
+        if 'version' in args:
+            headers['Cache-control'] = 'public, max-age=604800'
+        else:
+            headers['Cache-control'] = 'public, max-age=0'
+
+        data = json.loads(bag['data'])
         defs, defs_ctx = database.get_definitions_and_context(data['items'])
 
         context = data.get('@context', {})
@@ -465,8 +476,10 @@ class Bag(Resource):
         context.update(BAG_CONTEXT)
 
         data['@context'] = context
-        data['@id'] = 'p0bags/%s' % uuid
+        data['@id'] = identifier.prefix('bags/%s' % uuid)
         data['creator'] = bag['created_by']
         data['items'] = defs
 
-        return data, 200
+        response = api.make_response(data, 200, headers)
+        response.set_etag(bag_etag, weak=True)
+        return response

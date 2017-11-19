@@ -59,10 +59,32 @@ class TestBags(unittest.TestCase):
             self.assertEqual('/bags/%s' % id, bag_url.path)
             self.assertEqual('version=0', bag_url.query)
             res = client.get(res.headers['Location'])
+            self.assertTrue('Last-Modified' in res.headers)
+            self.assertEqual(
+                res.headers['Etag'],
+                'W/"bag-6f2c64e2-c65f-4e2d-b028-f89dfb71ce69-version-0"')
             self.maxDiff = None
             self.assertEqual(
                 json.loads(bag_jsonld),
                 json.loads(res.get_data(as_text=True)))
+
+    def test_if_none_match(self):
+        with open(filepath('test-bag.json')) as f:
+            bag_json = f.read()
+        with self.client as client:
+            id = UUID('6f2c64e2-c65f-4e2d-b028-f89dfb71ce69')
+            res = client.put(
+                '/bags/%s' % id,
+                data=bag_json,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            self.assertEqual(res.status_code, http.client.CREATED)
+            res = client.get(
+                res.headers['Location'], headers={
+                    'If-None-Match':
+                    'W/"bag-6f2c64e2-c65f-4e2d-b028-f89dfb71ce69-version-0"'})
+            self.assertEqual(res.status_code, http.client.NOT_MODIFIED)
 
     def test_create_bag_requires_auth(self):
         with open(filepath('test-bag.json')) as f:
