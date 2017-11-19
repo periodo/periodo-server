@@ -24,6 +24,7 @@ class W3CDTF(fields.Raw):
     def format(self, value):
         return utils.isoformat(value)
 
+
 patch_list_fields = OrderedDict((
     ('url', fields.Url('patchrequest', absolute=True)),
     ('created_by', fields.String),
@@ -62,10 +63,9 @@ patch_list_parser.add_argument('merged', type=str, choices=('true', 'false'))
 patch_list_parser.add_argument('limit', type=int, default=25)
 patch_list_parser.add_argument('from', type=int, default=0)
 
-dataset_parser = reqparse.RequestParser()
-dataset_parser.add_argument('If-None-Match', dest='etag', location='headers')
-dataset_parser.add_argument('version', type=int, location='args',
-                            help='Invalid version number')
+versioned_parser = reqparse.RequestParser()
+versioned_parser.add_argument(
+    'version', type=int, location='args', help='Invalid version number')
 
 
 def attach_to_dataset(o):
@@ -117,7 +117,7 @@ class Index(Resource):
 @api.resource('/d/', '/d.json', '/d.jsonld')
 class Dataset(Resource):
     def get(self):
-        args = dataset_parser.parse_args()
+        args = versioned_parser.parse_args()
 
         dataset = database.get_dataset(args.get('version', None))
 
@@ -129,10 +129,8 @@ class Dataset(Resource):
                 return {'status': 501,
                         'message': 'No dataset loaded yet.'}, 501
 
-        requested_etag = args.get('etag')
         dataset_etag = 'periodo-dataset-version-{}'.format(dataset['id'])
-
-        if requested_etag == dataset_etag:
+        if request.if_none_match.contains_weak(dataset_etag):
             return None, 304
 
         headers = {}
@@ -200,22 +198,11 @@ class PeriodDefinition(Resource):
         new_location = redirect_to_last_update(definition_id, version)
         if new_location is not None:
             return new_location
-        dataset = database.get_dataset(version=version)
-        o = json.loads(dataset['data'])
-        if 'periodCollections' not in o:
-            abort(404)
-        definition_key = identifier.prefix(definition_id)
-        collection_key = identifier.prefix(definition_id[:5])
-        if collection_key not in o['periodCollections']:
-            abort_gone_or_not_found(collection_key)
-        collection = o['periodCollections'][collection_key]
-
-        if definition_key not in collection['definitions']:
-            abort_gone_or_not_found(definition_key)
-        definition = collection['definitions'][definition_key]
-        definition['collection'] = collection_key
-        definition['@context'] = o['@context']
-        return attach_to_dataset(definition)
+        try:
+            return attach_to_dataset(
+                database.get_definition(definition_id, version))
+        except database.MissingKeyError as e:
+            abort_gone_or_not_found(e.key)
 
 
 @api.resource('/<string(length=%s):definition_id>/nanopub<int:version>'
@@ -225,6 +212,7 @@ class PeriodDefinition(Resource):
 class PeriodNanopublication(Resource):
     def get(self, definition_id, version):
         return nanopub.make_nanopub(definition_id, version)
+
 
 @api.resource('/patches/')
 class PatchList(Resource):
@@ -339,7 +327,8 @@ class Patch(Resource):
             raise auth.PermissionDenied(permission)
         try:
             patch = patching.from_text(request.data)
-            affected_entities = patching.validate(patch, database.get_dataset())
+            affected_entities = patching.validate(
+                patch, database.get_dataset())
         except patching.InvalidPatchError as e:
             if str(e) != 'Could not apply JSON patch to dataset.':
                 return {'status': 400, 'message': str(e)}, 400
@@ -411,3 +400,84 @@ class PatchMessages(Resource):
             }
         except patching.MergeError as e:
             return {'message': e.message}, 404
+
+
+BAG_CONTEXT = {
+    'items': {
+        '@container': '@index',
+        '@id': 'http://www.w3.org/2000/01/rdf-schema#member',
+    },
+    'creator': {
+        '@id': 'http://purl.org/dc/terms/creator',
+        '@type': '@id'
+    },
+    'wasRevisionOf': {
+        '@id': 'http://www.w3.org/ns/prov#wasRevisionOf',
+        '@type': '@id'
+    }
+}
+
+
+@api.resource('/bags/<uuid:uuid>')
+class Bag(Resource):
+    @auth.update_bag_permission.require()
+    def put(self, uuid):
+
+        data = request.get_json()
+
+        title = str(data.get('title', ''))
+        if len(title) == 0:
+            return {'message': 'A bag must have a title'}, 400
+
+        items = data.get('items', [])
+        if len(items) < 2:
+            return {'message': 'A bag must have at least two items'}, 400
+
+        try:
+            defs, ctx = database.\
+                        get_definitions_and_context(items, raiseErrors=True)
+        except database.MissingKeyError as e:
+            return {'message': 'No resource with key: ' + e.key}, 400
+
+        bag = database.get_bag(uuid)
+        if bag and g.identity.id not in json.loads(bag['owners']):
+            return None, 403
+
+        version = database.create_or_update_bag(uuid, g.identity.id, data)
+        return None, 201, {
+            'Location': api.url_for(Bag, uuid=uuid, version=version)
+        }
+
+    def get(self, uuid):
+        args = versioned_parser.parse_args()
+        bag = database.get_bag(uuid, version=args.get('version', None))
+
+        if not bag:
+            abort(404)
+
+        bag_etag = 'bag-{}-version-{}'.format(uuid, bag['version'])
+        if request.if_none_match.contains_weak(bag_etag):
+            return None, 304
+
+        headers = {}
+        headers['Last-Modified'] = format_date_time(bag['created_at'])
+        if 'version' in args:
+            headers['Cache-control'] = 'public, max-age=604800'
+        else:
+            headers['Cache-control'] = 'public, max-age=0'
+
+        data = json.loads(bag['data'])
+        defs, defs_ctx = database.get_definitions_and_context(data['items'])
+
+        context = data.get('@context', {})
+        context.update(defs_ctx)
+        context.update(BAG_CONTEXT)
+
+        data['@context'] = context
+        data['@id'] = identifier.prefix('bags/%s' % uuid)
+        data['creator'] = bag['created_by']
+        data['items'] = defs
+
+        response = api.make_response(data, 200, headers)
+        response.set_etag(bag_etag, weak=True)
+        return response

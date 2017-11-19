@@ -1,8 +1,13 @@
 import itertools
 import json
 import sqlite3
-from periodo import app
+from periodo import app, identifier
 from flask import g
+
+
+class MissingKeyError(Exception):
+    def __init__(self, key):
+        self.key = key
 
 
 def get_db():
@@ -28,6 +33,91 @@ def get_dataset(version=None):
     else:
         return query_db(
             'SELECT * FROM dataset WHERE dataset.id = ?', (version,), one=True)
+
+
+def extract_definition(definition_key, o, raiseErrors=False):
+    def maybeRaiseMissingKeyError():
+        if raiseErrors:
+            raise MissingKeyError(definition_key)
+
+    if 'periodCollections' not in o:
+        maybeRaiseMissingKeyError()
+        return None
+
+    collection_key = definition_key[:7]
+
+    if collection_key not in o['periodCollections']:
+        maybeRaiseMissingKeyError()
+        return None
+
+    collection = o['periodCollections'][collection_key]
+
+    if definition_key not in collection['definitions']:
+        maybeRaiseMissingKeyError()
+        return None
+
+    definition = collection['definitions'][definition_key]
+    definition['collection'] = collection_key
+
+    return definition
+
+
+def get_definition(id, version=None):
+    dataset = get_dataset(version=version)
+    o = json.loads(dataset['data'])
+    definition = extract_definition(identifier.prefix(id), o, raiseErrors=True)
+    definition['@context'] = o['@context']
+
+    return definition
+
+
+def get_definitions_and_context(ids, version=None, raiseErrors=False):
+    dataset = get_dataset(version=version)
+    o = json.loads(dataset['data'])
+    definitions = {id: extract_definition(id, o, raiseErrors) for id in ids}
+
+    return definitions, o['@context']
+
+
+def get_bag(uuid, version=None):
+    if version is None:
+        return query_db(
+            'SELECT * FROM bag WHERE uuid = ? ORDER BY version DESC LIMIT 1',
+            (uuid.hex,), one=True)
+    else:
+        return query_db(
+            'SELECT * FROM bag WHERE uuid = ? AND version = ?',
+            (uuid.hex, version), one=True)
+
+
+def create_or_update_bag(uuid, creator_id, data):
+    db = get_db()
+    c = get_db().cursor()
+    c.execute('''
+    SELECT MAX(version) AS max_version
+    FROM bag
+    WHERE uuid = ?''', (uuid.hex,))
+    row = c.fetchone()
+    version = 0 if row['max_version'] is None else row['max_version'] + 1
+    if version > 0:
+        data['wasRevisionOf'] = identifier.prefix('bags/{}?version={}'.format(
+            uuid, row['max_version']))
+    c.execute('''
+    INSERT INTO bag (
+               uuid,
+               version,
+               created_by,
+               data,
+               owners)
+    VALUES (?, ?, ?, ?, ?)''',
+              (uuid.hex,
+               version,
+               creator_id,
+               json.dumps(data),
+               json.dumps([creator_id])))
+    c.close()
+    db.commit()
+    return version
 
 
 def find_version_of_last_update(entity_id, version):

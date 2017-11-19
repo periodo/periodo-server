@@ -11,6 +11,7 @@ from werkzeug.exceptions import Unauthorized
 
 submit_patch_permission = Permission(ActionNeed('submit-patch'))
 accept_patch_permission = Permission(ActionNeed('accept-patch'))
+update_bag_permission = Permission(ActionNeed('create-bag'))
 
 ERROR_URIS = {
     'invalid_request': 'http://tools.ietf.org/html/rfc6750#section-6.2.1',
@@ -80,7 +81,11 @@ def handle_auth_error(e):
 def add_user_or_update_credentials(credentials, extra_permissions=()):
     orcid = 'http://orcid.org/{}'.format(credentials['orcid'])
     b64token = b64encode(credentials['access_token'].encode())
-    permissions = (ActionNeed('submit-patch'),) + extra_permissions
+    permissions = (
+        (ActionNeed('submit-patch'),
+         ActionNeed('create-bag'))
+        + extra_permissions
+    )
     db = database.get_db()
     cursor = db.cursor()
     cursor.execute('''

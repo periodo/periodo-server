@@ -54,7 +54,9 @@ class TestPatchMethods(unittest.TestCase):
             created_entities = database.query_db(
                 'SELECT created_entities FROM patch_request WHERE id = 1',
                 one=True)['created_entities']
-            self.assertEqual(created_entities, '["p0trgkv", "p0trgkvwbjd"]')
+            self.assertEqual(
+                created_entities,
+                '["p0trgkv", "p0trgkv4kxb", "p0trgkvkhrv", "p0trgkvwbjd"]')
             updated_entities = database.query_db(
                 'SELECT updated_entities FROM patch_request WHERE id = 1',
                 one=True)['updated_entities']
@@ -389,7 +391,9 @@ class TestPatchMethods(unittest.TestCase):
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
             self.assertEqual(res.status_code, http.client.NO_CONTENT)
             removed_entities = database.get_removed_entity_keys()
-            self.assertEqual(removed_entities, set(['p0trgkv', 'p0trgkvwbjd']))
+            self.assertEqual(
+                removed_entities,
+                set(['p0trgkv', 'p0trgkv4kxb', 'p0trgkvkhrv', 'p0trgkvwbjd']))
             res = client.get('/trgkv',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
@@ -446,7 +450,7 @@ class TestPatchMethods(unittest.TestCase):
 
             invalidated = list(g.objects(subject=PERIODO['p0h#change-2'],
                                          predicate=PROV.invalidated))
-            self.assertEqual(len(invalidated), 2)
+            self.assertEqual(len(invalidated), 4)
             self.assertIn(PERIODO['p0trgkv'], invalidated)
             self.assertIn(PERIODO['p0trgkvwbjd'], invalidated)
 
