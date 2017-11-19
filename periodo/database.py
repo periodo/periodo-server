@@ -35,26 +35,25 @@ def get_dataset(version=None):
             'SELECT * FROM dataset WHERE dataset.id = ?', (version,), one=True)
 
 
-def extract_definition(id, o, raiseErrors=False):
-    def maybeRaiseMissingKeyError(key):
+def extract_definition(definition_key, o, raiseErrors=False):
+    def maybeRaiseMissingKeyError():
         if raiseErrors:
-            raise MissingKeyError(key)
+            raise MissingKeyError(definition_key)
 
     if 'periodCollections' not in o:
-        maybeRaiseMissingKeyError('periodCollections')
+        maybeRaiseMissingKeyError()
         return None
 
-    definition_key = identifier.prefix(id)
-    collection_key = identifier.prefix(id[:5])
+    collection_key = definition_key[:7]
 
     if collection_key not in o['periodCollections']:
-        maybeRaiseMissingKeyError(collection_key)
+        maybeRaiseMissingKeyError()
         return None
 
     collection = o['periodCollections'][collection_key]
 
     if definition_key not in collection['definitions']:
-        maybeRaiseMissingKeyError(definition_key)
+        maybeRaiseMissingKeyError()
         return None
 
     definition = collection['definitions'][definition_key]
@@ -66,7 +65,7 @@ def extract_definition(id, o, raiseErrors=False):
 def get_definition(id, version=None):
     dataset = get_dataset(version=version)
     o = json.loads(dataset['data'])
-    definition = extract_definition(id, o, raiseErrors=True)
+    definition = extract_definition(identifier.prefix(id), o, raiseErrors=True)
     definition['@context'] = o['@context']
 
     return definition
@@ -75,10 +74,8 @@ def get_definition(id, version=None):
 def get_definitions_and_context(ids, version=None, raiseErrors=False):
     dataset = get_dataset(version=version)
     o = json.loads(dataset['data'])
-    definitions = {
-        id: extract_definition(identifier.unprefix(id), o, raiseErrors)
-        for id in ids
-    }
+    definitions = {id: extract_definition(id, o, raiseErrors) for id in ids}
+
     return definitions, o['@context']
 
 

@@ -64,6 +64,85 @@ class TestBags(unittest.TestCase):
                 json.loads(bag_jsonld),
                 json.loads(res.get_data(as_text=True)))
 
+    def test_create_bag_requires_auth(self):
+        with open(filepath('test-bag.json')) as f:
+            bag_json = f.read()
+        with self.client as client:
+            id = UUID('6f2c64e2-c65f-4e2d-b028-f89dfb71ce69')
+            res = client.put(
+                '/bags/%s' % id,
+                data=bag_json,
+                content_type='application/json')
+            self.assertEqual(res.status_code, http.client.UNAUTHORIZED)
+
+    def test_create_bag_requires_title(self):
+        with open(filepath('test-bag.json')) as f:
+            bag_json = json.loads(f.read())
+            del bag_json['title']
+        with self.client as client:
+            id = UUID('6f2c64e2-c65f-4e2d-b028-f89dfb71ce69')
+            res = client.put(
+                '/bags/%s' % id,
+                data=json.dumps(bag_json),
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            self.assertEqual(res.status_code, http.client.BAD_REQUEST)
+            self.assertEqual(
+                json.loads(res.get_data(as_text=True))['message'],
+                'A bag must have a title')
+
+    def test_create_bag_requires_items_array(self):
+        with open(filepath('test-bag.json')) as f:
+            bag_json = json.loads(f.read())
+            del bag_json['items']
+        with self.client as client:
+            id = UUID('6f2c64e2-c65f-4e2d-b028-f89dfb71ce69')
+            res = client.put(
+                '/bags/%s' % id,
+                data=json.dumps(bag_json),
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            self.assertEqual(res.status_code, http.client.BAD_REQUEST)
+            self.assertEqual(
+                json.loads(res.get_data(as_text=True))['message'],
+                'A bag must have at least two items')
+
+    def test_create_bag_requires_minimum_of_two_items(self):
+        with open(filepath('test-bag.json')) as f:
+            bag_json = json.loads(f.read())
+            bag_json['items'].pop()
+        with self.client as client:
+            id = UUID('6f2c64e2-c65f-4e2d-b028-f89dfb71ce69')
+            res = client.put(
+                '/bags/%s' % id,
+                data=json.dumps(bag_json),
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            self.assertEqual(res.status_code, http.client.BAD_REQUEST)
+            self.assertEqual(
+                json.loads(res.get_data(as_text=True))['message'],
+                'A bag must have at least two items')
+
+    def test_create_bag_requires_items_be_periodo_ids(self):
+        with open(filepath('test-bag.json')) as f:
+            bag_json = json.loads(f.read())
+            bag_json['items'].append('foobar')
+        with self.client as client:
+            id = UUID('6f2c64e2-c65f-4e2d-b028-f89dfb71ce69')
+            res = client.put(
+                '/bags/%s' % id,
+                data=json.dumps(bag_json),
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            self.assertEqual(res.status_code, http.client.BAD_REQUEST)
+            self.assertEqual(
+                json.loads(res.get_data(as_text=True))['message'],
+                'No resource with key: foobar')
+
     def test_update_bag(self):
         with open(filepath('test-bag.json')) as f:
             bag_json = f.read()
@@ -114,3 +193,29 @@ class TestBags(unittest.TestCase):
             self.assertEqual(
                 json.loads(updated_bag_jsonld),
                 json.loads(res.get_data(as_text=True)))
+
+    def test_update_bag_must_be_owner(self):
+        with open(filepath('test-bag.json')) as f:
+            bag_json = f.read()
+        with open(filepath('test-bag-updated.json')) as f:
+            updated_bag_json = f.read()
+        with self.client as client:
+            id = UUID('6f2c64e2-c65f-4e2d-b028-f89dfb71ce69')
+            res = client.put(
+                '/bags/%s' % id,
+                data=bag_json,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+            self.assertEqual(res.status_code, http.client.CREATED)
+            bag_url_v0 = urlparse(res.headers['Location'])
+            self.assertEqual('/bags/%s' % id, bag_url_v0.path)
+            self.assertEqual('version=0', bag_url_v0.query)
+
+            res = client.put(
+                '/bags/%s' % id,
+                data=updated_bag_json,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            self.assertEqual(res.status_code, http.client.FORBIDDEN)
