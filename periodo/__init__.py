@@ -48,9 +48,10 @@ def add_cors_headers(response):
     response.headers.add('Access-Control-Expose-Headers', 'Last-Modified')
     return response
 
+
 # end app setup ---------------------------------------------------------------
 
-import periodo.auth
+import periodo.auth  # noqa: E402
 
 
 class PeriodOApi(Api):
@@ -75,6 +76,7 @@ class PeriodOApi(Api):
             return res
         return super().make_response(data, *args, **kwargs)
 
+
 api = PeriodOApi(app)
 
 
@@ -82,8 +84,9 @@ api = PeriodOApi(app)
 def load_identity():
     return periodo.auth.load_identity_from_authorization_header()
 
+
 # end api setup ---------------------------------------------------------------
 
-import periodo.routes
-import periodo.representations
-import periodo.resources
+import periodo.routes           # noqa: E402
+import periodo.representations  # noqa: E402
+import periodo.resources        # noqa: E402
