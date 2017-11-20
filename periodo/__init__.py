@@ -2,7 +2,8 @@ import os
 from flask import Flask, request
 from flask_principal import Principal
 from flask_restful import Api
-from periodo.secrets import SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET
+from periodo.secrets import (
+    SECRET_KEY, DB, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
 from periodo.utils import UUIDConverter
 
 app = Flask(__name__)
@@ -11,7 +12,7 @@ app.url_map.converters['uuid'] = UUIDConverter
 principal = Principal(app, use_sessions=False)
 
 app.config.update(
-    DATABASE='./db.sqlite',
+    DATABASE=DB,
     ORCID_CLIENT_ID=ORCID_CLIENT_ID,
     ORCID_CLIENT_SECRET=ORCID_CLIENT_SECRET,
     # HTML representation of root resource is optional and dependent on the
@@ -47,9 +48,10 @@ def add_cors_headers(response):
     response.headers.add('Access-Control-Expose-Headers', 'Last-Modified')
     return response
 
+
 # end app setup ---------------------------------------------------------------
 
-import periodo.auth
+import periodo.auth  # noqa: E402
 
 
 class PeriodOApi(Api):
@@ -74,6 +76,7 @@ class PeriodOApi(Api):
             return res
         return super().make_response(data, *args, **kwargs)
 
+
 api = PeriodOApi(app)
 
 
@@ -81,8 +84,9 @@ api = PeriodOApi(app)
 def load_identity():
     return periodo.auth.load_identity_from_authorization_header()
 
+
 # end api setup ---------------------------------------------------------------
 
-import periodo.routes
-import periodo.representations
-import periodo.resources
+import periodo.routes           # noqa: E402
+import periodo.representations  # noqa: E402
+import periodo.resources        # noqa: E402

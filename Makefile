@@ -1,8 +1,7 @@
-DB := db.sqlite
-
 VENV_DIR := venv
 PIP3 := $(VENV_DIR)/bin/pip3
 PYTHON3 := $(VENV_DIR)/bin/python3
+DB := $(shell $(PYTHON3) -c "from periodo.secrets import DB; print(DB)")
 
 CLIENT_REPO := '../periodo-client'
 
