@@ -1,5 +1,3 @@
-DB := db.sqlite
-
 VENV_DIR := venv
 PIP3 := $(VENV_DIR)/bin/pip3
 PYTHON3 := $(VENV_DIR)/bin/python3
