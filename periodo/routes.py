@@ -78,13 +78,20 @@ def generate_state_token():
                    for x in range(32))
 
 
+def build_redirect_uri(cli=False):
+    if cli:
+        return url_for('registered', cli=True, _external=True)
+    else:
+        return url_for('registered', _external=True)
+
+
 @app.route('/register')
 def register():
     state_token = generate_state_token()
     session['state_token'] = state_token
     params = {
         'client_id': app.config['ORCID_CLIENT_ID'],
-        'redirect_uri': url_for('registered', _external=True),
+        'redirect_uri': build_redirect_uri(cli=('cli' in request.args)),
         'response_type': 'code',
         'scope': '/authenticate',
         'state': state_token,
@@ -102,7 +109,7 @@ def registered():
         'client_secret': app.config['ORCID_CLIENT_SECRET'],
         'code': request.args['code'],
         'grant_type': 'authorization_code',
-        'redirect_uri': url_for('registered', _external=True),
+        'redirect_uri': build_redirect_uri(cli=('cli' in request.args)),
         'scope': '/authenticate',
     }
     response = requests.post(
@@ -110,7 +117,7 @@ def registered():
         headers={'Accept': 'application/json'},
         allow_redirects=True, data=data)
     if not response.status_code == 200:
-        app.logger.error('Response to request for ORCID credentials was not OK')
+        app.logger.error('Response to request for ORCID credential was not OK')
         app.logger.error('Request: %s', data)
         app.logger.error('Response: %s', response.text)
     credentials = response.json()
@@ -119,8 +126,12 @@ def registered():
         credentials['name'] = credentials['orcid']
     identity = auth.add_user_or_update_credentials(credentials)
     database.get_db().commit()
-    return make_response(
-        """
+    if 'cli' in request.args:
+        return make_response(
+            ('Your token is: {}'.format(identity.b64token.decode()),
+             {'Content-Type': 'text/plain'}))
+    else:
+        return make_response("""
         <!doctype html>
         <head>
             <script type="text/javascript">
