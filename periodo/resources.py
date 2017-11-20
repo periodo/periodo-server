@@ -68,6 +68,10 @@ versioned_parser.add_argument(
     'version', type=int, location='args', help='Invalid version number')
 
 
+def cache_control(args):
+    return 'public, max-age={}'.format(604800 if args['version'] else 0)
+
+
 def attach_to_dataset(o):
     o['primaryTopicOf'] = {'id': identifier.prefix(request.path[1:]),
                            'inDataset': identifier.prefix('d')}
@@ -135,11 +139,7 @@ class Dataset(Resource):
 
         headers = {}
         headers['Last-Modified'] = format_date_time(dataset['created_at'])
-
-        if not args['version']:
-            headers['Cache-control'] = 'public, max-age=0'
-        else:
-            headers['Cache-control'] = 'public, max-age=604800'
+        headers['Cache_Control'] = cache_control(args)
 
         response = api.make_response(
             attach_to_dataset(json.loads(dataset['data'])), 200, headers)
@@ -461,10 +461,7 @@ class Bag(Resource):
 
         headers = {}
         headers['Last-Modified'] = format_date_time(bag['created_at'])
-        if 'version' in args:
-            headers['Cache-control'] = 'public, max-age=604800'
-        else:
-            headers['Cache-control'] = 'public, max-age=0'
+        headers['Cache_Control'] = cache_control(args)
 
         data = json.loads(bag['data'])
         defs, defs_ctx = database.get_definitions_and_context(data['items'])
