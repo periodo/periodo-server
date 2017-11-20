@@ -2,7 +2,8 @@ import os
 from flask import Flask, request
 from flask_principal import Principal
 from flask_restful import Api
-from periodo.secrets import SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET
+from periodo.secrets import (
+    SECRET_KEY, DB, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
 from periodo.utils import UUIDConverter
 
 app = Flask(__name__)
@@ -11,7 +12,7 @@ app.url_map.converters['uuid'] = UUIDConverter
 principal = Principal(app, use_sessions=False)
 
 app.config.update(
-    DATABASE='./db.sqlite',
+    DATABASE=DB,
     ORCID_CLIENT_ID=ORCID_CLIENT_ID,
     ORCID_CLIENT_SECRET=ORCID_CLIENT_SECRET,
     # HTML representation of root resource is optional and dependent on the
