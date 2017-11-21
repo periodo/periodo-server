@@ -60,6 +60,35 @@ periodo:DefinitionLocalizedLabelShape
   sh:name "localized label" ;
   sh:description "Language-specific name for the period" ;
   sh:datatype rdf:langString ;
+  sh:languageIn (
+    "ar"
+    "bg"
+    "cmn-Hans"
+    "cmn-Hant"
+    "cmn-Latn"
+    "de"
+    "el"
+    "en"
+    "es"
+    "fr"
+    "hu"
+    "it"
+    "ja-Latn"
+    "ko-Latn"
+    "mi-Latn"
+    "mk"
+    "nl"
+    "ota-Arab"
+    "pt"
+    "ro"
+    "scn"
+    "sl"
+    "sq"
+    "sr-Cyrl"
+    "sv"
+    "tr"
+    "uk"
+    ) ;
   sh:minCount 1 ;
   sh:message "Problem with definition localized label" ;
   .
@@ -194,6 +223,35 @@ periodo:DefinitionLanguageTagShape
   sh:name "language tag" ;
   sh:description "Language tag of the preferred label for this period" ;
   sh:datatype xsd:string ;
+  sh:in (
+    "ar"
+    "bg"
+    "cmn-Hans"
+    "cmn-Hant"
+    "cmn-Latn"
+    "de"
+    "el"
+    "en"
+    "es"
+    "fr"
+    "hu"
+    "it"
+    "ja-Latn"
+    "ko-Latn"
+    "mi-Latn"
+    "mk"
+    "nl"
+    "ota-Arab"
+    "pt"
+    "ro"
+    "scn"
+    "sl"
+    "sq"
+    "sr-Cyrl"
+    "sv"
+    "tr"
+    "uk"
+    ) ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
   sh:message "Problem with definition language tag" ;
