@@ -35,6 +35,8 @@ periodo:DefinitionShape
     periodo:DefinitionSpatialCoverageDescriptionShape ,
     periodo:DefinitionSpatialCoverageShape ,
     periodo:DefinitionSameAsShape ,
+    periodo:DefinitionBroaderShape ,
+    periodo:DefinitionNarrowerShape ,
     periodo:DefinitionURLShape ,
     periodo:DefinitionLanguageShape
   .
@@ -173,6 +175,26 @@ periodo:DefinitionSameAsShape
   sh:description "Alternative URI for this definition" ;
   sh:nodeKind sh:IRI ;
   sh:message "Problem with definition alternative URI (sameAs)" ;
+  .
+
+periodo:DefinitionBroaderShape
+  rdf:type sh:PropertyShape ;
+  sh:path skos:broader ;
+  sh:name "see broader definition" ;
+  sh:description "Another period definition that encompasses this one" ;
+  sh:nodeKind sh:IRI ;
+  sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
+  sh:message "Problem with broader" ;
+  .
+
+periodo:DefinitionNarrowerShape
+  rdf:type sh:PropertyShape ;
+  sh:path skos:narrower ;
+  sh:name "see narrower definition" ;
+  sh:description "Another period definition encompassed by this one" ;
+  sh:nodeKind sh:IRI ;
+  sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
+  sh:message "Problem with narrower" ;
   .
 
 periodo:DefinitionURLShape
