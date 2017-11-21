@@ -81,7 +81,9 @@ class TestBags(unittest.TestCase):
                          + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
             self.assertEqual(res.status_code, http.client.CREATED)
             res = client.get(
-                res.headers['Location'], headers={
+                res.headers['Location'],
+                buffered=True,
+                headers={
                     'If-None-Match':
                     'W/"bag-6f2c64e2-c65f-4e2d-b028-f89dfb71ce69-version-0"'})
             self.assertEqual(res.status_code, http.client.NOT_MODIFIED)

@@ -86,6 +86,7 @@ class TestPatchMethods(unittest.TestCase):
             '/d/',
             data=self.patch,
             content_type='application/json',
+            buffered=True,
             headers={'Authorization': 'Bearer '
                          + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
         patch_url = urlparse(res.headers['Location']).path
@@ -129,6 +130,7 @@ class TestPatchMethods(unittest.TestCase):
             patch_url = urlparse(res.headers['Location']).path
             res = client.post(
                 patch_url + 'merge',
+                buffered=True,
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
             self.assertEqual(res.status_code, http.client.NO_CONTENT)
@@ -162,6 +164,7 @@ class TestPatchMethods(unittest.TestCase):
             patch_url = urlparse(res.headers['Location']).path
             res = client.post(
                 patch_url + 'reject',
+                buffered=True,
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
             self.assertEqual(res.status_code, http.client.NO_CONTENT)
@@ -222,6 +225,7 @@ class TestPatchMethods(unittest.TestCase):
             patch_url = urlparse(res.headers['Location']).path
             res = client.post(
                 patch_url + 'merge',
+                buffered=True,
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
             self.assertEqual(res.status_code, http.client.NO_CONTENT)
@@ -234,6 +238,7 @@ class TestPatchMethods(unittest.TestCase):
             patch_url = urlparse(res.headers['Location']).path
             res = client.post(
                 patch_url + 'merge',
+                buffered=True,
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
             self.assertEqual(res.status_code, http.client.NO_CONTENT)
@@ -328,6 +333,7 @@ class TestPatchMethods(unittest.TestCase):
             patch_url = urlparse(res.headers['Location']).path
             res = client.post(
                 patch_url + 'merge',
+                buffered=True,
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
             self.assertEqual(res.status_code, http.client.NO_CONTENT)
@@ -387,6 +393,7 @@ class TestPatchMethods(unittest.TestCase):
             patch_url = urlparse(res.headers['Location']).path
             res = client.post(
                 patch_url + 'merge',
+                buffered=True,
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
             self.assertEqual(res.status_code, http.client.NO_CONTENT)

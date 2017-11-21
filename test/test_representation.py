@@ -150,6 +150,7 @@ WHERE {
                          + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
             res = client.post(
                 urlparse(res.headers['Location']).path + 'merge',
+                buffered=True,
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
         data = self.client.get(
@@ -202,7 +203,7 @@ WHERE {
         res1 = self.client.get('/d/')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.get_etag(), ('periodo-dataset-version-1', True))
-        res2 = self.client.get('/d/', headers={
+        res2 = self.client.get('/d/', buffered=True, headers={
             'If-None-Match': 'W/"periodo-dataset-version-1"'})
         self.assertEqual(res2.status_code, http.client.NOT_MODIFIED)
 
