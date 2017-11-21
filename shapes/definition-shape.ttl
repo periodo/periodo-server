@@ -3,7 +3,9 @@
 @prefix periodo: <p0v#> .
 
 @prefix bibo: <http://purl.org/ontology/bibo/> .
+@prefix dce: <http://purl.org/dc/elements/1.1/> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix lvont: <http://lexvo.org/ontology#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -36,7 +38,9 @@ periodo:DefinitionShape
     periodo:DefinitionSpatialCoverageShape ,
     periodo:DefinitionSameAsShape ,
     periodo:DefinitionURLShape ,
-    periodo:DefinitionLanguageShape
+    periodo:DefinitionLanguageTagShape ,
+    periodo:DefinitionLanguageShape ,
+    periodo:DefinitionScriptShape
   .
 
 periodo:DefinitionPreferredLabelShape
@@ -184,13 +188,36 @@ periodo:DefinitionURLShape
   sh:message "Problem with definition URL" ;
   .
 
+periodo:DefinitionLanguageTagShape
+  rdf:type sh:PropertyShape ;
+  sh:path dce:language ;
+  sh:name "language tag" ;
+  sh:description "Language tag of the preferred label for this period" ;
+  sh:datatype xsd:string ;
+  sh:minCount 1 ;
+  sh:maxCount 1 ;
+  sh:message "Problem with definition language tag" ;
+  .
+
 periodo:DefinitionLanguageShape
   rdf:type sh:PropertyShape ;
   sh:path dcterms:language ;
   sh:name "language" ;
   sh:description "Language of the preferred label for this period" ;
-  sh:datatype xsd:string ;
+  sh:nodeKind sh:IRI ;
+  sh:pattern "^http://lexvo.org/id/iso639-[13]/[a-z]{2,3}" ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
   sh:message "Problem with definition language" ;
+  .
+
+periodo:DefinitionScriptShape
+  rdf:type sh:PropertyShape ;
+  sh:path lvont:inScript ;
+  sh:name "script" ;
+  sh:description "Script of the preferred label for this period" ;
+  sh:nodeKind sh:IRI ;
+  sh:pattern "^http://lexvo.org/id/script/[A-Z][a-z]{3}" ;
+  sh:maxCount 1 ;
+  sh:message "Problem with script" ;
   .
