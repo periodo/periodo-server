@@ -49,10 +49,26 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         res1 = self.client.get('/v', buffered=True)
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'],
+                         'text/html; charset=utf-8')
+
+        res2 = self.client.get(
+            '/v', headers={'Accept': 'text/turtle'}, buffered=True)
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'],
                          'text/turtle; charset=utf-8')
 
+        res3 = self.client.get('/v.ttl', buffered=True)
+        self.assertEqual(res3.status_code, http.client.OK)
+        self.assertEqual(res3.headers['Content-Type'],
+                         'text/turtle; charset=utf-8')
+
+        res4 = self.client.get('/v.html', buffered=True)
+        self.assertEqual(res4.status_code, http.client.OK)
+        self.assertEqual(res4.headers['Content-Type'],
+                         'text/html; charset=utf-8')
+
         g = Graph()
-        g.parse(format='turtle', data=res1.get_data(as_text=True))
+        g.parse(format='turtle', data=res3.get_data(as_text=True))
         self.assertIn(
             (PERIODO['p0v#spatialCoverageDescription'],
              RDF.type, OWL.DatatypeProperty), g)
@@ -66,8 +82,7 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
     def test_dataset_description(self):
         res1 = self.client.get(
             '/', headers={'Accept': 'text/html'}, buffered=True)
-        self.assertIn(
-            res1.status_code, (http.client.OK, http.client.NOT_ACCEPTABLE))
+        self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/html')
 
         res2 = self.client.get('/', headers={'Accept': 'text/turtle'})
@@ -75,9 +90,15 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         self.assertEqual(res2.headers['Content-Type'], 'text/turtle')
 
         res3 = self.client.get('/.well-known/void')
-        self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(res2.headers['Content-Type'], 'text/turtle')
-        self.assertEqual(res2.get_data(as_text=True),
+        self.assertEqual(res3.status_code, http.client.OK)
+        self.assertEqual(res3.headers['Content-Type'], 'text/turtle')
+        self.assertEqual(res3.get_data(as_text=True),
+                         res2.get_data(as_text=True))
+
+        res4 = self.client.get('/.wellknown/void')
+        self.assertEqual(res4.status_code, http.client.OK)
+        self.assertEqual(res4.headers['Content-Type'], 'text/turtle')
+        self.assertEqual(res4.get_data(as_text=True),
                          res3.get_data(as_text=True))
 
         g = Graph()

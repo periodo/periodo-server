@@ -9,7 +9,7 @@ VOCAB_FILES := $(shell find vocab -name *.ttl)
 SHAPE_FILES := $(shell find shapes -name *.ttl)
 
 .PHONY: all
-all: setup periodo/static/vocab.ttl $(DB)
+all: setup periodo/static/vocab.html $(DB)
 
 $(PYTHON3):
 	python3 -m venv $(VENV_DIR)
@@ -20,6 +20,9 @@ $(DB):
 periodo/static/vocab.ttl: $(VOCAB_FILES) $(SHAPE_FILES)
 	mkdir -p periodo/static
 	./bin/ttlcat $^ > $@
+
+periodo/static/vocab.html: periodo/static/vocab.ttl
+	highlight -i $< -o $@ -s zellner -K 12 -l -a -T 'PeriodO vocabulary and shapes' --inline-css
 
 .PHONY: load_data
 load_data:
