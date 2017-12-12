@@ -22,7 +22,7 @@ periodo/static/vocab.ttl: $(VOCAB_FILES) $(SHAPE_FILES)
 	./bin/ttlcat $^ > $@
 
 periodo/static/vocab.html: periodo/static/vocab.ttl
-	highlight -i $< -o $@ -s zellner -K 12 -l -a -T 'PeriodO vocabulary and shapes'
+	highlight -i $< -o $@ -s zellner -K 12 -l -a -T 'PeriodO vocabulary and shapes' --inline-css
 
 .PHONY: load_data
 load_data:
