@@ -14,6 +14,7 @@ FROM patch_request
 
 index_fields = {
     'dataset': fields.Url('dataset', absolute=True),
+    'dataset_description': fields.Url('void', absolute=True),
     'patches': fields.Url('patchlist', absolute=True),
     'register': fields.Url('register', absolute=True),
 }
