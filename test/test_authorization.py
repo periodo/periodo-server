@@ -54,7 +54,8 @@ class TestAuthorization(unittest.TestCase):
                 (self.admin_identity.id,), one=True)
             self.assertEqual(
                 row['permissions'],
-                '[["action", "submit-patch"], ["action", "accept-patch"]]')
+                '[["action", "submit-patch"], ["action", "create-bag"], '
+                + '["action", "accept-patch"]]')
 
     def test_unauthorized_user(self):
         res = self.client.patch(
@@ -131,6 +132,7 @@ class TestAuthorization(unittest.TestCase):
 
             res = client.post(
                 patch_url + 'merge',
+                buffered=True,
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
             self.assertEqual(res.status_code, http.client.NO_CONTENT)
@@ -187,6 +189,7 @@ class TestAuthorization(unittest.TestCase):
             patch_path = urlparse(res.headers['Location']).path
             res = client.post(
                 patch_path + 'merge',
+                buffered=True,
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
             res = client.put(

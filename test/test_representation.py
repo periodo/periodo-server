@@ -119,7 +119,7 @@ WHERE {
 ''', initNs={'void': VOID, 'skos': SKOS})
         concept_count = next(iter(g.query(
             q, initBindings={'class': SKOS.Concept})))['count'].value
-        self.assertEqual(concept_count, 1)
+        self.assertEqual(concept_count, 3)
         scheme_count = next(iter(g.query(
             q, initBindings={'class': SKOS.ConceptScheme})))['count'].value
         self.assertEqual(scheme_count, 1)
@@ -146,7 +146,7 @@ WHERE {
         triples = next(iter(g.query(
             q, initBindings={'dataset': dbpedia,
                              'predicate': DCTERMS.spatial})))['triples'].value
-        self.assertEqual(triples, 1)
+        self.assertEqual(triples, 3)
 
         worldcat = URIRef('http://purl.oclc.org/dataset/WorldCat')
         triples = next(iter(g.query(
@@ -171,6 +171,7 @@ WHERE {
                          + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
             res = client.post(
                 urlparse(res.headers['Location']).path + 'merge',
+                buffered=True,
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
         data = self.client.get(
@@ -218,6 +219,14 @@ WHERE {
                        FOAF.isPrimaryTopicOf, PERIODO['p0d/']), g)
         self.assertIn((PERIODO['p0d/'],
                        VOID.inDataset, PERIODO['p0d']), g)
+
+    def test_if_none_match(self):
+        res1 = self.client.get('/d/')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.get_etag(), ('periodo-dataset-version-1', True))
+        res2 = self.client.get('/d/', buffered=True, headers={
+            'If-None-Match': 'W/"periodo-dataset-version-1"'})
+        self.assertEqual(res2.status_code, http.client.NOT_MODIFIED)
 
     def test_period_collection(self):
         res1 = self.client.get('/trgkv')

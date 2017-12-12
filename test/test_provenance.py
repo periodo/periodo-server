@@ -59,6 +59,7 @@ class TestProvenance(unittest.TestCase):
             patch_url = urlparse(res1.headers['Location']).path
             client.post(
                 patch_url + 'merge',
+                buffered=True,
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
             res2 = client.get('/h')
