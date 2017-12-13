@@ -25,9 +25,9 @@ def history():
 @app.route('/v')
 def vocab():
     if request.accept_mimetypes.best == 'text/turtle':
-        return app.send_static_file('vocab.ttl')
+        return redirect(url_for('vocab_as_turtle'))
     else:
-        return app.send_static_file('vocab.html')
+        return redirect(url_for('vocab_as_html'))
 
 
 @app.route('/v.ttl')
@@ -35,7 +35,7 @@ def vocab_as_turtle():
     return app.send_static_file('vocab.ttl')
 
 
-@app.route('/v.html')
+@app.route('/v.ttl.html')
 def vocab_as_html():
     return app.send_static_file('vocab.html')
 
