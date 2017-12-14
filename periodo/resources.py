@@ -167,6 +167,18 @@ class Dataset(Resource):
 @api.resource('/<string(length=%s):collection_id>.jsonld'
               % (identifier.COLLECTION_SEQUENCE_LENGTH + 1),
               endpoint='collection-jsonld')
+@api.resource('/<string(length=%s):collection_id>.ttl'
+              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1),
+              endpoint='collection-ttl')
+@api.resource('/<string(length=%s):collection_id>.json.html'
+              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1),
+              endpoint='collection-json-html')
+@api.resource('/<string(length=%s):collection_id>.jsonld.html'
+              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1),
+              endpoint='collection-jsonld-html')
+@api.resource('/<string(length=%s):collection_id>.ttl.html'
+              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1),
+              endpoint='collection-ttl-html')
 class PeriodCollection(Resource):
     def get(self, collection_id):
         version = request.args.get('version')
@@ -193,6 +205,22 @@ class PeriodCollection(Resource):
               % (identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
                  identifier.DEFINITION_SEQUENCE_LENGTH + 1),
               endpoint='definition-jsonld')
+@api.resource('/<string(length=%s):definition_id>.ttl'
+              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
+                 identifier.DEFINITION_SEQUENCE_LENGTH + 1),
+              endpoint='definition-ttl')
+@api.resource('/<string(length=%s):definition_id>.json.html'
+              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
+                 identifier.DEFINITION_SEQUENCE_LENGTH + 1),
+              endpoint='definition-json-html')
+@api.resource('/<string(length=%s):definition_id>.jsonld.html'
+              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
+                 identifier.DEFINITION_SEQUENCE_LENGTH + 1),
+              endpoint='definition-jsonld-html')
+@api.resource('/<string(length=%s):definition_id>.ttl.html'
+              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
+                 identifier.DEFINITION_SEQUENCE_LENGTH + 1),
+              endpoint='definition-ttl-html')
 class PeriodDefinition(Resource):
     def get(self, definition_id):
         version = request.args.get('version')
