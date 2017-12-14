@@ -73,8 +73,28 @@ class PeriodOApi(Api):
             return res
         if request.path.endswith('.jsonld'):
             res = self.representations[
-                'application/json'](data, *args, **kwargs)
+                'application/ld+json'](data, *args, **kwargs)
             res.content_type = 'application/ld+json'
+            return res
+        if request.path.endswith('.json.html'):
+            res = self.representations[
+                'application/json+html'](data, *args, **kwargs)
+            res.content_type = 'text/html'
+            return res
+        if request.path.endswith('.jsonld.html'):
+            res = self.representations[
+                'application/json+html'](data, *args, **kwargs)
+            res.content_type = 'text/html'
+            return res
+        if request.path.endswith('.ttl'):
+            res = self.representations[
+                'text/turtle'](data, *args, **kwargs)
+            res.content_type = 'text/turtle'
+            return res
+        if request.path.endswith('.ttl.html'):
+            res = self.representations[
+                'text/turtle+html'](data, *args, **kwargs)
+            res.content_type = 'text/html'
             return res
         return super().make_response(data, *args, **kwargs)
 
@@ -92,3 +112,4 @@ def load_identity():
 import periodo.routes           # noqa: E402
 import periodo.representations  # noqa: E402
 import periodo.resources        # noqa: E402
+import periodo.namespaces       # noqa: E402

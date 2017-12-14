@@ -3,3 +3,4 @@ Flask-RESTful==0.3.5
 jsonpatch==1.15
 rdflib-jsonld==0.4.0
 requests==2.14.2
+Pygments==2.2.0

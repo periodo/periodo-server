@@ -47,12 +47,13 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
 
     def test_vocab(self):
         res1 = self.client.get('/v', buffered=True)
-        self.assertEqual(res1.status_code, http.client.FOUND)
-        self.assertEqual(urlparse(res1.headers['Location']).path, '/v.ttl.html')
+        self.assertEqual(res1.status_code, http.client.SEE_OTHER)
+        self.assertEqual(
+            urlparse(res1.headers['Location']).path, '/v.ttl.html')
 
         res2 = self.client.get(
             '/v', headers={'Accept': 'text/turtle'}, buffered=True)
-        self.assertEqual(res2.status_code, http.client.FOUND)
+        self.assertEqual(res2.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res2.headers['Location']).path, '/v.ttl')
 
         res3 = self.client.get('/v.ttl', buffered=True)
@@ -98,6 +99,16 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         self.assertEqual(res4.headers['Content-Type'], 'text/turtle')
         self.assertEqual(res4.get_data(as_text=True),
                          res3.get_data(as_text=True))
+
+        res5 = self.client.get('/.well-known/void.ttl')
+        self.assertEqual(res5.status_code, http.client.OK)
+        self.assertEqual(res5.headers['Content-Type'], 'text/turtle')
+        self.assertEqual(res5.get_data(as_text=True),
+                         res4.get_data(as_text=True))
+
+        res6 = self.client.get('/.well-known/void.ttl.html')
+        self.assertEqual(res6.status_code, http.client.OK)
+        self.assertEqual(res6.headers['Content-Type'], 'text/html')
 
         g = Graph()
         g.parse(format='turtle', data=res2.get_data(as_text=True))
@@ -197,7 +208,8 @@ WHERE {
         res3 = self.client.get('/d.jsonld')
         self.assertEqual(res3.status_code, http.client.OK)
         self.assertEqual(res3.headers['Content-Type'], 'application/ld+json')
-        res4 = self.client.get('/d/', headers={'Accept': 'application/ld+json'})
+        res4 = self.client.get(
+            '/d/', headers={'Accept': 'application/ld+json'})
         self.assertEqual(res4.status_code, http.client.OK)
         self.assertEqual(res4.headers['Content-Type'], 'application/ld+json')
         res5 = self.client.get(
@@ -231,39 +243,76 @@ WHERE {
         self.assertEqual(res1.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res1.headers['Location']).path, '/')
         self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkv')
-        res2 = self.client.get('/trgkv', headers={'Accept': 'application/json'})
+
+        res2 = self.client.get(
+            '/trgkv', headers={'Accept': 'application/json'})
         self.assertEqual(res2.status_code, http.client.SEE_OTHER)
         self.assertEqual(
             urlparse(res2.headers['Location']).path, '/trgkv.json')
+
         res3 = self.client.get(
             '/trgkv', headers={'Accept': 'application/ld+json'})
         self.assertEqual(res3.status_code, http.client.SEE_OTHER)
         self.assertEqual(
             urlparse(res3.headers['Location']).path, '/trgkv.jsonld')
+
         res4 = self.client.get('/trgkv', headers={'Accept': 'text/html'})
         self.assertEqual(res4.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res4.headers['Location']).path, '/')
         self.assertEqual(urlparse(res1.headers['Location']).fragment, 'trgkv')
+
         res5 = self.client.get('/trgkv/')
         self.assertEqual(res5.status_code, http.client.NOT_FOUND)
 
-    def test_period_collection_data(self):
+        res6 = self.client.get(
+            '/trgkv', headers={'Accept': 'text/turtle'})
+        self.assertEqual(res6.status_code, http.client.SEE_OTHER)
+        self.assertEqual(
+            urlparse(res6.headers['Location']).path, '/trgkv.ttl')
+
+    def test_period_collection_json(self):
         res1 = self.client.get('/trgkv.json')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
+
         res2 = self.client.get('/trgkv.jsonld')
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
+
         g = Graph().parse(data=res2.get_data(as_text=True), format='json-ld')
         self.assertIsNone(g.value(predicate=RDF.type, object=RDF.Bag))
         self.assertIn((PERIODO['p0trgkv'],
                        FOAF.isPrimaryTopicOf, PERIODO['p0trgkv.jsonld']), g)
         self.assertIn((PERIODO['p0trgkv.jsonld'],
                        VOID.inDataset, PERIODO['p0d']), g)
+
         res3 = self.client.get('/trgkv.json/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
         res4 = self.client.get('/trgkv.jsonld/')
         self.assertEqual(res4.status_code, http.client.NOT_FOUND)
+
+        res5 = self.client.get('/trgkv.json.html')
+        self.assertEqual(res5.status_code, http.client.OK)
+        self.assertEqual(res5.headers['Content-Type'], 'text/html')
+
+    def test_period_collection_turtle(self):
+        res1 = self.client.get('/trgkv.ttl')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
+
+        g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
+        self.assertIsNone(g.value(predicate=RDF.type, object=RDF.Bag))
+        self.assertIn((PERIODO['p0trgkv'],
+                       FOAF.isPrimaryTopicOf, PERIODO['p0trgkv.ttl']), g)
+        self.assertIn((PERIODO['p0trgkv.ttl'],
+                       VOID.inDataset, PERIODO['p0d']), g)
+
+        res2 = self.client.get('/trgkv.ttl.html')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'text/html')
+
+        res3 = self.client.get('/trgkv.ttl/')
+        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
 
     def test_period_definition(self):
         res1 = self.client.get('/trgkvwbjd')
@@ -287,8 +336,13 @@ WHERE {
         self.assertEqual(urlparse(res4.headers['Location']).path, '/')
         self.assertEqual(
             urlparse(res1.headers['Location']).fragment, 'trgkvwbjd')
+        res5 = self.client.get(
+            '/trgkvwbjd', headers={'Accept': 'text/turtle'})
+        self.assertEqual(res5.status_code, http.client.SEE_OTHER)
+        self.assertEqual(
+            urlparse(res5.headers['Location']).path, '/trgkvwbjd.ttl')
 
-    def test_period_definition_data(self):
+    def test_period_definition_json(self):
         res1 = self.client.get('/trgkvwbjd.json')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
@@ -304,3 +358,23 @@ WHERE {
                        VOID.inDataset, PERIODO['p0d']), g)
         self.assertIn((PERIODO['p0trgkvwbjd'],
                        SKOS.inScheme, PERIODO['p0trgkv']), g)
+        res3 = self.client.get('/trgkvwbjd.json.html')
+        self.assertEqual(res3.status_code, http.client.OK)
+        self.assertEqual(res3.headers['Content-Type'], 'text/html')
+
+    def test_period_definition_turtle(self):
+        res1 = self.client.get('/trgkvwbjd.ttl')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
+        g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
+        self.assertIsNone(
+            g.value(predicate=RDF.type, object=SKOS.ConceptScheme))
+        self.assertIn((PERIODO['p0trgkvwbjd'],
+                       FOAF.isPrimaryTopicOf, PERIODO['p0trgkvwbjd.ttl']), g)
+        self.assertIn((PERIODO['p0trgkvwbjd.ttl'],
+                       VOID.inDataset, PERIODO['p0d']), g)
+        self.assertIn((PERIODO['p0trgkvwbjd'],
+                       SKOS.inScheme, PERIODO['p0trgkv']), g)
+        res2 = self.client.get('/trgkvwbjd.ttl.html')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'text/html')

@@ -3,7 +3,7 @@ import random
 import requests
 import string
 from flask import request, make_response, redirect, url_for, session, abort
-from periodo import app, database, provenance, identifier, auth
+from periodo import app, database, provenance, identifier, auth, utils
 from urllib.parse import urlencode
 
 if app.config['HTML_REPR_EXISTS']:
@@ -25,9 +25,9 @@ def history():
 @app.route('/v')
 def vocab():
     if request.accept_mimetypes.best == 'text/turtle':
-        return redirect(url_for('vocab_as_turtle'))
+        return redirect(url_for('vocab_as_turtle'), code=303)
     else:
-        return redirect(url_for('vocab_as_html'))
+        return redirect(url_for('vocab_as_html'), code=303)
 
 
 @app.route('/v.ttl')
@@ -42,11 +42,23 @@ def vocab_as_html():
 
 # http://www.w3.org/TR/void/#well-known
 @app.route('/.well-known/void')
+@app.route('/.well-known/void.ttl')
 # N2T resolver strips hyphens so handle this too
 @app.route('/.wellknown/void')
+@app.route('/.wellknown/void.ttl')
 def void():
     return make_response(database.get_dataset()['description'], 200, {
         'Content-Type': 'text/turtle',
+        'Link': '</>; rel="alternate"; type="text/html"',
+    })
+
+
+@app.route('/.well-known/void.ttl.html')
+@app.route('/.wellknown/void.ttl.html')
+def void_as_html():
+    ttl = database.get_dataset()['description']
+    return make_response(utils.highlight_ttl(ttl), 200, {
+        'Content-Type': 'text/html',
         'Link': '</>; rel="alternate"; type="text/html"',
     })
 
@@ -57,17 +69,25 @@ def see_dataset():
     return redirect(url_for('dataset', **request.args), code=303)
 
 
+def get_mimetype():
+    if request.accept_mimetypes.best == 'application/json':
+        return 'json'
+    if request.accept_mimetypes.best == 'application/ld+json':
+        return 'jsonld'
+    if request.accept_mimetypes.best == 'text/turtle':
+        return 'ttl'
+    return None
+
+
 @app.route('/<string(length=%s):collection_id>'
            % (identifier.COLLECTION_SEQUENCE_LENGTH + 1))
 def see_collection(collection_id):
-    if request.accept_mimetypes.best == 'application/json':
-        url = url_for('collection-json', collection_id=collection_id,
-                      **request.args)
-    elif request.accept_mimetypes.best == 'application/ld+json':
-        url = url_for('collection-jsonld', collection_id=collection_id,
-                      **request.args)
-    else:
+    mimetype = get_mimetype()
+    if mimetype is None:
         url = url_for('index', _anchor=request.path[1:])
+    else:
+        url = url_for(f'collection-{mimetype}', collection_id=collection_id,
+                      **request.args)
     return redirect(url, code=303)
 
 
@@ -75,14 +95,12 @@ def see_collection(collection_id):
            % (identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
               identifier.DEFINITION_SEQUENCE_LENGTH + 1))
 def see_definition(definition_id):
-    if request.accept_mimetypes.best == 'application/json':
-        url = url_for('definition-json', definition_id=definition_id,
-                      **request.args)
-    elif request.accept_mimetypes.best == 'application/ld+json':
-        url = url_for('definition-jsonld', definition_id=definition_id,
-                      **request.args)
-    else:
+    mimetype = get_mimetype()
+    if mimetype is None:
         url = url_for('index', _anchor=request.path[1:])
+    else:
+        url = url_for(f'definition-{mimetype}', definition_id=definition_id,
+                      **request.args)
     return redirect(url, code=303)
 
 
