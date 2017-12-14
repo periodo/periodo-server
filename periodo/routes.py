@@ -86,7 +86,7 @@ def see_collection(collection_id):
     if mimetype is None:
         url = url_for('index', _anchor=request.path[1:])
     else:
-        url = url_for(f'collection-{mimetype}', collection_id=collection_id,
+        url = url_for('collection-%s' % mimetype, collection_id=collection_id,
                       **request.args)
     return redirect(url, code=303)
 
@@ -99,7 +99,7 @@ def see_definition(definition_id):
     if mimetype is None:
         url = url_for('index', _anchor=request.path[1:])
     else:
-        url = url_for(f'definition-{mimetype}', definition_id=definition_id,
+        url = url_for('definition-%s' % mimetype, definition_id=definition_id,
                       **request.args)
     return redirect(url, code=303)
 
