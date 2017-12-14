@@ -1,11 +1,12 @@
 namespaces = {
+    'dbpedia': 'http://dbpedia.org/resource/',
+    'dcelements': 'https://staging.perio.do/zmdxzf369.ttl.html',
     'dcterms': 'http://purl.org/dc/terms/',
-    'skos': 'http://www.w3.org/2004/02/skos/core#',
-    'time': 'http://www.w3.org/2006/time#',
     'foaf': 'http://xmlns.com/foaf/0.1/',
     'owl': 'http://www.w3.org/2002/07/owl#',
+    'skos': 'http://www.w3.org/2004/02/skos/core#',
+    'time': 'http://www.w3.org/2006/time#',
     'void': 'http://rdfs.org/ns/void#',
-    'dbpedia': 'http://dbpedia.org/resource/'
 }
 
 
