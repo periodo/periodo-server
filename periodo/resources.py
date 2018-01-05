@@ -141,7 +141,8 @@ class Index(Resource):
         return {}
 
 
-@api.resource('/c')
+@api.resource('/c', '/c.json', endpoint='context-json')
+@api.resource('/c.json.html', endpoint='context-json-html')
 class Context(Resource):
     def get(self):
         args = versioned_parser.parse_args()
