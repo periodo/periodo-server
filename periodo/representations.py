@@ -3,6 +3,32 @@ from flask import request, make_response, redirect
 from periodo import app, api, routes, utils
 
 
+def abbreviate_context(data):
+    if ((data is None
+         or '@context' not in data
+         or len(data) == 1
+         or type(data['@context']) is list)):
+
+        # don't abbreviate non-LD responses, the context object itself, or bags
+        return data
+
+    context = data['@context']
+
+    if '__inline' in context:
+        context.pop('__inline', None)
+        context.pop('__version', None)
+        data['@context'] = context
+    else:
+        data['@context'] = [
+            context['@base'] + 'p0c',
+            {'@base': context['@base']}
+        ]
+        if '__version' in context:
+            data['@context'][0] += '?version=%s' % context['__version']
+
+    return data
+
+
 @api.representation('text/html')
 def output_html(data, code, headers=None):
     if app.config['HTML_REPR_EXISTS'] and request.path == '/':
@@ -26,28 +52,34 @@ def output_turtle(data, code, headers=None):
     if request.path == '/':
         res = routes.void()
     else:
-        res = make_response(utils.jsonld_to_turtle(data), code, headers)
+        res = make_response(utils.jsonld_to_turtle(data), code)
+    res.headers.extend(headers or {})
+    return res
+
+
+@api.representation('application/json')
+def output_json(data, code, headers=None):
+    res = make_response(
+        json.dumps(abbreviate_context(data)) + '\n', code)
     res.headers.extend(headers or {})
     return res
 
 
 @api.representation('application/ld+json')
 def output_jsonld(data, code, headers=None):
-    res = make_response(json.dumps(data), code, headers)
-    res.headers.extend(headers or {})
-    return res
+    return output_json(data, code, headers)
 
 
 @api.representation('text/turtle+html')
 def output_turtle_as_html(data, code, headers=None):
     ttl = utils.jsonld_to_turtle(data)
-    res = make_response(utils.highlight_ttl(ttl), code, headers)
+    res = make_response(utils.highlight_ttl(ttl), code)
     res.headers.extend(headers or {})
     return res
 
 
 @api.representation('application/json+html')
 def output_json_as_html(data, code, headers=None):
-    res = make_response(utils.highlight_json(data), code, headers)
+    res = make_response(utils.highlight_json(data), code)
     res.headers.extend(headers or {})
     return res

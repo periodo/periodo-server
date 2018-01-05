@@ -35,22 +35,29 @@ def get_dataset(version=None):
             'SELECT * FROM dataset WHERE dataset.id = ?', (version,), one=True)
 
 
-def extract_definition(definition_key, o, raiseErrors=False):
+def extract_collection(collection_key, o, raiseErrors=False):
     def maybeRaiseMissingKeyError():
         if raiseErrors:
-            raise MissingKeyError(definition_key)
+            raise MissingKeyError(collection_key)
 
     if 'periodCollections' not in o:
         maybeRaiseMissingKeyError()
         return None
 
-    collection_key = definition_key[:7]
-
     if collection_key not in o['periodCollections']:
         maybeRaiseMissingKeyError()
         return None
 
-    collection = o['periodCollections'][collection_key]
+    return o['periodCollections'][collection_key]
+
+
+def extract_definition(definition_key, o, raiseErrors=False):
+    def maybeRaiseMissingKeyError():
+        if raiseErrors:
+            raise MissingKeyError(definition_key)
+
+    collection_key = definition_key[:7]
+    collection = extract_collection(collection_key, o, raiseErrors)
 
     if definition_key not in collection['definitions']:
         maybeRaiseMissingKeyError()
@@ -60,6 +67,15 @@ def extract_definition(definition_key, o, raiseErrors=False):
     definition['collection'] = collection_key
 
     return definition
+
+
+def get_collection(id, version=None):
+    dataset = get_dataset(version=version)
+    o = json.loads(dataset['data'])
+    collection = extract_collection(identifier.prefix(id), o, raiseErrors=True)
+    collection['@context'] = o['@context']
+
+    return collection
 
 
 def get_definition(id, version=None):

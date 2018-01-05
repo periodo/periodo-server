@@ -67,6 +67,10 @@ class TestBags(unittest.TestCase):
             self.assertEqual(
                 json.loads(bag_jsonld),
                 json.loads(res.get_data(as_text=True)))
+            context = json.loads(res.get_data(as_text=True))['@context']
+            self.assertEqual(context, [
+                'http://n2t.net/ark:/99152/p0c',
+                {'@base': 'http://n2t.net/ark:/99152/'}])
 
     def test_if_none_match(self):
         with open(filepath('test-bag.json')) as f:
@@ -254,6 +258,12 @@ class TestBags(unittest.TestCase):
             self.assertEqual(
                 json.loads(updated_bag_jsonld),
                 json.loads(res.get_data(as_text=True)))
+            context = json.loads(res.get_data(as_text=True))['@context']
+            self.assertEqual(context, [
+                'http://n2t.net/ark:/99152/p0c', {
+                    '@base': 'http://n2t.net/ark:/99152/',
+                    "foo": "http://example.org/foo"
+                }])
 
             res = client.get('/bags/%s?version=0' % id)
             self.maxDiff = None

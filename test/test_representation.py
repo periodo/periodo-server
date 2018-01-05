@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 import http.client
+import json
 from rdflib import Graph, URIRef
 from rdflib.plugins import sparql
 from rdflib.namespace import Namespace, RDF, DCTERMS, OWL
@@ -44,6 +45,13 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
     def tearDown(self):
         os.close(self.db_fd)
         os.unlink(app.config['DATABASE'])
+
+    def test_context(self):
+        res1 = self.client.get('/c', buffered=True)
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        self.assertEqual(
+            list(json.loads(res1.get_data(as_text=True)).keys()), ['@context'])
 
     def test_vocab(self):
         res1 = self.client.get('/v', buffered=True)
@@ -202,6 +210,10 @@ WHERE {
         res1 = self.client.get('/d/')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        context = json.loads(res1.get_data(as_text=True))['@context']
+        self.assertEqual(context, [
+            'http://n2t.net/ark:/99152/p0c',
+            {'@base': 'http://n2t.net/ark:/99152/'}])
         res2 = self.client.get('/d.json')
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'application/json')
@@ -224,11 +236,25 @@ WHERE {
                      + 'application/xml;q=0.9,image/webp,*/*;q=0.8'})
         self.assertEqual(res6.status_code, http.client.OK)
         self.assertEqual(res6.headers['Content-Type'], 'application/ld+json')
-        g = Graph().parse(data=res4.get_data(as_text=True), format='json-ld')
+
+        jsonld = json.loads(res4.get_data(as_text=True))
+        context = json.loads(self.client.get('/c', buffered=True)
+                             .get_data(as_text=True))
+        g = Graph().parse(
+            data=json.dumps({**jsonld, **context}), format='json-ld')
         self.assertIn((PERIODO['p0d/#periodCollections'],
                        FOAF.isPrimaryTopicOf, PERIODO['p0d/']), g)
         self.assertIn((PERIODO['p0d/'],
                        VOID.inDataset, PERIODO['p0d']), g)
+
+    def test_inline_context(self):
+        res1 = self.client.get('/d.json?inline-context')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        context = json.loads(res1.get_data(as_text=True))['@context']
+        self.assertIs(type(context), dict)
+        self.assertIn('@base', context)
+        self.assertEqual(context['@base'], 'http://n2t.net/ark:/99152/')
 
     def test_if_none_match(self):
         res1 = self.client.get('/d/')
@@ -274,12 +300,20 @@ WHERE {
         res1 = self.client.get('/trgkv.json')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        context = json.loads(res1.get_data(as_text=True))['@context']
+        self.assertEqual(context, [
+            'http://n2t.net/ark:/99152/p0c',
+            {'@base': 'http://n2t.net/ark:/99152/'}])
 
         res2 = self.client.get('/trgkv.jsonld')
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
 
-        g = Graph().parse(data=res2.get_data(as_text=True), format='json-ld')
+        jsonld = json.loads(res2.get_data(as_text=True))
+        context = json.loads(self.client.get('/c', buffered=True)
+                             .get_data(as_text=True))
+        g = Graph().parse(
+            data=json.dumps({**jsonld, **context}), format='json-ld')
         self.assertIsNone(g.value(predicate=RDF.type, object=RDF.Bag))
         self.assertIn((PERIODO['p0trgkv'],
                        FOAF.isPrimaryTopicOf, PERIODO['p0trgkv.jsonld']), g)
@@ -346,10 +380,20 @@ WHERE {
         res1 = self.client.get('/trgkvwbjd.json')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        context = json.loads(res1.get_data(as_text=True))['@context']
+        self.assertEqual(context, [
+            'http://n2t.net/ark:/99152/p0c',
+            {'@base': 'http://n2t.net/ark:/99152/'}])
+
         res2 = self.client.get('/trgkvwbjd.jsonld')
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
-        g = Graph().parse(data=res1.get_data(as_text=True), format='json-ld')
+
+        jsonld = json.loads(res1.get_data(as_text=True))
+        context = json.loads(self.client.get('/c', buffered=True)
+                             .get_data(as_text=True))
+        g = Graph().parse(
+            data=json.dumps({**jsonld, **context}), format='json-ld')
         self.assertIsNone(
             g.value(predicate=RDF.type, object=SKOS.ConceptScheme))
         self.assertIn((PERIODO['p0trgkvwbjd'],
