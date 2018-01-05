@@ -261,6 +261,12 @@ class TestPatchMethods(unittest.TestCase):
                     res.status_code, http.client.OK)
                 self.assertEqual(
                     res.headers['Content-Type'], 'application/json')
+                ctx = json.loads(res.get_data(as_text=True))['@context']
+                self.assertEqual(
+                    ctx[0],
+                    'http://n2t.net/ark:/99152/p0c?version={}'.format(version)
+                )
+
             res = client.get('/h')
 
             g = ConjunctiveGraph()
