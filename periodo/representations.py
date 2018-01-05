@@ -80,6 +80,7 @@ def output_turtle_as_html(data, code, headers=None):
 
 @api.representation('application/json+html')
 def output_json_as_html(data, code, headers=None):
-    res = make_response(utils.highlight_json(data), code)
+    res = make_response(
+        utils.highlight_json(abbreviate_context(data)), code)
     res.headers.extend(headers or {})
     return res

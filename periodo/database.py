@@ -69,22 +69,23 @@ def extract_definition(definition_key, o, raiseErrors=False):
     return definition
 
 
-def get_collection(id, version=None):
+def get_item(extract_item, id, version=None):
     dataset = get_dataset(version=version)
     o = json.loads(dataset['data'])
-    collection = extract_collection(identifier.prefix(id), o, raiseErrors=True)
-    collection['@context'] = o['@context']
+    item = extract_item(identifier.prefix(id), o, raiseErrors=True)
+    item['@context'] = o['@context']
+    if version is not None:
+        item['@context']['__version'] = version
 
-    return collection
+    return item
+
+
+def get_collection(id, version=None):
+    return get_item(extract_collection, id, version)
 
 
 def get_definition(id, version=None):
-    dataset = get_dataset(version=version)
-    o = json.loads(dataset['data'])
-    definition = extract_definition(identifier.prefix(id), o, raiseErrors=True)
-    definition['@context'] = o['@context']
-
-    return definition
+    return get_item(extract_definition, id, version)
 
 
 def get_definitions_and_context(ids, version=None, raiseErrors=False):
