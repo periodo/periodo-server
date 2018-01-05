@@ -74,8 +74,9 @@ def cache_control(args):
 
 
 def attach_to_dataset(o):
-    o['primaryTopicOf'] = {'id': identifier.prefix(request.path[1:]),
-                           'inDataset': identifier.prefix('d')}
+    if len(o) > 0:
+        o['primaryTopicOf'] = {'id': identifier.prefix(request.path[1:]),
+                               'inDataset': identifier.prefix('d')}
     return o
 
 
@@ -112,6 +113,27 @@ def abort_gone_or_not_found(entity_key):
         abort(404)
 
 
+def get_dataset(version=None):
+    dataset = database.get_dataset(version)
+
+    if not dataset:
+        if version:
+            raise ResourceError(404, 'Could not find given version.')
+        else:
+            raise ResourceError(501, 'No dataset loaded yet.')
+
+    return dataset
+
+
+class ResourceError(Exception):
+    def __init__(self, status, message):
+        self.status = status
+        self.message = message
+
+    def response(self):
+        return {'status': self.status, 'message': self.message}, self.status
+
+
 @api.resource('/')
 class Index(Resource):
     @marshal_with(index_fields)
@@ -119,20 +141,44 @@ class Index(Resource):
         return {}
 
 
+@api.resource('/c')
+class Context(Resource):
+    def get(self):
+        args = versioned_parser.parse_args()
+
+        try:
+            dataset = get_dataset(args.get('version', None))
+        except ResourceError as e:
+            return e.response()
+
+        context_etag = 'periodo-context-version-{}'.format(dataset['id'])
+        if request.if_none_match.contains_weak(context_etag):
+            return None, 304
+
+        headers = {}
+        headers['Last-Modified'] = format_date_time(dataset['created_at'])
+        headers['Cache_Control'] = cache_control(args)
+
+        context = json.loads(dataset['data']).get('@context', None)
+        if context is None:
+            return None, 404
+
+        response = api.make_response({'@context': context}, 200, headers)
+        response.set_etag(context_etag, weak=True)
+
+        return response
+
+
 @api.resource('/d/', '/d.json', '/d.jsonld')
 class Dataset(Resource):
     def get(self):
         args = versioned_parser.parse_args()
+        version = args.get('version', None)
 
-        dataset = database.get_dataset(args.get('version', None))
-
-        if not dataset:
-            if args['version']:
-                return {'status': 404,
-                        'message': 'Could not find given version.'}, 404
-            else:
-                return {'status': 501,
-                        'message': 'No dataset loaded yet.'}, 501
+        try:
+            dataset = get_dataset(version)
+        except ResourceError as e:
+            return e.response()
 
         dataset_etag = 'periodo-dataset-version-{}'.format(dataset['id'])
         if request.if_none_match.contains_weak(dataset_etag):
@@ -142,8 +188,13 @@ class Dataset(Resource):
         headers['Last-Modified'] = format_date_time(dataset['created_at'])
         headers['Cache_Control'] = cache_control(args)
 
-        response = api.make_response(
-            attach_to_dataset(json.loads(dataset['data'])), 200, headers)
+        data = json.loads(dataset['data'])
+        if version is not None and '@context' in data:
+            data['@context']['__version'] = version
+        if 'inline-context' in request.args:
+            data['@context']['__inline'] = True
+
+        response = api.make_response(attach_to_dataset(data), 200, headers)
         response.set_etag(dataset_etag, weak=True)
 
         return response
@@ -185,16 +236,11 @@ class PeriodCollection(Resource):
         new_location = redirect_to_last_update(collection_id, version)
         if new_location is not None:
             return new_location
-        dataset = database.get_dataset(version=version)
-        o = json.loads(dataset['data'])
-        if 'periodCollections' not in o:
-            abort(404)
-        collection_key = identifier.prefix(collection_id)
-        if collection_key not in o['periodCollections']:
-            abort_gone_or_not_found(collection_key)
-        collection = o['periodCollections'][collection_key]
-        collection['@context'] = o['@context']
-        return attach_to_dataset(collection)
+        try:
+            return attach_to_dataset(
+                database.get_collection(collection_id, version))
+        except database.MissingKeyError as e:
+            abort_gone_or_not_found(e.key)
 
 
 @api.resource('/<string(length=%s):definition_id>.json'
@@ -468,6 +514,21 @@ class Bag(Resource):
         except database.MissingKeyError as e:
             return {'message': 'No resource with key: ' + e.key}, 400
 
+        base = ctx['@base']
+        bag_ctx = data.get('@context', {})
+        if type(bag_ctx) is list:
+            contexts = bag_ctx
+            if (base + 'p0c') not in contexts:
+                contexts.insert(0, base + 'p0c')
+            if type(contexts[-1]) is dict:
+                contexts[-1]['@base'] = base
+            else:
+                contexts.append({'@base': base})
+        else:
+            contexts = [base + 'p0c', {**bag_ctx, '@base': base}]
+
+        data['@context'] = contexts
+
         bag = database.get_bag(uuid)
         if bag and g.identity.id not in json.loads(bag['owners']):
             return None, 403
@@ -495,11 +556,6 @@ class Bag(Resource):
         data = json.loads(bag['data'])
         defs, defs_ctx = database.get_definitions_and_context(data['items'])
 
-        context = data.get('@context', {})
-        context.update(defs_ctx)
-        context.update(BAG_CONTEXT)
-
-        data['@context'] = context
         data['@id'] = identifier.prefix('bags/%s' % uuid)
         data['creator'] = bag['created_by']
         data['items'] = defs

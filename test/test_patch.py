@@ -320,6 +320,64 @@ class TestPatchMethods(unittest.TestCase):
                 self.assertEqual(
                     res.headers['Content-Type'], 'application/json')
 
+    def test_context_versioning(self):
+        with open(filepath('test-patch-modify-context.json')) as f:
+            patch = f.read()
+        with self.client as client:
+            res = client.patch(
+                '/d/',
+                data=patch,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            patch_url = urlparse(res.headers['Location']).path
+            res = client.post(
+                patch_url + 'merge',
+                buffered=True,
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+            self.assertEqual(res.status_code, http.client.NO_CONTENT)
+
+            res = client.get('/d.json?version=0',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            ctx = json.loads(res.get_data(as_text=True)).get('@context', None)
+            self.assertIsNone(ctx)
+
+            res = client.get('/c?version=0',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.NOT_FOUND)
+
+            res = client.get('/d.json?version=1',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            ctx = json.loads(res.get_data(as_text=True))['@context']
+            self.assertEqual(ctx[0], 'http://n2t.net/ark:/99152/p0c?version=1')
+
+            res = client.get('/c?version=1',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            ctx = json.loads(res.get_data(as_text=True))['@context']
+            self.assertNotIn('broader', ctx)
+
+            res = client.get('/d.json?version=2',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            ctx = json.loads(res.get_data(as_text=True))['@context']
+            self.assertEqual(ctx[0], 'http://n2t.net/ark:/99152/p0c?version=2')
+
+            res = client.get('/c?version=2',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            ctx = json.loads(res.get_data(as_text=True))['@context']
+            self.assertIn('broader', ctx)
+
     def test_remove_definition(self):
         with open(filepath('test-patch-remove-definition.json')) as f:
             patch1 = f.read()
