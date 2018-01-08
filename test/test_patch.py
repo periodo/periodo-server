@@ -264,7 +264,7 @@ class TestPatchMethods(unittest.TestCase):
                 ctx = json.loads(res.get_data(as_text=True))['@context']
                 self.assertEqual(
                     ctx[0],
-                    'http://n2t.net/ark:/99152/p0c?version={}'.format(version)
+                    'http://localhost/c?version={}'.format(version)
                 )
 
             res = client.get('/h')
@@ -361,7 +361,7 @@ class TestPatchMethods(unittest.TestCase):
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
             ctx = json.loads(res.get_data(as_text=True))['@context']
-            self.assertEqual(ctx[0], 'http://n2t.net/ark:/99152/p0c?version=1')
+            self.assertEqual(ctx[0], 'http://localhost/c?version=1')
 
             res = client.get('/c?version=1',
                              headers={'Accept': 'application/json'},
@@ -375,7 +375,7 @@ class TestPatchMethods(unittest.TestCase):
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
             ctx = json.loads(res.get_data(as_text=True))['@context']
-            self.assertEqual(ctx[0], 'http://n2t.net/ark:/99152/p0c?version=2')
+            self.assertEqual(ctx[0], 'http://localhost/c?version=2')
 
             res = client.get('/c?version=2',
                              headers={'Accept': 'application/json'},

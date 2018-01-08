@@ -1,9 +1,10 @@
 import os
+import json
 from flask import Flask, request
 from flask_principal import Principal
 from flask_restful import Api
 from periodo.secrets import (
-    SECRET_KEY, DB, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
+    SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
 from periodo.utils import UUIDConverter
 from periodo.middleware import StreamConsumingMiddleware
 
@@ -14,7 +15,8 @@ app.wsgi_app = StreamConsumingMiddleware(app.wsgi_app)
 principal = Principal(app, use_sessions=False)
 
 app.config.update(
-    DATABASE=DB,
+    DATABASE=os.environ.get('DATABASE', './db.sqlite'),
+    CANONICAL=json.loads(os.environ.get('CANONICAL', 'false')),
     ORCID_CLIENT_ID=ORCID_CLIENT_ID,
     ORCID_CLIENT_SECRET=ORCID_CLIENT_SECRET,
     # HTML representation of root resource is optional and dependent on the

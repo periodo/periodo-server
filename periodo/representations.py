@@ -1,6 +1,13 @@
 import json
-from flask import request, make_response, redirect
+from flask import request, make_response, redirect, url_for
 from periodo import app, api, routes, utils
+
+
+def context_url(context):
+    if app.config['CANONICAL']:
+        return context['@base'] + 'p0c'
+    else:
+        return url_for('context', _external=True)
 
 
 def abbreviate_context(data):
@@ -20,7 +27,7 @@ def abbreviate_context(data):
         data['@context'] = context
     else:
         data['@context'] = [
-            context['@base'] + 'p0c',
+            context_url(context),
             {'@base': context['@base']}
         ]
         if '__version' in context:
@@ -35,6 +42,8 @@ def output_html(data, code, headers=None):
         res = app.send_static_file('html/index.html')
     elif request.path == '/d/':
         res = redirect('/d.jsonld', code=307)
+    elif request.path == '/c':
+        res = redirect('/c.json.html', code=307)
     else:
         res = make_response('This resource is not available as text/html', 406)
         res.headers.add('Link', '<>; rel="alternate"; type="application/json"')

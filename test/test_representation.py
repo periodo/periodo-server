@@ -212,7 +212,7 @@ WHERE {
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
         context = json.loads(res1.get_data(as_text=True))['@context']
         self.assertEqual(context, [
-            'http://n2t.net/ark:/99152/p0c',
+            'http://localhost/c',
             {'@base': 'http://n2t.net/ark:/99152/'}])
         res2 = self.client.get('/d.json')
         self.assertEqual(res2.status_code, http.client.OK)
@@ -302,7 +302,7 @@ WHERE {
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
         context = json.loads(res1.get_data(as_text=True))['@context']
         self.assertEqual(context, [
-            'http://n2t.net/ark:/99152/p0c',
+            'http://localhost/c',
             {'@base': 'http://n2t.net/ark:/99152/'}])
 
         res2 = self.client.get('/trgkv.jsonld')
@@ -382,7 +382,7 @@ WHERE {
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
         context = json.loads(res1.get_data(as_text=True))['@context']
         self.assertEqual(context, [
-            'http://n2t.net/ark:/99152/p0c',
+            'http://localhost/c',
             {'@base': 'http://n2t.net/ark:/99152/'}])
 
         res2 = self.client.get('/trgkvwbjd.jsonld')
