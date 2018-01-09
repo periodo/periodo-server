@@ -3,7 +3,6 @@ from datetime import datetime
 from uuid import UUID
 from werkzeug.routing import BaseConverter
 from rdflib import Graph
-from periodo import namespaces
 from pygments import highlight
 from pygments.lexers import TurtleLexer, JsonLexer
 from pygments.formatters import HtmlFormatter
@@ -14,9 +13,8 @@ def isoformat(value):
 
 
 def jsonld_to_turtle(jsonld):
-    g = Graph().parse(data=json.dumps(jsonld), format='json-ld')
-    namespaces.bind(g)
-    return g.serialize(format='turtle')
+    return Graph().parse(data=json.dumps(jsonld), format='json-ld')\
+                  .serialize(format='turtle')
 
 
 def highlight_string(string, lexer):
