@@ -114,4 +114,3 @@ def load_identity():
 import periodo.routes           # noqa: E402
 import periodo.representations  # noqa: E402
 import periodo.resources        # noqa: E402
-import periodo.namespaces       # noqa: E402

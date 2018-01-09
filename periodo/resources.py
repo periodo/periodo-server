@@ -479,22 +479,6 @@ class PatchMessages(Resource):
             return {'message': e.message}, 404
 
 
-BAG_CONTEXT = {
-    'items': {
-        '@container': '@index',
-        '@id': 'http://www.w3.org/2000/01/rdf-schema#member',
-    },
-    'creator': {
-        '@id': 'http://purl.org/dc/terms/creator',
-        '@type': '@id'
-    },
-    'wasRevisionOf': {
-        '@id': 'http://www.w3.org/ns/prov#wasRevisionOf',
-        '@type': '@id'
-    }
-}
-
-
 @api.resource('/bags/<uuid:uuid>')
 class Bag(Resource):
     @auth.update_bag_permission.require()
