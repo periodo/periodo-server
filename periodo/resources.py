@@ -360,7 +360,7 @@ class PatchList(Resource):
         link_headers = []
 
         if offset > 0:
-            prev_url = url_for('patchlist', _external=True)
+            prev_url = url_for('patches', _external=True)
 
             prev_params = request.args.to_dict().copy()
             prev_params['from'] = offset - limit
@@ -376,7 +376,7 @@ class PatchList(Resource):
         # We fetched 1 more than the limit. If there are limit+1 rows in the
         # retrieved query, then there are more rows to be fetched
         if len(rows) > limit:
-            next_url = url_for('patchlist', _external=True)
+            next_url = url_for('patches', _external=True)
             next_params = request.args.to_dict().copy()
 
             next_params['from'] = offset + limit
