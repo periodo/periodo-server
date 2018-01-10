@@ -18,11 +18,14 @@ if app.config['HTML_REPR_EXISTS']:
 
 @app.route('/h')
 def history():
-    return make_response(
-        provenance.history(), 200, {'Content-Type': 'application/ld+json'})
+    return make_response(provenance.history(), 200, {
+        'Content-Type': 'application/ld+json',
+        'Content-Disposition': 'attachment; filename="periodo-history.json"'
+    })
 
 
-@app.route('/v')
+@app.route('/v', endpoint='vocab')
+@app.route('/v', endpoint='vocabulary')
 def vocab():
     if request.accept_mimetypes.best == 'text/turtle':
         return redirect(url_for('vocab_as_turtle'), code=303)
@@ -41,12 +44,14 @@ def vocab_as_html():
 
 
 # http://www.w3.org/TR/void/#well-known
-@app.route('/.well-known/void')
+@app.route('/.well-known/void', endpoint='description')
 @app.route('/.well-known/void.ttl')
 # N2T resolver strips hyphens so handle this too
 @app.route('/.wellknown/void')
 @app.route('/.wellknown/void.ttl')
 def void():
+    if request.accept_mimetypes.best == 'text/html':
+        return redirect(url_for('void_as_html'), code=303)
     return make_response(database.get_dataset()['description'], 200, {
         'Content-Type': 'text/turtle',
         'Link': '</>; rel="alternate"; type="text/html"',

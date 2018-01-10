@@ -1,6 +1,6 @@
 {
   "@context": [
-    "http://n2t.net/ark:/99152/p0c",
+    "http://localhost/c",
     {"@base": "http://n2t.net/ark:/99152/"}
   ],
   "@id": "p0bags/6f2c64e2-c65f-4e2d-b028-f89dfb71ce69",

@@ -69,8 +69,13 @@ class TestBags(unittest.TestCase):
                 json.loads(res.get_data(as_text=True)))
             context = json.loads(res.get_data(as_text=True))['@context']
             self.assertEqual(context, [
-                'http://n2t.net/ark:/99152/p0c',
+                'http://localhost/c',
                 {'@base': 'http://n2t.net/ark:/99152/'}])
+            res = client.get('/bags/')
+            self.assertEqual(res.status_code, http.client.OK)
+            self.assertEqual(
+                ['http://localhost/bags/%s' % id],
+                json.loads(res.get_data(as_text=True)))
 
     def test_if_none_match(self):
         with open(filepath('test-bag.json')) as f:
@@ -260,7 +265,7 @@ class TestBags(unittest.TestCase):
                 json.loads(res.get_data(as_text=True)))
             context = json.loads(res.get_data(as_text=True))['@context']
             self.assertEqual(context, [
-                'http://n2t.net/ark:/99152/p0c', {
+                'http://localhost/c', {
                     '@base': 'http://n2t.net/ark:/99152/',
                     "foo": "http://example.org/foo"
                 }])
