@@ -17,7 +17,8 @@ $(PYTHON3):
 
 .PHONY: $(DB)
 $(DB):
-	$(PYTHON3) -c "from periodo.commands import init_db; init_db()";
+	DATABASE=$(DB) $(PYTHON3) -c\
+	 "from periodo.commands import init_db; init_db()";
 
 periodo/static/vocab.ttl: $(VOCAB_FILES) $(SHAPE_FILES)
 	mkdir -p periodo/static
