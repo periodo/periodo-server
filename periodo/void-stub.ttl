@@ -6,6 +6,7 @@
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix time: <http://www.w3.org/2006/time#> .
 @prefix void: <http://rdfs.org/ns/void#> .
 @prefix wv: <http://vocab.org/waiver/terms/> .
 
@@ -36,8 +37,8 @@
    void:exampleResource <p0fh3zc> , <p0fh3zcqs6h> , <p0fh3zcg927> ;
    void:uriSpace "http://n2t.net/ark:/99152/p0" ;
    void:vocabulary
-      <http://www.w3.org/2004/02/skos/core> ,
-      <http://www.w3.org/2006/time> ,
+      <http://www.w3.org/2004/02/skos/core#> ,
+      <http://www.w3.org/2006/time#> ,
       <http://purl.org/dc/terms/> ;
    void:classPartition
       [ void:class skos:Concept ] ,
@@ -65,20 +66,22 @@ orcid:0000-0002-4871-039X a foaf:Person ;
    foaf:mbox <mailto:sarahab@utexas.edu> .
 
 
-<p0#source-links-to-worldcat>a void:Linkset ;
+<p0#source-links-to-worldcat> a void:Linkset ;
    void:subset <p0d> ;
    void:subjectsTarget <p0d> ;
    void:objectsTarget <http://purl.oclc.org/dataset/WorldCat> ;
    void:linkPredicate dcterms:source .
+
 <http://purl.oclc.org/dataset/WorldCat> a void:Dataset ;
    dcterms:description "WorldCat"@en ;
    void:uriSpace "http://www.worldcat.org/oclc/" .
 
-<p0#ispartof-links-to-worldcat>a void:Linkset ;
+<p0#ispartof-links-to-worldcat> a void:Linkset ;
    void:subset <p0d> ;
    void:subjectsTarget <p0d> ;
    void:objectsTarget <http://purl.oclc.org/dataset/WorldCat> ;
    void:linkPredicate dcterms:isPartOf .
+
 <http://purl.oclc.org/dataset/WorldCat> a void:Dataset ;
    dcterms:description "WorldCat"@en ;
    void:uriSpace "http://www.worldcat.org/oclc/" .
@@ -92,20 +95,22 @@ orcid:0000-0002-4871-039X a foaf:Person ;
    ] ;
    void:linkPredicate dcterms:isPartOf .
 
-<p0#spatial-links-to-dbpedia>a void:Linkset ;
+<p0#spatial-links-to-dbpedia> a void:Linkset ;
    void:subset <p0d> ;
    void:subjectsTarget <p0d> ;
    void:objectsTarget <http://dbpedia.org/void/Dataset> ;
    void:linkPredicate dcterms:spatial .
+
 <http://dbpedia.org/void/Dataset> a void:Dataset ;
    dcterms:description "DBpedia"@en ;
    void:uriSpace "http://dbpedia.org/resource/" .
 
-<p0#sameas-links-to-english-heritage-periods-list>a void:Linkset ;
+<p0#sameas-links-to-english-heritage-periods-list> a void:Linkset ;
    void:subset <p0d> ;
    void:subjectsTarget <p0d> ;
    void:objectsTarget <http://purl.org/heritagedata/schemes/eh_period> ;
    void:linkPredicate owl:sameAs .
+
 <http://purl.org/heritagedata/schemes/eh_period> a void:Dataset ;
    dcterms:description "English Heritage Periods List"@en ;
    void:uriSpace "http://purl.org/heritagedata/schemes/eh_period" .

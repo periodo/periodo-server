@@ -1,7 +1,7 @@
 import json
 from collections import OrderedDict
 from flask import request, g, abort, url_for, redirect
-from flask_restful import fields, Resource, marshal, marshal_with, reqparse
+from flask_restful import fields, Resource, marshal, reqparse
 from periodo import api, database, auth, identifier, patching, utils, nanopub
 from urllib.parse import urlencode
 
@@ -11,13 +11,6 @@ PATCH_QUERY = """
 SELECT *
 FROM patch_request
 """
-
-index_fields = {
-    'dataset': fields.Url('dataset', absolute=True),
-    'dataset_description': fields.Url('void', absolute=True),
-    'patches': fields.Url('patchlist', absolute=True),
-    'register': fields.Url('register', absolute=True),
-}
 
 
 # http://www.w3.org/TR/NOTE-datetime
@@ -134,11 +127,44 @@ class ResourceError(Exception):
         return {'status': self.status, 'message': self.message}, self.status
 
 
-@api.resource('/')
+INDEX = {
+    'dataset':
+    'the PeriodO dataset',
+
+    'description':
+    'description of the PeriodO dataset',
+
+    'patches':
+    'patches submitted to the PeriodO dataset',
+
+    'history':
+    'history of changes to the PeriodO dataset',
+
+    'bags':
+    'user-defined subsets of the PeriodO dataset',
+
+    'context':
+    'PeriodO JSON-LD context',
+
+    'vocabulary':
+    'PeriodO RDF vocabulary',
+}
+
+
+def describe_endpoint(endpoint, description):
+    return {
+        'description': description,
+        'url': url_for(endpoint, _external=True)
+    }
+
+
+@api.resource('/', '/index.json', '/index.json.html')
 class Index(Resource):
-    @marshal_with(index_fields)
     def get(self):
-        return {}
+        return {
+            endpoint: describe_endpoint(endpoint, description)
+            for (endpoint, description) in INDEX.items()
+        }
 
 
 @api.resource('/c', endpoint='context')
@@ -171,11 +197,14 @@ class Context(Resource):
         return response
 
 
-@api.resource('/d/', '/d.json', '/d.jsonld')
+@api.resource('/d/')
+@api.resource('/d.json', '/d.jsonld', endpoint='dataset-json')
 class Dataset(Resource):
     def get(self):
         args = versioned_parser.parse_args()
         version = args.get('version', None)
+        filename = 'periodo-dataset{}.json'.format(
+            '' if version is None else '-v{}'.format(version))
 
         try:
             dataset = get_dataset(version)
@@ -189,6 +218,8 @@ class Dataset(Resource):
         headers = {}
         headers['Last-Modified'] = format_date_time(dataset['created_at'])
         headers['Cache_Control'] = cache_control(args)
+        headers['Content-Disposition'] = (
+            'attachment; filename="{}"'.format(filename))
 
         data = json.loads(dataset['data'])
         if version is not None and '@context' in data:
@@ -291,7 +322,9 @@ class PeriodNanopublication(Resource):
         return nanopub.make_nanopub(definition_id, version)
 
 
-@api.resource('/patches/')
+@api.resource('/patches/', endpoint='patches')
+@api.resource('/patches.json', endpoint='patches-json')
+@api.resource('/patches.json.html', endpoint='patches-json-html')
 class PatchList(Resource):
     def get(self):
         args = patch_list_parser.parse_args()
@@ -358,6 +391,8 @@ class PatchList(Resource):
 
 
 @api.resource('/patches/<int:id>/')
+@api.resource('/patches/<int:id>.json', endpoint='patchrequest-json')
+@api.resource('/patches/<int:id>.json.html', endpoint='patchrequest-json-html')
 class PatchRequest(Resource):
     def get(self, id):
         row = database.query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
@@ -389,6 +424,8 @@ class PatchRequest(Resource):
 
 
 @api.resource('/patches/<int:id>/patch.jsonpatch')
+@api.resource('/patches/<int:id>/patch.json', endpoint='patch-json')
+@api.resource('/patches/<int:id>/patch.json.html', endpoint='patch-json-html')
 class Patch(Resource):
     def get(self, id):
         row = database.query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
@@ -479,7 +516,20 @@ class PatchMessages(Resource):
             return {'message': e.message}, 404
 
 
+@api.resource('/bags/')
+@api.resource('/bags.json', endpoint='bags-json')
+@api.resource('/bags.json.html', endpoint='bags-json-html')
+class Bags(Resource):
+    def get(self):
+        return [
+            url_for('bag', uuid=uuid, _external=True)
+            for uuid in database.get_bag_ids()
+        ]
+
+
 @api.resource('/bags/<uuid:uuid>')
+@api.resource('/bags/<uuid:uuid>.json', endpoint='bag-json')
+@api.resource('/bags/<uuid:uuid>.json.html', endpoint='bag-json-html')
 class Bag(Resource):
     @auth.update_bag_permission.require()
     def put(self, uuid):

@@ -204,7 +204,7 @@ WHERE {
     def test_dataset_html_redirect(self):
         res = self.client.get('/d/', headers={'Accept': 'text/html'})
         self.assertEqual(res.status_code, http.client.TEMPORARY_REDIRECT)
-        self.assertEqual(urlparse(res.headers['Location']).path, '/d.jsonld')
+        self.assertEqual(urlparse(res.headers['Location']).path, '/d.json')
 
     def test_dataset_data(self):
         res1 = self.client.get('/d/')

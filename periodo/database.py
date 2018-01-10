@@ -96,6 +96,10 @@ def get_definitions_and_context(ids, version=None, raiseErrors=False):
     return definitions, o['@context']
 
 
+def get_bag_ids():
+    return query_db('SELECT uuid FROM bag')
+
+
 def get_bag(uuid, version=None):
     if version is None:
         return query_db(

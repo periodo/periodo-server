@@ -1,4 +1,5 @@
 import json
+from urllib.parse import urlencode
 from flask import request, make_response, redirect, url_for
 from periodo import app, api, routes, utils
 
@@ -36,16 +37,25 @@ def abbreviate_context(data):
     return data
 
 
+def html_version(path):
+    if path.endswith('.jsonpatch'):
+        return path.replace('.jsonpatch', '.json.html')
+    else:
+        return (path[:-1] if path.endswith('/') else path) + '.json.html'
+
+
 @api.representation('text/html')
 def output_html(data, code, headers=None):
     if app.config['HTML_REPR_EXISTS'] and request.path == '/':
         res = app.send_static_file('html/index.html')
     elif request.path == '/d/':
-        res = redirect('/d.jsonld', code=307)
-    elif request.path == '/c':
-        res = redirect('/c.json.html', code=307)
+        res = redirect(
+            url_for('dataset-json', version=request.args.get('version', None)),
+            code=307)
     else:
-        res = make_response('This resource is not available as text/html', 406)
+        res = redirect(
+            html_version(request.path) + urlencode(request.args),
+            code=303)
         res.headers.add('Link', '<>; rel="alternate"; type="application/json"')
 
     if request.path == '/':
