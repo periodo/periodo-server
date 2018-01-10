@@ -2,11 +2,19 @@ import json
 import re
 from datetime import datetime
 from uuid import UUID
+from flask import url_for
 from werkzeug.routing import BaseConverter
 from rdflib import Graph
 from pygments import highlight
 from pygments.lexers import TurtleLexer, JsonLexer
 from pygments.formatters import HtmlFormatter
+
+
+def context_url(app, context):
+    if app.config['CANONICAL']:
+        return context['@base'] + 'p0c'
+    else:
+        return url_for('context', _external=True)
 
 
 def isoformat(value):

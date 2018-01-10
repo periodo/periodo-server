@@ -2,9 +2,9 @@ import json
 from collections import OrderedDict
 from flask import request, g, abort, url_for, redirect
 from flask_restful import fields, Resource, marshal, reqparse
-from periodo import api, database, auth, identifier, patching, utils, nanopub
+from periodo import (
+    app, api, database, auth, identifier, patching, utils, nanopub)
 from urllib.parse import urlencode
-
 from wsgiref.handlers import format_date_time
 
 PATCH_QUERY = """
@@ -522,8 +522,8 @@ class PatchMessages(Resource):
 class Bags(Resource):
     def get(self):
         return [
-            url_for('bag', uuid=uuid, _external=True)
-            for uuid in database.get_bag_ids()
+            api.url_for(Bag, uuid=uuid, _external=True)
+            for uuid in database.get_bag_uuids()
         ]
 
 
@@ -552,16 +552,17 @@ class Bag(Resource):
 
         base = ctx['@base']
         bag_ctx = data.get('@context', {})
+        context_url = utils.context_url(app, ctx)
         if type(bag_ctx) is list:
             contexts = bag_ctx
-            if (base + 'p0c') not in contexts:
-                contexts.insert(0, base + 'p0c')
+            if context_url not in contexts:
+                contexts.insert(0, context_url)
             if type(contexts[-1]) is dict:
                 contexts[-1]['@base'] = base
             else:
                 contexts.append({'@base': base})
         else:
-            contexts = [base + 'p0c', {**bag_ctx, '@base': base}]
+            contexts = [context_url, {**bag_ctx, '@base': base}]
 
         data['@context'] = contexts
 

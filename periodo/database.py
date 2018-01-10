@@ -3,6 +3,7 @@ import json
 import sqlite3
 from periodo import app, identifier
 from flask import g
+from uuid import UUID
 
 
 class MissingKeyError(Exception):
@@ -96,8 +97,8 @@ def get_definitions_and_context(ids, version=None, raiseErrors=False):
     return definitions, o['@context']
 
 
-def get_bag_ids():
-    return query_db('SELECT uuid FROM bag')
+def get_bag_uuids():
+    return [UUID(row['uuid']) for row in query_db('SELECT uuid FROM bag')]
 
 
 def get_bag(uuid, version=None):

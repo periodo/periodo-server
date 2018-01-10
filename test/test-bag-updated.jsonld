@@ -1,5 +1,5 @@
 {
-  "@context": ["http://n2t.net/ark:/99152/p0c", {
+  "@context": ["http://localhost/c", {
     "@base": "http://n2t.net/ark:/99152/",
     "foo": "http://example.org/foo"
   }],

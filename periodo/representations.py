@@ -4,13 +4,6 @@ from flask import request, make_response, redirect, url_for
 from periodo import app, api, routes, utils
 
 
-def context_url(context):
-    if app.config['CANONICAL']:
-        return context['@base'] + 'p0c'
-    else:
-        return url_for('context', _external=True)
-
-
 def abbreviate_context(data):
     if ((data is None
          or '@context' not in data
@@ -28,7 +21,7 @@ def abbreviate_context(data):
         data['@context'] = context
     else:
         data['@context'] = [
-            context_url(context),
+            utils.context_url(app, context),
             {'@base': context['@base']}
         ]
         if '__version' in context:
