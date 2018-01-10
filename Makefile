@@ -1,7 +1,7 @@
 VENV_DIR := venv
 PIP3 := $(VENV_DIR)/bin/pip3
 PYTHON3 := $(VENV_DIR)/bin/python3
-DB := $(shell $(PYTHON3) -c "from periodo.secrets import DB; print(DB)")
+DB := './db.sqlite'
 
 CLIENT_REPO := '../periodo-client'
 CLIENT_VERSION := latest
@@ -15,6 +15,7 @@ all: setup periodo/static/vocab.html $(DB)
 $(PYTHON3):
 	python3 -m venv $(VENV_DIR)
 
+.PHONY: $(DB)
 $(DB):
 	$(PYTHON3) -c "from periodo.commands import init_db; init_db()";
 
