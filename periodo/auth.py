@@ -36,6 +36,7 @@ class UnauthenticatedIdentity(AnonymousIdentity):
     def can(self, permission):
         raise self.exception
 
+
 UpdatePatchNeed = partial(ItemNeed, type='patch_request', method='update')
 
 
