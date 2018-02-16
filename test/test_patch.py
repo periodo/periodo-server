@@ -201,7 +201,7 @@ class TestPatchMethods(unittest.TestCase):
             row = database.query_db(
                 'SELECT * FROM patch_request_comment WHERE patch_request_id=?',
                 (patch_id,), one=True)
-            self.assertEqual('http://orcid.org/1234-5678-9101-112X',
+            self.assertEqual('https://orcid.org/1234-5678-9101-112X',
                              row['author'])
             self.assertEqual(patch_id, row['patch_request_id'])
             self.assertEqual('This is a comment', row['message'])

@@ -174,7 +174,7 @@ WHERE {
     def test_add_contributors_to_dataset_description(self):
         contribution = (URIRef('http://n2t.net/ark:/99152/p0d'),
                         DCTERMS.contributor,
-                        URIRef('http://orcid.org/1234-5678-9101-112X'))
+                        URIRef('https://orcid.org/1234-5678-9101-112X'))
         data = self.client.get(
             '/', headers={'Accept': 'text/turtle'}).get_data(as_text=True)
         g = Graph().parse(format='turtle', data=data)

@@ -36,7 +36,7 @@ $ curl -L -X GET "http://n2t.net/ark:/99152/p0bags/$BAG_UUID" | jq .
 {
   "@context": { ... },
   "@id": "p0bags/...",
-  "creator": "http://orcid.org/...",
+  "creator": "https://orcid.org/...",
   "title": "my bag of periods",
   "items": {
     "p03377fkhrv": { ... full JSON-LD for period definition ... },

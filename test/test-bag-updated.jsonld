@@ -6,7 +6,7 @@
   "@id": "p0bags/6f2c64e2-c65f-4e2d-b028-f89dfb71ce69",
   "foo": "bar",
   "wasRevisionOf": "p0bags/6f2c64e2-c65f-4e2d-b028-f89dfb71ce69?version=0",
-  "creator": "http://orcid.org/1234-5678-9101-112X",
+  "creator": "https://orcid.org/1234-5678-9101-112X",
   "title": "Minimal bag of periods",
   "items": {
     "p0trgkvkhrv": {

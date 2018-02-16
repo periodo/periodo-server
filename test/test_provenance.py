@@ -120,19 +120,19 @@ class TestProvenance(unittest.TestCase):
         self.assertRegex(end.value.isoformat(), W3CDTF)
         self.assertIn(
             (PERIODO['p0h#change-2'], PROV.wasAssociatedWith,
-             URIRef('http://orcid.org/1234-5678-9101-112X')), g)
+             URIRef('https://orcid.org/1234-5678-9101-112X')), g)
         self.assertIn(
             (PERIODO['p0h#change-2'], PROV.wasAssociatedWith,
-             URIRef('http://orcid.org/1211-1098-7654-321X')), g)
+             URIRef('https://orcid.org/1211-1098-7654-321X')), g)
         for association in g.subjects(
                 predicate=PROV.agent,
-                object=URIRef('http://orcid.org/1234-5678-9101-112X')):
+                object=URIRef('https://orcid.org/1234-5678-9101-112X')):
             role = g.value(subject=association, predicate=PROV.hadRole)
             self.assertIn(role, (PERIODO['p0v#submitted'],
                                  PERIODO['p0v#updated']))
         merger = g.value(
             predicate=PROV.agent,
-            object=URIRef('http://orcid.org/1211-1098-7654-321X'))
+            object=URIRef('https://orcid.org/1211-1098-7654-321X'))
         self.assertIn(
             (PERIODO['p0h#change-2'], PROV.qualifiedAssociation, merger), g)
         self.assertIn(
