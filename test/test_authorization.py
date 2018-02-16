@@ -83,7 +83,7 @@ class TestAuthorization(unittest.TestCase):
             creator = database.query_db(
                 'SELECT created_by FROM patch_request WHERE id = ?',
                 (patch_id,), one=True)['created_by']
-            self.assertEqual(creator, 'http://orcid.org/1234-5678-9101-112X')
+            self.assertEqual(creator, 'https://orcid.org/1234-5678-9101-112X')
 
     def test_nonadmin_merge(self):
         res = self.client.patch(
@@ -139,7 +139,7 @@ class TestAuthorization(unittest.TestCase):
             merger = database.query_db(
                 'SELECT merged_by FROM patch_request WHERE id = ?',
                 (patch_id,), one=True)['merged_by']
-            self.assertEqual(merger, 'http://orcid.org/1211-1098-7654-321X')
+            self.assertEqual(merger, 'https://orcid.org/1211-1098-7654-321X')
 
     def test_noncreator_patch_update(self):
         res = self.client.patch(

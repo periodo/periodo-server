@@ -149,7 +149,7 @@ def registered():
         'scope': '/authenticate',
     }
     response = requests.post(
-        'https://pub.orcid.org/oauth/token',
+        'https://orcid.org/oauth/token',
         headers={'Accept': 'application/json'},
         allow_redirects=True, data=data)
     if not response.status_code == 200:

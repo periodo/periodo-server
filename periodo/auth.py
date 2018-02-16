@@ -36,6 +36,7 @@ class UnauthenticatedIdentity(AnonymousIdentity):
     def can(self, permission):
         raise self.exception
 
+
 UpdatePatchNeed = partial(ItemNeed, type='patch_request', method='update')
 
 
@@ -79,7 +80,7 @@ def handle_auth_error(e):
 
 
 def add_user_or_update_credentials(credentials, extra_permissions=()):
-    orcid = 'http://orcid.org/{}'.format(credentials['orcid'])
+    orcid = 'https://orcid.org/{}'.format(credentials['orcid'])
     b64token = b64encode(credentials['access_token'].encode())
     permissions = (
         (ActionNeed('submit-patch'),
