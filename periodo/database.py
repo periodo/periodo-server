@@ -30,7 +30,7 @@ def query_db(query, args=(), one=False):
 def get_dataset(version=None):
     if version is None:
         return query_db(
-            'SELECT * FROM dataset ORDER BY id DESC', one=True)
+            'SELECT * FROM dataset ORDER BY id DESC LIMIT 1', one=True)
     else:
         return query_db(
             'SELECT * FROM dataset WHERE dataset.id = ?', (version,), one=True)
