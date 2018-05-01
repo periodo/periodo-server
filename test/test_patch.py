@@ -360,6 +360,8 @@ class TestPatchMethods(unittest.TestCase):
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
+            self.assertEqual(
+                res.headers['Cache-Control'], 'public, max-age=31557600')
             ctx = json.loads(res.get_data(as_text=True))['@context']
             self.assertEqual(ctx[0], 'http://localhost/c?version=1')
 
@@ -367,6 +369,8 @@ class TestPatchMethods(unittest.TestCase):
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
+            self.assertEqual(
+                res.headers['Cache-Control'], 'public, max-age=31557600')
             ctx = json.loads(res.get_data(as_text=True))['@context']
             self.assertNotIn('broader', ctx)
 

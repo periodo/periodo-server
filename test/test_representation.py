@@ -210,6 +210,9 @@ WHERE {
         res1 = self.client.get('/d/')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        self.assertEqual(
+            res1.headers['Cache-Control'], 'public, max-age=0')
+
         context = json.loads(res1.get_data(as_text=True))['@context']
         self.assertEqual(context, [
             'http://localhost/c',
@@ -238,8 +241,12 @@ WHERE {
         self.assertEqual(res6.headers['Content-Type'], 'application/ld+json')
 
         jsonld = json.loads(res4.get_data(as_text=True))
-        context = json.loads(self.client.get('/c', buffered=True)
-                             .get_data(as_text=True))
+
+        res7 = self.client.get('/c', buffered=True)
+        self.assertEqual(
+            res7.headers['Cache-Control'], 'public, max-age=0')
+        context = json.loads(res7.get_data(as_text=True))
+
         g = Graph().parse(
             data=json.dumps({**jsonld, **context}), format='json-ld')
         self.assertIn((PERIODO['p0d/#periodCollections'],
@@ -333,6 +340,8 @@ WHERE {
         res1 = self.client.get('/trgkv.ttl')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
+        self.assertEqual(
+            res1.headers['Cache-Control'], 'public, max-age=86400')
 
         g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
         self.assertIsNone(g.value(predicate=RDF.type, object=RDF.Bag))
@@ -344,6 +353,8 @@ WHERE {
         res2 = self.client.get('/trgkv.ttl.html')
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'text/html')
+        self.assertEqual(
+            res2.headers['Cache-Control'], 'public, max-age=86400')
 
         res3 = self.client.get('/trgkv.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
@@ -410,6 +421,8 @@ WHERE {
         res1 = self.client.get('/trgkvwbjd.ttl')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
+        self.assertEqual(
+            res1.headers['Cache-Control'], 'public, max-age=86400')
         g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
         self.assertIsNone(
             g.value(predicate=RDF.type, object=SKOS.ConceptScheme))
@@ -422,3 +435,5 @@ WHERE {
         res2 = self.client.get('/trgkvwbjd.ttl.html')
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'text/html')
+        self.assertEqual(
+            res2.headers['Cache-Control'], 'public, max-age=86400')
