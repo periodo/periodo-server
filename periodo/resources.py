@@ -63,7 +63,8 @@ versioned_parser.add_argument(
 
 
 def cache_control(args):
-    return 'public, max-age={}'.format(604800 if args['version'] else 0)
+    # 31557600 seconds = 1 year
+    return 'public, max-age={}'.format(31557600 if args['version'] else 0)
 
 
 def attach_to_dataset(o):
