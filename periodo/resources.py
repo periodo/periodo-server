@@ -186,7 +186,7 @@ class Context(Resource):
 
         headers = {}
         headers['Last-Modified'] = format_date_time(dataset['created_at'])
-        headers['Cache_Control'] = cache_control(args)
+        headers['Cache-Control'] = cache_control(args)
 
         context = json.loads(dataset['data']).get('@context', None)
         if context is None:
@@ -218,7 +218,7 @@ class Dataset(Resource):
 
         headers = {}
         headers['Last-Modified'] = format_date_time(dataset['created_at'])
-        headers['Cache_Control'] = cache_control(args)
+        headers['Cache-Control'] = cache_control(args)
         headers['Content-Disposition'] = (
             'attachment; filename="{}"'.format(filename))
 
@@ -589,7 +589,7 @@ class Bag(Resource):
 
         headers = {}
         headers['Last-Modified'] = format_date_time(bag['created_at'])
-        headers['Cache_Control'] = cache_control(args)
+        headers['Cache-Control'] = cache_control(args)
 
         data = json.loads(bag['data'])
         defs, defs_ctx = database.get_definitions_and_context(data['items'])
