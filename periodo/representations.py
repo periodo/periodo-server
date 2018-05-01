@@ -64,7 +64,9 @@ def output_turtle(data, code, headers=None):
     if request.path == '/':
         res = routes.void()
     else:
-        res = make_response(utils.jsonld_to_turtle(data), code)
+        res = make_response(
+            utils.jsonld_to_turtle(data), code,
+            {'Cache-Control': 'public, max-age=86400'})
     res.headers.extend(headers or {})
     return res
 
@@ -85,7 +87,9 @@ def output_jsonld(data, code, headers=None):
 @api.representation('text/turtle+html')
 def output_turtle_as_html(data, code, headers=None):
     ttl = utils.jsonld_to_turtle(data)
-    res = make_response(utils.highlight_ttl(ttl), code)
+    res = make_response(
+        utils.highlight_ttl(ttl), code,
+        {'Cache-Control': 'public, max-age=86400'})
     res.headers.extend(headers or {})
     return res
 
@@ -93,6 +97,7 @@ def output_turtle_as_html(data, code, headers=None):
 @api.representation('application/json+html')
 def output_json_as_html(data, code, headers=None):
     res = make_response(
-        utils.highlight_json(abbreviate_context(data)), code)
+        utils.highlight_json(abbreviate_context(data)), code,
+        {'Cache-Control': 'public, max-age=86400'})
     res.headers.extend(headers or {})
     return res
