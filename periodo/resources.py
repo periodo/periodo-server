@@ -217,7 +217,7 @@ class Dataset(Resource):
 
         headers = {}
         headers['Last-Modified'] = format_date_time(dataset['created_at'])
-        headers['Cache_Control'] = cache_control(args)
+        # headers['Cache_Control'] = cache_control(args)
         headers['Content-Disposition'] = (
             'attachment; filename="{}"'.format(filename))
 
