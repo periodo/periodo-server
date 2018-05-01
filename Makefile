@@ -20,6 +20,11 @@ $(DB):
 	DATABASE=$(DB) $(PYTHON3) -c\
 	 "from periodo.commands import init_db; init_db()";
 
+periodo/static/html:
+	mkdir -p periodo/static/html
+	TARBALL=`npm pack periodo-client@$(CLIENT_VERSION) | tail -n 1` && \
+		tar xvzf $$TARBALL -C periodo/static/html --strip-components=1
+
 periodo/static/vocab.ttl: $(VOCAB_FILES) $(SHAPE_FILES)
 	mkdir -p periodo/static
 	./bin/ttlcat $^ > $@
@@ -43,7 +48,7 @@ endif
 
 .PHONY: setup
 setup: $(PYTHON3) requirements.txt
-	$(PIP3) install -r requirements.txt
+	$(PIP3) install -q -r requirements.txt
 
 .PHONY: clean
 clean: clean_static_html
@@ -54,19 +59,18 @@ clean: clean_static_html
 clean_static_html:
 	if [ -L periodo/static/html ]; then rm periodo/static/html; else rm -rf periodo/static/html; fi
 
-.PHONY: fetch_client
-fetch_client: clean_static_html
-	mkdir -p periodo/static/html
-	TARBALL=`npm pack periodo-client@$(CLIENT_VERSION) | tail -n 1` && \
-		tar xvzf $$TARBALL -C periodo/static/html --strip-components=1
-
 .PHONY: fetch_latest_client
-fetch_latest_client: fetch_client
+fetch_latest_client: clean_static_html
+	@$(MAKE) periodo/static/html
 
 .PHONY: link_client_repository
 link_client_repository: clean_static_html
 	ln -s $(abspath $(CLIENT_REPO)) periodo/static/html
 
 .PHONY: test
-test: setup periodo/static/vocab.ttl
+test: setup periodo/static/vocab.html periodo/static/html
 	$(PYTHON3) -m unittest discover
+
+.PHONY: run
+run:
+	$(PYTHON3) runserver.py
