@@ -166,6 +166,7 @@ def add_resources(
         endpoint=None,
         barepaths=[],
         suffixes=('json', 'jsonld', 'ttl'),
+        html=True
 ):
     def decorator(cls):
 
@@ -186,10 +187,12 @@ def add_resources(
                 cls,
                 *suffixed_paths,
                 endpoint=suffixed_endpoint)
-            api.add_resource(
-                cls,
-                *['{}.html'.format(p) for p in suffixed_paths],
-                endpoint='{}-html'.format(suffixed_endpoint))
+
+            if html:
+                api.add_resource(
+                    cls,
+                    *['{}.html'.format(p) for p in suffixed_paths],
+                    endpoint='{}-html'.format(suffixed_endpoint))
 
         return cls
 
@@ -233,7 +236,7 @@ class Context(Resource):
         return response
 
 
-@add_resources('dataset', shortname='d', barepaths=['/d/'])
+@add_resources('dataset', shortname='d', barepaths=['/d/'], html=False)
 class Dataset(Resource):
     def get(self):
         args = versioned_parser.parse_args()
@@ -279,7 +282,7 @@ class Dataset(Resource):
             return {'status': 400, 'message': str(e)}, 400
 
 
-@add_resources('history', shortname='h', barepaths=None)
+@add_resources('history', shortname='h', barepaths=None, html=False)
 class History(Resource):
     def get(self):
         history = provenance.history()

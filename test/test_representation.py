@@ -481,12 +481,6 @@ WHERE {
         self.assertIn((PERIODO['p0d.ttl'],
                        VOID.inDataset, PERIODO['p0d']), g)
 
-        res2 = self.client.get('/d.ttl.html')
-        self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(res2.headers['Content-Type'], 'text/html')
-        self.assertEqual(
-            res2.headers['Cache-Control'], 'public, max-age=86400')
-
         res3 = self.client.get('/d.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
 
@@ -505,12 +499,6 @@ WHERE {
                        FOAF.isPrimaryTopicOf, PERIODO['p0dataset.ttl']), g)
         self.assertIn((PERIODO['p0dataset.ttl'],
                        VOID.inDataset, PERIODO['p0d']), g)
-
-        res2 = self.client.get('/dataset.ttl.html')
-        self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(res2.headers['Content-Type'], 'text/html')
-        self.assertEqual(
-            res2.headers['Cache-Control'], 'public, max-age=86400')
 
         res3 = self.client.get('/dataset.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
@@ -543,12 +531,6 @@ WHERE {
         self.assertIn((PERIODO['p0h#patch-1'],
                        FOAF.page, PERIODO['p0patches/1/patch.jsonpatch']), g)
 
-        res2 = self.client.get('/h.ttl.html')
-        self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(res2.headers['Content-Type'], 'text/html')
-        self.assertEqual(
-            res2.headers['Cache-Control'], 'public, max-age=86400')
-
         res3 = self.client.get('/h.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
 
@@ -580,12 +562,6 @@ WHERE {
         self.assertIn((PERIODO['p0h#patch-1'],
                        FOAF.page, PERIODO['p0patches/1/patch.jsonpatch']), g)
 
-        res2 = self.client.get('/history.ttl.html')
-        self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(res2.headers['Content-Type'], 'text/html')
-        self.assertEqual(
-            res2.headers['Cache-Control'], 'public, max-age=86400')
-
         res3 = self.client.get('/history.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
 
@@ -616,12 +592,6 @@ WHERE {
         g.parse(data=res1.get_data(as_text=True), format='json-ld')
         self.assertIn((PERIODO['p0h#patch-1'],
                        FOAF.page, PERIODO['p0patches/1/patch.jsonpatch']), g)
-
-        res2 = self.client.get('/history.json.html')
-        self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(res2.headers['Content-Type'], 'text/html')
-        self.assertEqual(
-            res2.headers['Cache-Control'], 'public, max-age=86400')
 
         res3 = self.client.get('/history.json/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
