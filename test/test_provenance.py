@@ -62,11 +62,16 @@ class TestProvenance(unittest.TestCase):
                 buffered=True,
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
-            res2 = client.get('/h')
-            self.assertEqual(res2.status_code, http.client.OK)
+            res2 = client.get('/h', headers={'Accept': 'application/ld+json'})
+            self.assertEqual(res2.status_code, http.client.SEE_OTHER)
             self.assertEqual(
-                res2.headers['Content-Type'], 'application/ld+json')
-            jsonld = res2.get_data(as_text=True)
+                urlparse(res2.headers['Location']).path, '/history.jsonld')
+
+            res3 = client.get('/history.jsonld')
+            self.assertEqual(res3.status_code, http.client.OK)
+            self.assertEqual(
+                res3.headers['Content-Type'], 'application/ld+json')
+            jsonld = res3.get_data(as_text=True)
 
         g = ConjunctiveGraph()
         g.parse(format='json-ld', data=jsonld)

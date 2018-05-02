@@ -125,4 +125,4 @@ ORDER BY id ASC
     jsonld = json.loads(
         g.serialize(format='json-ld', context=CONTEXT).decode('utf-8'))
     jsonld['history'] = sorted(jsonld['history'], key=ordering)
-    return json.dumps(jsonld, sort_keys=True)
+    return jsonld

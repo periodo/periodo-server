@@ -3,7 +3,7 @@ import random
 import requests
 import string
 from flask import request, make_response, redirect, url_for, session, abort
-from periodo import app, database, provenance, identifier, auth, utils
+from periodo import app, database, identifier, auth, utils
 from urllib.parse import urlencode
 
 if app.config['HTML_REPR_EXISTS']:
@@ -16,12 +16,24 @@ if app.config['HTML_REPR_EXISTS']:
         return app.send_static_file('html' + request.path)
 
 
-@app.route('/h')
-def history():
-    return make_response(provenance.history(), 200, {
-        'Content-Type': 'application/ld+json',
-        'Content-Disposition': 'attachment; filename="periodo-history.json"'
-    })
+def get_mimetype():
+    if request.accept_mimetypes.best == 'application/json':
+        return 'json'
+    if request.accept_mimetypes.best == 'application/ld+json':
+        return 'jsonld'
+    if request.accept_mimetypes.best == 'text/turtle':
+        return 'ttl'
+    return None
+
+
+@app.route('/h', endpoint='history')
+def see_history():
+    mimetype = get_mimetype()
+    if mimetype is None:
+        url = url_for('index', _anchor='history')
+    else:
+        url = url_for('history-%s' % mimetype,  **request.args)
+    return redirect(url, code=303)
 
 
 @app.route('/v', endpoint='vocab')
@@ -72,16 +84,6 @@ def void_as_html():
 @app.route('/d', endpoint='abstract_dataset')
 def see_dataset():
     return redirect(url_for('dataset', **request.args), code=303)
-
-
-def get_mimetype():
-    if request.accept_mimetypes.best == 'application/json':
-        return 'json'
-    if request.accept_mimetypes.best == 'application/ld+json':
-        return 'jsonld'
-    if request.accept_mimetypes.best == 'text/turtle':
-        return 'ttl'
-    return None
 
 
 @app.route('/<string(length=%s):collection_id>'

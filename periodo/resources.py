@@ -3,7 +3,7 @@ from collections import OrderedDict
 from flask import request, g, abort, url_for, redirect
 from flask_restful import fields, Resource, marshal, reqparse
 from periodo import (
-    app, api, database, auth, identifier, patching, utils, nanopub)
+    app, api, database, auth, identifier, patching, utils, nanopub, provenance)
 from urllib.parse import urlencode
 from wsgiref.handlers import format_date_time
 
@@ -244,6 +244,21 @@ class Dataset(Resource):
             }
         except patching.InvalidPatchError as e:
             return {'status': 400, 'message': str(e)}, 400
+
+
+@api.resource('/history.json', endpoint='history-json')
+@api.resource('/history.jsonld', endpoint='history-jsonld')
+@api.resource('/history.ttl', endpoint='history-ttl')
+@api.resource('/history.json.html', endpoint='history-json-html')
+@api.resource('/history.jsonld.html', endpoint='history-jsonld-html')
+@api.resource('/history.ttl.html', endpoint='history-ttl-html')
+class History(Resource):
+    def get(self):
+        headers = {}
+        headers['Cache-Control'] = 'public, max-age=604800'  # one week
+        headers['Content-Disposition'] = (
+            'attachment; filename="periodo-history.json"')
+        return api.make_response(provenance.history(), 200, headers)
 
 
 @api.resource('/<string(length=%s):collection_id>.json'

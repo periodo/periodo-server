@@ -8,7 +8,8 @@ def abbreviate_context(data):
     if ((data is None
          or '@context' not in data
          or len(data) == 1
-         or type(data['@context']) is list)):
+         or type(data['@context']) is list
+         or 'history' in data['@context'])):
 
         # don't abbreviate non-LD responses, the context object itself, or bags
         return data

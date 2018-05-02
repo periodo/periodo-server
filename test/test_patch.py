@@ -267,7 +267,9 @@ class TestPatchMethods(unittest.TestCase):
                     'http://localhost/c?version={}'.format(version)
                 )
 
-            res = client.get('/h')
+            res = client.get('/history.jsonld')
+            self.assertEqual(
+                res.headers['Cache-Control'], 'public, max-age=604800')
 
             g = ConjunctiveGraph()
             g.parse(format='json-ld', data=res.get_data(as_text=True))
@@ -432,7 +434,9 @@ class TestPatchMethods(unittest.TestCase):
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
 
-            res = client.get('/h')
+            res = client.get('/history.jsonld')
+            self.assertEqual(
+                res.headers['Cache-Control'], 'public, max-age=604800')
 
             g = ConjunctiveGraph()
             g.parse(format='json-ld', data=res.get_data(as_text=True))
@@ -518,7 +522,9 @@ class TestPatchMethods(unittest.TestCase):
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
 
-            res = client.get('/h')
+            res = client.get('/history.jsonld')
+            self.assertEqual(
+                res.headers['Cache-Control'], 'public, max-age=604800')
 
             g = ConjunctiveGraph()
             g.parse(format='json-ld', data=res.get_data(as_text=True))
