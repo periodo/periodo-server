@@ -11,7 +11,8 @@ def abbreviate_context(data):
          or type(data['@context']) is list
          or 'history' in data['@context'])):
 
-        # don't abbreviate non-LD responses, the context object itself, or bags
+        # don't abbreviate non-LD responses, the context object itself,
+        # bags, or history
         return data
 
     context = data['@context']
@@ -39,7 +40,7 @@ def html_version(path):
 
 
 @api.representation('text/html')
-def output_html(data, code, headers=None):
+def output_html(data, code, headers={}, filename=None):
     if app.config['HTML_REPR_EXISTS'] and request.path == '/':
         res = app.send_static_file('html/index.html')
     elif request.path == '/d/':
@@ -56,49 +57,57 @@ def output_html(data, code, headers=None):
         res.headers.add(
             'Link', '</>; rel="alternate"; type="text/turtle"; '
             + 'title="VoID description of the PeriodO Period Gazetteer')
-    res.headers.extend(headers or {})
+    res.headers.extend(headers)
     return res
 
 
 @api.representation('text/turtle')
-def output_turtle(data, code, headers=None):
+def output_turtle(data, code, headers={}, filename=None):
     if request.path == '/':
         res = routes.void()
     else:
-        res = make_response(
-            utils.jsonld_to_turtle(data), code,
-            {'Cache-Control': 'public, max-age=86400'})
-    res.headers.extend(headers or {})
+        res = make_response(utils.jsonld_to_turtle(data), code)
+        res.content_type = 'text/turtle'
+        headers['Cache-Control'] = 'public, max-age=86400'
+        if filename is not None:
+            headers['Content-Disposition'] = (
+                'attachment; filename="%s.ttl"' % filename)
+    res.headers.extend(headers)
     return res
 
 
 @api.representation('application/json')
-def output_json(data, code, headers=None):
-    res = make_response(
-        json.dumps(abbreviate_context(data)) + '\n', code)
-    res.headers.extend(headers or {})
+def output_json(data, code, headers={}, filename=None):
+    res = make_response(json.dumps(abbreviate_context(data)) + '\n', code)
+    res.content_type = 'application/json'
+    if filename is not None:
+        headers['Content-Disposition'] = (
+            'attachment; filename="%s.json"' % filename)
+    res.headers.extend(headers)
     return res
 
 
 @api.representation('application/ld+json')
-def output_jsonld(data, code, headers=None):
-    return output_json(data, code, headers)
+def output_jsonld(data, code, headers={}, filename=None):
+    res = output_json(data, code, headers, filename)
+    res.content_type = 'application/ld+json'
+    return res
 
 
 @api.representation('text/turtle+html')
-def output_turtle_as_html(data, code, headers=None):
+def output_turtle_as_html(data, code, headers={}, filename=None):
     ttl = utils.jsonld_to_turtle(data)
-    res = make_response(
-        utils.highlight_ttl(ttl), code,
-        {'Cache-Control': 'public, max-age=86400'})
-    res.headers.extend(headers or {})
+    headers['Cache-Control'] = 'public, max-age=86400'
+    res = make_response(utils.highlight_ttl(ttl), code)
+    res.content_type = 'text/html'
+    res.headers.extend(headers)
     return res
 
 
 @api.representation('application/json+html')
-def output_json_as_html(data, code, headers=None):
-    res = make_response(
-        utils.highlight_json(abbreviate_context(data)), code,
-        {'Cache-Control': 'public, max-age=86400'})
-    res.headers.extend(headers or {})
+def output_json_as_html(data, code, headers={}, filename=None):
+    headers['Cache-Control'] = 'public, max-age=86400'
+    res = make_response(utils.highlight_json(abbreviate_context(data)), code)
+    res.content_type = 'text/html'
+    res.headers.extend(headers)
     return res

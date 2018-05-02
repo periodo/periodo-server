@@ -58,6 +58,16 @@ def add_cors_headers(response):
 import periodo.auth  # noqa: E402
 
 
+SUFFIXES = {
+    '.json': 'application/json',
+    '.jsonld': 'application/ld+json',
+    '.ttl': 'text/turtle',
+    '.json.html': 'application/json+html',
+    '.jsonld.html': 'application/json+html',
+    '.ttl.html': 'text/turtle+html',
+}
+
+
 class PeriodOApi(Api):
     def handle_error(self, e):
         response = periodo.auth.handle_auth_error(e)
@@ -68,36 +78,10 @@ class PeriodOApi(Api):
 
     def make_response(self, data, *args, **kwargs):
         # Override content negotation for content-type-specific URLs.
-        if request.path.endswith('.json'):
-            res = self.representations[
-                'application/json'](data, *args, **kwargs)
-            res.content_type = 'application/json'
-            return res
-        if request.path.endswith('.jsonld'):
-            res = self.representations[
-                'application/ld+json'](data, *args, **kwargs)
-            res.content_type = 'application/ld+json'
-            return res
-        if request.path.endswith('.json.html'):
-            res = self.representations[
-                'application/json+html'](data, *args, **kwargs)
-            res.content_type = 'text/html'
-            return res
-        if request.path.endswith('.jsonld.html'):
-            res = self.representations[
-                'application/json+html'](data, *args, **kwargs)
-            res.content_type = 'text/html'
-            return res
-        if request.path.endswith('.ttl'):
-            res = self.representations[
-                'text/turtle'](data, *args, **kwargs)
-            res.content_type = 'text/turtle'
-            return res
-        if request.path.endswith('.ttl.html'):
-            res = self.representations[
-                'text/turtle+html'](data, *args, **kwargs)
-            res.content_type = 'text/html'
-            return res
+        for suffix, content_type in SUFFIXES.items():
+            if request.path.endswith(suffix):
+                return self.representations[content_type](
+                    data, *args, **kwargs)
         return super().make_response(data, *args, **kwargs)
 
 

@@ -3,7 +3,7 @@ import tempfile
 import unittest
 import http.client
 import json
-from rdflib import Graph, URIRef
+from rdflib import Graph, ConjunctiveGraph, URIRef
 from rdflib.plugins import sparql
 from rdflib.namespace import Namespace, RDF, DCTERMS, OWL
 from urllib.parse import urlparse
@@ -220,9 +220,15 @@ WHERE {
         res2 = self.client.get('/d.json')
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'application/json')
+        self.assertEqual(
+            res2.headers['Content-Disposition'],
+            'attachment; filename="periodo-dataset.json"')
         res3 = self.client.get('/d.jsonld')
         self.assertEqual(res3.status_code, http.client.OK)
         self.assertEqual(res3.headers['Content-Type'], 'application/ld+json')
+        self.assertEqual(
+            res3.headers['Content-Disposition'],
+            'attachment; filename="periodo-dataset.json"')
         res4 = self.client.get(
             '/d/', headers={'Accept': 'application/ld+json'})
         self.assertEqual(res4.status_code, http.client.OK)
@@ -258,6 +264,9 @@ WHERE {
         res1 = self.client.get('/d.json?inline-context')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        self.assertEqual(
+            res1.headers['Content-Disposition'],
+            'attachment; filename="periodo-dataset.json"')
         context = json.loads(res1.get_data(as_text=True))['@context']
         self.assertIs(type(context), dict)
         self.assertIn('@base', context)
@@ -307,6 +316,9 @@ WHERE {
         res1 = self.client.get('/trgkv.json')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        self.assertEqual(
+            res1.headers['Content-Disposition'],
+            'attachment; filename="periodo-collection-trgkv.json"')
         context = json.loads(res1.get_data(as_text=True))['@context']
         self.assertEqual(context, [
             'http://localhost/c',
@@ -315,6 +327,9 @@ WHERE {
         res2 = self.client.get('/trgkv.jsonld')
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
+        self.assertEqual(
+            res2.headers['Content-Disposition'],
+            'attachment; filename="periodo-collection-trgkv.json"')
 
         jsonld = json.loads(res2.get_data(as_text=True))
         context = json.loads(self.client.get('/c', buffered=True)
@@ -342,6 +357,9 @@ WHERE {
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
         self.assertEqual(
             res1.headers['Cache-Control'], 'public, max-age=86400')
+        self.assertEqual(
+            res1.headers['Content-Disposition'],
+            'attachment; filename="periodo-collection-trgkv.ttl"')
 
         g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
         self.assertIsNone(g.value(predicate=RDF.type, object=RDF.Bag))
@@ -391,6 +409,9 @@ WHERE {
         res1 = self.client.get('/trgkvwbjd.json')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        self.assertEqual(
+            res1.headers['Content-Disposition'],
+            'attachment; filename="periodo-definition-trgkvwbjd.json"')
         context = json.loads(res1.get_data(as_text=True))['@context']
         self.assertEqual(context, [
             'http://localhost/c',
@@ -399,6 +420,9 @@ WHERE {
         res2 = self.client.get('/trgkvwbjd.jsonld')
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
+        self.assertEqual(
+            res2.headers['Content-Disposition'],
+            'attachment; filename="periodo-definition-trgkvwbjd.json"')
 
         jsonld = json.loads(res1.get_data(as_text=True))
         context = json.loads(self.client.get('/c', buffered=True)
@@ -423,6 +447,9 @@ WHERE {
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
         self.assertEqual(
             res1.headers['Cache-Control'], 'public, max-age=86400')
+        self.assertEqual(
+            res1.headers['Content-Disposition'],
+            'attachment; filename="periodo-definition-trgkvwbjd.ttl"')
         g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
         self.assertIsNone(
             g.value(predicate=RDF.type, object=SKOS.ConceptScheme))
@@ -437,3 +464,164 @@ WHERE {
         self.assertEqual(res2.headers['Content-Type'], 'text/html')
         self.assertEqual(
             res2.headers['Cache-Control'], 'public, max-age=86400')
+
+    def test_d_turtle(self):
+        res1 = self.client.get('/d.ttl')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
+        self.assertEqual(
+            res1.headers['Cache-Control'], 'public, max-age=86400')
+        self.assertEqual(
+            res1.headers['Content-Disposition'],
+            'attachment; filename="periodo-dataset.ttl"')
+
+        g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
+        self.assertIn((PERIODO['p0d/#periodCollections'],
+                       FOAF.isPrimaryTopicOf, PERIODO['p0d.ttl']), g)
+        self.assertIn((PERIODO['p0d.ttl'],
+                       VOID.inDataset, PERIODO['p0d']), g)
+
+        res2 = self.client.get('/d.ttl.html')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'text/html')
+        self.assertEqual(
+            res2.headers['Cache-Control'], 'public, max-age=86400')
+
+        res3 = self.client.get('/d.ttl/')
+        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+
+    def test_dataset_turtle(self):
+        res1 = self.client.get('/dataset.ttl')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
+        self.assertEqual(
+            res1.headers['Cache-Control'], 'public, max-age=86400')
+        self.assertEqual(
+            res1.headers['Content-Disposition'],
+            'attachment; filename="periodo-dataset.ttl"')
+
+        g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
+        self.assertIn((PERIODO['p0d/#periodCollections'],
+                       FOAF.isPrimaryTopicOf, PERIODO['p0dataset.ttl']), g)
+        self.assertIn((PERIODO['p0dataset.ttl'],
+                       VOID.inDataset, PERIODO['p0d']), g)
+
+        res2 = self.client.get('/dataset.ttl.html')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'text/html')
+        self.assertEqual(
+            res2.headers['Cache-Control'], 'public, max-age=86400')
+
+        res3 = self.client.get('/dataset.ttl/')
+        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+
+    def test_h_turtle(self):
+        with self.client as client:
+            res = client.patch(
+                '/d/',
+                data=self.patch,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            res = client.post(
+                urlparse(res.headers['Location']).path + 'merge',
+                buffered=True,
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+
+        res1 = self.client.get('/h.ttl')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
+        self.assertEqual(
+            res1.headers['Cache-Control'], 'public, max-age=86400')
+        self.assertEqual(
+            res1.headers['Content-Disposition'],
+            'attachment; filename="periodo-history.ttl"')
+
+        g = Graph()
+        g.parse(data=res1.get_data(as_text=True), format='turtle')
+        self.assertIn((PERIODO['p0h#patch-1'],
+                       FOAF.page, PERIODO['p0patches/1/patch.jsonpatch']), g)
+
+        res2 = self.client.get('/h.ttl.html')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'text/html')
+        self.assertEqual(
+            res2.headers['Cache-Control'], 'public, max-age=86400')
+
+        res3 = self.client.get('/h.ttl/')
+        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+
+    def test_history_turtle(self):
+        with self.client as client:
+            res = client.patch(
+                '/d/',
+                data=self.patch,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            res = client.post(
+                urlparse(res.headers['Location']).path + 'merge',
+                buffered=True,
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+
+        res1 = self.client.get('/history.ttl')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
+        self.assertEqual(
+            res1.headers['Cache-Control'], 'public, max-age=86400')
+        self.assertEqual(
+            res1.headers['Content-Disposition'],
+            'attachment; filename="periodo-history.ttl"')
+
+        g = Graph()
+        g.parse(data=res1.get_data(as_text=True), format='turtle')
+        self.assertIn((PERIODO['p0h#patch-1'],
+                       FOAF.page, PERIODO['p0patches/1/patch.jsonpatch']), g)
+
+        res2 = self.client.get('/history.ttl.html')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'text/html')
+        self.assertEqual(
+            res2.headers['Cache-Control'], 'public, max-age=86400')
+
+        res3 = self.client.get('/history.ttl/')
+        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+
+    def test_history_json(self):
+        with self.client as client:
+            res = client.patch(
+                '/d/',
+                data=self.patch,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            res = client.post(
+                urlparse(res.headers['Location']).path + 'merge',
+                buffered=True,
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+
+        res1 = self.client.get('/history.json')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'application/json')
+        self.assertEqual(
+            res1.headers['Cache-Control'], 'public, max-age=604800')
+        self.assertEqual(
+            res1.headers['Content-Disposition'],
+            'attachment; filename="periodo-history.json"')
+
+        g = ConjunctiveGraph()
+        g.parse(data=res1.get_data(as_text=True), format='json-ld')
+        self.assertIn((PERIODO['p0h#patch-1'],
+                       FOAF.page, PERIODO['p0patches/1/patch.jsonpatch']), g)
+
+        res2 = self.client.get('/history.json.html')
+        self.assertEqual(res2.status_code, http.client.OK)
+        self.assertEqual(res2.headers['Content-Type'], 'text/html')
+        self.assertEqual(
+            res2.headers['Cache-Control'], 'public, max-age=86400')
+
+        res3 = self.client.get('/history.json/')
+        self.assertEqual(res3.status_code, http.client.NOT_FOUND)

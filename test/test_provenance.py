@@ -65,7 +65,7 @@ class TestProvenance(unittest.TestCase):
             res2 = client.get('/h', headers={'Accept': 'application/ld+json'})
             self.assertEqual(res2.status_code, http.client.SEE_OTHER)
             self.assertEqual(
-                urlparse(res2.headers['Location']).path, '/history.jsonld')
+                urlparse(res2.headers['Location']).path, '/h.jsonld')
 
             res3 = client.get('/history.jsonld')
             self.assertEqual(res3.status_code, http.client.OK)

@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID
 from flask import url_for
 from werkzeug.routing import BaseConverter
-from rdflib import Graph
+from rdflib import ConjunctiveGraph
 from pygments import highlight
 from pygments.lexers import TurtleLexer, JsonLexer
 from pygments.formatters import HtmlFormatter
@@ -22,8 +22,9 @@ def isoformat(value):
 
 
 def jsonld_to_turtle(jsonld):
-    return Graph().parse(data=json.dumps(jsonld), format='json-ld')\
-                  .serialize(format='turtle')
+    g = ConjunctiveGraph()
+    g.parse(data=json.dumps(jsonld), format='json-ld')
+    return g.serialize(format='turtle')
 
 
 def highlight_string(string, lexer):
