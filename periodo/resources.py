@@ -152,13 +152,6 @@ INDEX = {
 }
 
 
-def describe_endpoint(endpoint, description):
-    return {
-        'description': description,
-        'url': url_for(endpoint, _external=True)
-    }
-
-
 # decorator to add content-type-specific resources for each resource class
 def add_resources(
         name,
@@ -197,6 +190,13 @@ def add_resources(
         return cls
 
     return decorator
+
+
+def describe_endpoint(endpoint, description):
+    return {
+        'description': description,
+        'url': url_for(endpoint, _external=True)
+    }
 
 
 @add_resources('index', suffixes=['json'], barepaths=['/'])
