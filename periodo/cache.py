@@ -44,7 +44,8 @@ def no_time(response, server_only=False):
 def purge(keys):
     for key in keys:
         filename = md5(key.encode('utf-8')).hexdigest()
-        path = os.path.join(filename[-1], filename[-3:-1], filename)
+        path = os.path.join(  # because nginx cache_path levels=1:2
+            app.config['CACHE'], filename[-1], filename[-3:-1], filename)
         try:
             if os.path.isfile(path):
                 os.remove(path)
