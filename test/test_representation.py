@@ -9,7 +9,7 @@ from rdflib.namespace import Namespace, RDF, DCTERMS, OWL
 from urllib.parse import urlparse
 from flask_principal import ActionNeed
 from .filepath import filepath
-from periodo import app, commands, database, auth
+from periodo import app, commands, database, auth, cache
 
 VOID = Namespace('http://rdfs.org/ns/void#')
 SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
@@ -357,7 +357,8 @@ WHERE {
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
         self.assertEqual(
-            res1.headers['Cache-Control'], 'public, max-age=86400')
+            res1.headers['Cache-Control'],
+            'public, max-age={}'.format(cache.SHORT_TIME))
         self.assertEqual(
             res1.headers['Content-Disposition'],
             'attachment; filename="periodo-collection-trgkv.ttl"')
@@ -373,7 +374,8 @@ WHERE {
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'text/html')
         self.assertEqual(
-            res2.headers['Cache-Control'], 'public, max-age=86400')
+            res2.headers['Cache-Control'],
+            'public, max-age={}'.format(cache.SHORT_TIME))
         self.assertIn('Date', res2.headers)
 
         res3 = self.client.get('/trgkv.ttl/')
@@ -448,7 +450,8 @@ WHERE {
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
         self.assertEqual(
-            res1.headers['Cache-Control'], 'public, max-age=86400')
+            res1.headers['Cache-Control'],
+            'public, max-age={}'.format(cache.SHORT_TIME))
         self.assertEqual(
             res1.headers['Content-Disposition'],
             'attachment; filename="periodo-definition-trgkvwbjd.ttl"')
@@ -465,14 +468,16 @@ WHERE {
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'text/html')
         self.assertEqual(
-            res2.headers['Cache-Control'], 'public, max-age=86400')
+            res2.headers['Cache-Control'],
+            'public, max-age={}'.format(cache.SHORT_TIME))
 
     def test_d_turtle(self):
         res1 = self.client.get('/d.ttl')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
         self.assertEqual(
-            res1.headers['Cache-Control'], 'public, max-age=86400')
+            res1.headers['Cache-Control'],
+            'public, max-age={}'.format(cache.SHORT_TIME))
         self.assertEqual(
             res1.headers['Content-Disposition'],
             'attachment; filename="periodo-dataset.ttl"')
@@ -491,7 +496,8 @@ WHERE {
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
         self.assertEqual(
-            res1.headers['Cache-Control'], 'public, max-age=86400')
+            res1.headers['Cache-Control'],
+            'public, max-age={}'.format(cache.SHORT_TIME))
         self.assertEqual(
             res1.headers['Content-Disposition'],
             'attachment; filename="periodo-dataset.ttl"')
@@ -523,7 +529,8 @@ WHERE {
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
         self.assertEqual(
-            res1.headers['Cache-Control'], 'public, max-age=86400')
+            res1.headers['Cache-Control'],
+            'public, max-age={}'.format(cache.SHORT_TIME))
         self.assertEqual(
             res1.headers['Content-Disposition'],
             'attachment; filename="periodo-history.ttl"')
@@ -554,7 +561,8 @@ WHERE {
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
         self.assertEqual(
-            res1.headers['Cache-Control'], 'public, max-age=86400')
+            res1.headers['Cache-Control'],
+            'public, max-age={}'.format(cache.SHORT_TIME))
         self.assertEqual(
             res1.headers['Content-Disposition'],
             'attachment; filename="periodo-history.ttl"')
@@ -585,7 +593,11 @@ WHERE {
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
         self.assertEqual(
-            res1.headers['Cache-Control'], 'public, max-age=604800')
+            res1.headers['Cache-Control'],
+            'public, max-age=0')
+        self.assertEqual(
+            res1.headers['X-Accel-Expires'],
+            '{}'.format(cache.MEDIUM_TIME))
         self.assertEqual(
             res1.headers['Content-Disposition'],
             'attachment; filename="periodo-history.json"')

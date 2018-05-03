@@ -266,7 +266,7 @@ class Dataset(Resource):
         response.set_etag(dataset_etag, weak=True)
 
         if version is None:
-            return cache.no_time(response)
+            return cache.short_time(response, server_only=True)
         else:
             return cache.long_time(response)
 
@@ -289,7 +289,7 @@ class History(Resource):
         response = api.make_response(
             provenance.history(), 200, filename='periodo-history')
 
-        return cache.medium_time(response)
+        return cache.medium_time(response, server_only=True)
 
 
 @add_resources(
@@ -497,6 +497,8 @@ class PatchMerge(Resource):
         try:
             patching.merge(id, g.identity.id)
             database.commit()
+            cache.purge_history()
+            cache.purge_dataset()
             return None, 204
         except patching.MergeError as e:
             return {'message': e.message}, 404

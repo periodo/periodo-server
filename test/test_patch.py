@@ -8,7 +8,7 @@ from rdflib.namespace import Namespace
 from urllib.parse import urlparse
 from flask_principal import ActionNeed
 from .filepath import filepath
-from periodo import app, database, identifier, commands, auth
+from periodo import app, database, identifier, commands, auth, cache
 
 PERIODO = Namespace('http://n2t.net/ark:/99152/')
 PROV = Namespace('http://www.w3.org/ns/prov#')
@@ -269,7 +269,11 @@ class TestPatchMethods(unittest.TestCase):
 
             res = client.get('/history.jsonld')
             self.assertEqual(
-                res.headers['Cache-Control'], 'public, max-age=604800')
+                res.headers['Cache-Control'],
+                'public, max-age=0')
+            self.assertEqual(
+                res.headers['X-Accel-Expires'],
+                '{}'.format(cache.MEDIUM_TIME))
 
             g = ConjunctiveGraph()
             g.parse(format='json-ld', data=res.get_data(as_text=True))
@@ -363,7 +367,8 @@ class TestPatchMethods(unittest.TestCase):
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
             self.assertEqual(
-                res.headers['Cache-Control'], 'public, max-age=31557600')
+                res.headers['Cache-Control'],
+                'public, max-age={}'.format(cache.LONG_TIME))
             ctx = json.loads(res.get_data(as_text=True))['@context']
             self.assertEqual(ctx[0], 'http://localhost/c?version=1')
 
@@ -372,7 +377,8 @@ class TestPatchMethods(unittest.TestCase):
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
             self.assertEqual(
-                res.headers['Cache-Control'], 'public, max-age=31557600')
+                res.headers['Cache-Control'],
+                'public, max-age={}'.format(cache.LONG_TIME))
             ctx = json.loads(res.get_data(as_text=True))['@context']
             self.assertNotIn('broader', ctx)
 
@@ -436,7 +442,11 @@ class TestPatchMethods(unittest.TestCase):
 
             res = client.get('/history.jsonld')
             self.assertEqual(
-                res.headers['Cache-Control'], 'public, max-age=604800')
+                res.headers['Cache-Control'],
+                'public, max-age=0')
+            self.assertEqual(
+                res.headers['X-Accel-Expires'],
+                '{}'.format(cache.MEDIUM_TIME))
 
             g = ConjunctiveGraph()
             g.parse(format='json-ld', data=res.get_data(as_text=True))
@@ -524,7 +534,11 @@ class TestPatchMethods(unittest.TestCase):
 
             res = client.get('/history.jsonld')
             self.assertEqual(
-                res.headers['Cache-Control'], 'public, max-age=604800')
+                res.headers['Cache-Control'],
+                'public, max-age=0')
+            self.assertEqual(
+                res.headers['X-Accel-Expires'],
+                '{}'.format(cache.MEDIUM_TIME))
 
             g = ConjunctiveGraph()
             g.parse(format='json-ld', data=res.get_data(as_text=True))
