@@ -3,7 +3,8 @@ from collections import OrderedDict
 from flask import request, g, abort, url_for, redirect
 from flask_restful import fields, Resource, marshal, reqparse
 from periodo import (
-    app, api, database, auth, identifier, patching, utils, nanopub, provenance)
+    app, api, cache, database, auth, identifier, patching,
+    utils, nanopub, provenance)
 from urllib.parse import urlencode
 from wsgiref.handlers import format_date_time
 
@@ -60,11 +61,6 @@ patch_list_parser.add_argument('from', type=int, default=0)
 versioned_parser = reqparse.RequestParser()
 versioned_parser.add_argument(
     'version', type=int, location='args', help='Invalid version number')
-
-
-def cache_control(args):
-    # 31557600 seconds = 1 year
-    return 'public, max-age={}'.format(31557600 if args['version'] else 0)
 
 
 def attach_to_dataset(o):
@@ -212,9 +208,10 @@ class Index(Resource):
 class Context(Resource):
     def get(self):
         args = versioned_parser.parse_args()
+        version = args.get('version')
 
         try:
-            dataset = get_dataset(args.get('version', None))
+            dataset = get_dataset(version)
         except ResourceError as e:
             return e.response()
 
@@ -224,23 +221,25 @@ class Context(Resource):
 
         headers = {}
         headers['Last-Modified'] = format_date_time(dataset['created_at'])
-        headers['Cache-Control'] = cache_control(args)
 
-        context = json.loads(dataset['data']).get('@context', None)
+        context = json.loads(dataset['data']).get('@context')
         if context is None:
             return None, 404
 
         response = api.make_response({'@context': context}, 200, headers)
         response.set_etag(context_etag, weak=True)
 
-        return response
+        if version is None:
+            return cache.no_time(response)
+        else:
+            return cache.long_time(response)
 
 
 @add_resources('dataset', shortname='d', barepaths=['/d/'], html=False)
 class Dataset(Resource):
     def get(self):
         args = versioned_parser.parse_args()
-        version = args.get('version', None)
+        version = args.get('version')
         filename = 'periodo-dataset{}'.format(
             '' if version is None else '-v{}'.format(version))
 
@@ -255,7 +254,6 @@ class Dataset(Resource):
 
         headers = {}
         headers['Last-Modified'] = format_date_time(dataset['created_at'])
-        headers['Cache-Control'] = cache_control(args)
 
         data = json.loads(dataset['data'])
         if version is not None and '@context' in data:
@@ -267,7 +265,10 @@ class Dataset(Resource):
             attach_to_dataset(data), 200, headers, filename=filename)
         response.set_etag(dataset_etag, weak=True)
 
-        return response
+        if version is None:
+            return cache.no_time(response)
+        else:
+            return cache.long_time(response)
 
     @auth.submit_patch_permission.require()
     def patch(self):
@@ -285,11 +286,10 @@ class Dataset(Resource):
 @add_resources('history', shortname='h', barepaths=None, html=False)
 class History(Resource):
     def get(self):
-        history = provenance.history()
-        headers = {}
-        headers['Cache-Control'] = 'public, max-age=604800'  # one week
-        return api.make_response(
-            history, 200, headers, filename='periodo-history')
+        response = api.make_response(
+            provenance.history(), 200, filename='periodo-history')
+
+        return cache.medium_time(response)
 
 
 @add_resources(
@@ -599,7 +599,8 @@ class Bag(Resource):
 
     def get(self, uuid):
         args = versioned_parser.parse_args()
-        bag = database.get_bag(uuid, version=args.get('version', None))
+        version = args.get('version')
+        bag = database.get_bag(uuid, version=version)
 
         if not bag:
             abort(404)
@@ -610,7 +611,6 @@ class Bag(Resource):
 
         headers = {}
         headers['Last-Modified'] = format_date_time(bag['created_at'])
-        headers['Cache-Control'] = cache_control(args)
 
         data = json.loads(bag['data'])
         defs, defs_ctx = database.get_definitions_and_context(data['items'])
@@ -621,4 +621,8 @@ class Bag(Resource):
 
         response = api.make_response(data, 200, headers)
         response.set_etag(bag_etag, weak=True)
-        return response
+
+        if version is None:
+            return cache.no_time(response)
+        else:
+            return cache.long_time(response)

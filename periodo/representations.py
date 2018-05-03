@@ -1,7 +1,7 @@
 import json
 from urllib.parse import urlencode
 from flask import request, make_response, redirect, url_for
-from periodo import app, api, routes, utils
+from periodo import app, api, cache, routes, utils
 
 
 def abbreviate_context(data):
@@ -42,72 +42,82 @@ def html_version(path):
 @api.representation('text/html')
 def output_html(data, code, headers={}, filename=None):
     if app.config['HTML_REPR_EXISTS'] and request.path == '/':
-        res = app.send_static_file('html/index.html')
+        response = app.send_static_file('html/index.html')
     elif request.path == '/d/':
-        res = redirect(
+        response = redirect(
             url_for('dataset-json', version=request.args.get('version', None)),
             code=307)
     else:
-        res = redirect(
+        response = redirect(
             html_version(request.path) + urlencode(request.args),
             code=303)
-        res.headers.add('Link', '<>; rel="alternate"; type="application/json"')
+        response.headers.add(
+            'Link', '<>; rel="alternate"; type="application/json"')
 
     if request.path == '/':
-        res.headers.add(
+        response.headers.add(
             'Link', '</>; rel="alternate"; type="text/turtle"; '
             + 'title="VoID description of the PeriodO Period Gazetteer')
-    res.headers.extend(headers)
-    return res
+
+    response.headers.extend(headers)
+
+    return response
+
+
+@api.representation('application/json')
+def output_json(data, code, headers={}, filename=None):
+    response = make_response(json.dumps(abbreviate_context(data)) + '\n', code)
+    response.content_type = 'application/json'
+    response.headers.extend(headers)
+
+    if filename is not None:
+        response.headers['Content-Disposition'] = (
+            'attachment; filename="%s.json"' % filename)
+
+    return response
 
 
 @api.representation('text/turtle')
 def output_turtle(data, code, headers={}, filename=None):
     if request.path == '/':
-        res = routes.void()
-    else:
-        res = make_response(utils.jsonld_to_turtle(data), code)
-        res.content_type = 'text/turtle'
-        headers['Cache-Control'] = 'public, max-age=86400'
-        if filename is not None:
-            headers['Content-Disposition'] = (
-                'attachment; filename="%s.ttl"' % filename)
-    res.headers.extend(headers)
-    return res
+        return routes.void()
 
+    response = make_response(utils.jsonld_to_turtle(data), code)
+    response.content_type = 'text/turtle'
+    response.headers.extend(headers)
 
-@api.representation('application/json')
-def output_json(data, code, headers={}, filename=None):
-    res = make_response(json.dumps(abbreviate_context(data)) + '\n', code)
-    res.content_type = 'application/json'
     if filename is not None:
-        headers['Content-Disposition'] = (
-            'attachment; filename="%s.json"' % filename)
-    res.headers.extend(headers)
-    return res
+        response.headers['Content-Disposition'] = (
+            'attachment; filename="%s.ttl"' % filename)
+
+    return cache.short_time(response)
 
 
 @api.representation('application/ld+json')
 def output_jsonld(data, code, headers={}, filename=None):
-    res = output_json(data, code, headers, filename)
-    res.content_type = 'application/ld+json'
-    return res
+    response = output_json(data, code, headers, filename)
+    response.content_type = 'application/ld+json'
+
+    return response
 
 
 @api.representation('text/turtle+html')
 def output_turtle_as_html(data, code, headers={}, filename=None):
     ttl = utils.jsonld_to_turtle(data)
-    headers['Cache-Control'] = 'public, max-age=86400'
-    res = make_response(utils.highlight_ttl(ttl), code)
-    res.content_type = 'text/html'
-    res.headers.extend(headers)
-    return res
+    html = utils.highlight_ttl(ttl)
+    response = make_response(html, code)
+    response.content_type = 'text/html'
+    response.headers.extend(headers)
+
+    return cache.short_time(response)
 
 
 @api.representation('application/json+html')
 def output_json_as_html(data, code, headers={}, filename=None):
-    headers['Cache-Control'] = 'public, max-age=86400'
-    res = make_response(utils.highlight_json(abbreviate_context(data)), code)
-    res.content_type = 'text/html'
-    res.headers.extend(headers)
-    return res
+    json = abbreviate_context(data)
+    html = utils.highlight_json(json)
+    response = make_response(html, code)
+    response.content_type = 'text/html'
+    response.headers.extend(headers)
+
+    return cache.short_time(response)
