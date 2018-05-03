@@ -47,6 +47,12 @@ if not app.debug:
 
 
 @app.after_request
+def add_date_header(response):
+    response.headers.add('Date', http_date())
+    return response
+
+
+@app.after_request
 def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'If-Modified-Since')
@@ -77,19 +83,13 @@ class PeriodOApi(Api):
         else:
             return response
 
-    def _make_response(self, data, *args, **kwargs):
+    def make_response(self, data, *args, **kwargs):
         # Override content negotation for content-type-specific URLs.
         for suffix, content_type in SUFFIXES.items():
             if request.path.endswith(suffix):
                 return self.representations[content_type](
                     data, *args, **kwargs)
         return super().make_response(data, *args, **kwargs)
-
-    def make_response(self, data, *args, **kwargs):
-        date = http_date()
-        res = self._make_response(data, *args, **kwargs)
-        res.headers.extend({'Date': date})
-        return res
 
 
 api = PeriodOApi(app)
