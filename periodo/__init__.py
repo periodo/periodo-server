@@ -102,7 +102,6 @@ def load_identity():
 
 # end api setup ---------------------------------------------------------------
 
-import periodo.cache            # noqa: E402
 import periodo.routes           # noqa: E402
 import periodo.representations  # noqa: E402
 import periodo.resources        # noqa: E402
