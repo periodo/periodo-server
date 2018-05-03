@@ -223,6 +223,7 @@ WHERE {
         self.assertEqual(
             res2.headers['Content-Disposition'],
             'attachment; filename="periodo-dataset.json"')
+        self.assertIn('Date', res2.headers)
         res3 = self.client.get('/d.jsonld')
         self.assertEqual(res3.status_code, http.client.OK)
         self.assertEqual(res3.headers['Content-Type'], 'application/ld+json')
@@ -373,6 +374,7 @@ WHERE {
         self.assertEqual(res2.headers['Content-Type'], 'text/html')
         self.assertEqual(
             res2.headers['Cache-Control'], 'public, max-age=86400')
+        self.assertIn('Date', res2.headers)
 
         res3 = self.client.get('/trgkv.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
@@ -587,6 +589,7 @@ WHERE {
         self.assertEqual(
             res1.headers['Content-Disposition'],
             'attachment; filename="periodo-history.json"')
+        self.assertIn('Date', res1.headers)
 
         g = ConjunctiveGraph()
         g.parse(data=res1.get_data(as_text=True), format='json-ld')

@@ -3,6 +3,7 @@ import json
 from flask import Flask, request
 from flask_principal import Principal
 from flask_restful import Api
+from werkzeug.http import http_date
 from periodo.secrets import (
     SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
 from periodo.utils import UUIDConverter
@@ -76,13 +77,19 @@ class PeriodOApi(Api):
         else:
             return response
 
-    def make_response(self, data, *args, **kwargs):
+    def _make_response(self, data, *args, **kwargs):
         # Override content negotation for content-type-specific URLs.
         for suffix, content_type in SUFFIXES.items():
             if request.path.endswith(suffix):
                 return self.representations[content_type](
                     data, *args, **kwargs)
         return super().make_response(data, *args, **kwargs)
+
+    def make_response(self, data, *args, **kwargs):
+        date = http_date()
+        res = self._make_response(data, *args, **kwargs)
+        res.headers.extend({'Date': date})
+        return res
 
 
 api = PeriodOApi(app)
