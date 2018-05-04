@@ -126,12 +126,14 @@ def add_comment(patch_id, user_id, message):
 
 def add_new_version_of_dataset(data):
     now = database.query_db(
-        "SELECT CAST(strftime('%s', 'now') AS INTEGER) AS now", one=True)['now']
+        "SELECT CAST(strftime('%s', 'now') AS INTEGER) AS now", one=True
+    )['now']
     cursor = database.get_db().cursor()
     cursor.execute(
         'INSERT into DATASET (data, description, created_at) VALUES (?,?,?)',
         (json.dumps(data), void.describe_dataset(data, now), now))
     return cursor.lastrowid
+
 
 def reject(patch_id, user_id):
     row = database.query_db(
