@@ -2,12 +2,9 @@ import os
 from hashlib import md5
 from periodo import app
 
-# LONG_TIME = 31557600  # 1 year - versioned reprs that should not change
-# MEDIUM_TIME = 604800  # 1 week - slow-to-generate reprs that change infreq.
-# SHORT_TIME = 86400    # 1 day - derived reprs like TTL and HTML
-LONG_TIME = 3600
-MEDIUM_TIME = 600
-SHORT_TIME = 60
+LONG_TIME = 31557600  # 1 year - versioned reprs that should not change
+MEDIUM_TIME = 604800  # 1 week - slow-to-generate reprs that change infreq.
+SHORT_TIME = 86400    # 1 day  - derived reprs like TTL and HTML
 
 
 def set_max_age(response, max_age, server_only):
@@ -42,17 +39,17 @@ def no_time(response, server_only=False):
 
 
 def purge(keys):
-    for key in keys:
-        filename = md5(key.encode('utf-8')).hexdigest()
-        path = os.path.join(  # because nginx cache_path levels=1:2
-            app.config['CACHE'], filename[-1], filename[-3:-1], filename)
-        try:
-            if os.path.isfile(path):
-                os.remove(path)
-        except OSError as e:
-            app.logger.error('Failed to purge: {}'.format(key))
-            app.logger.error('Error was: {}'.format(e))
-            pass
+    if app.config['CACHE'] is not None:
+        for key in keys:
+            filename = md5(key.encode('utf-8')).hexdigest()
+            path = os.path.join(  # because nginx cache_path levels=1:2
+                app.config['CACHE'], filename[-1], filename[-3:-1], filename)
+            try:
+                if os.path.isfile(path):
+                    os.remove(path)
+            except OSError as e:
+                app.logger.error('Failed to purge: {}'.format(key))
+                app.logger.error('Error was: {}'.format(e))
 
 
 def keys_for_endpoint(endpoint):
@@ -63,10 +60,12 @@ def keys_for_endpoint(endpoint):
 
 
 def purge_history():
-    purge(keys_for_endpoint('history'))
+    if app.config['CACHE'] is not None:
+        purge(keys_for_endpoint('history'))
 
 
 def purge_dataset():
-    keys = keys_for_endpoint('dataset')
-    purge(keys)
-    purge(['{}?inline-context'.format(k) for k in keys])
+    if app.config['CACHE'] is not None:
+        keys = keys_for_endpoint('dataset')
+        purge(keys)
+        purge(['{}?inline-context'.format(k) for k in keys])
