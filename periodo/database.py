@@ -167,6 +167,11 @@ def commit():
     get_db().commit()
 
 
+def dump(f):
+    for line in get_db().iterdump():
+        f.write('%s\n' % line)
+
+
 @app.teardown_appcontext
 def close(exception):
     db = getattr(g, '_database', None)

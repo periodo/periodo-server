@@ -2,9 +2,12 @@ import json
 import random
 import requests
 import string
+from io import StringIO
 from flask import request, make_response, redirect, url_for, session, abort
 from periodo import app, database, identifier, auth, utils
 from urllib.parse import urlencode
+from werkzeug.http import http_date
+
 
 if app.config['HTML_REPR_EXISTS']:
     @app.route('/images/<path:path>')
@@ -181,3 +184,17 @@ def registered():
         """.format(json.dumps(
             {'name': credentials['name'], 'token': identity.b64token.decode()}
         )))
+
+
+@app.route('/export.sql')
+def export():
+    sql = StringIO()
+    database.dump(sql)
+    response = make_response(sql.getvalue(), 200, {
+        'Content-Type':
+        'text/plain',
+        'Content-Disposition':
+        'attachment; filename="periodo-export-{}.sql"'.format(http_date())
+    })
+    sql.close()
+    return response

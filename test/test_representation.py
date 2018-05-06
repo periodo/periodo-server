@@ -610,3 +610,8 @@ WHERE {
 
         res3 = self.client.get('/history.json/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+
+    def test_export(self):
+        res1 = self.client.get('/export.sql')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'text/plain')
