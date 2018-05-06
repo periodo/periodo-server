@@ -287,8 +287,10 @@ class Dataset(Resource):
 class History(Resource):
     def get(self):
         response = api.make_response(
-            provenance.history(), 200, filename='periodo-history')
-
+            provenance.history(
+                include_entity_details=('full' in request.args)),
+            200, filename='periodo-history'
+        )
         return cache.medium_time(response, server_only=True)
 
 

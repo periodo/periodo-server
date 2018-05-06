@@ -440,7 +440,7 @@ class TestPatchMethods(unittest.TestCase):
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
 
-            res = client.get('/history.jsonld')
+            res = client.get('/history.jsonld?full')
             self.assertEqual(
                 res.headers['Cache-Control'],
                 'public, max-age=0')
@@ -532,7 +532,7 @@ class TestPatchMethods(unittest.TestCase):
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
 
-            res = client.get('/history.jsonld')
+            res = client.get('/h.jsonld?full')
             self.assertEqual(
                 res.headers['Cache-Control'],
                 'public, max-age=0')
