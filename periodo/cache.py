@@ -52,20 +52,20 @@ def purge(keys):
                 app.logger.error('Error was: {}'.format(e))
 
 
-def keys_for_endpoint(endpoint):
-    return [
-        r.rule for r in app.url_map.iter_rules()
-        if r.endpoint.startswith(endpoint)
-    ]
+def purge_endpoint(endpoint, params):
+    if app.config['CACHE'] is not None:
+        keys = [
+            r.rule for r in app.url_map.iter_rules()
+            if r.endpoint.startswith(endpoint)
+        ]
+        purge(keys)
+        for p in params:
+            purge(['{}?{}'.format(k, p) for k in keys])
 
 
 def purge_history():
-    if app.config['CACHE'] is not None:
-        purge(keys_for_endpoint('history'))
+    purge_endpoint('history', ['full'])
 
 
 def purge_dataset():
-    if app.config['CACHE'] is not None:
-        keys = keys_for_endpoint('dataset')
-        purge(keys)
-        purge(['{}?inline-context'.format(k) for k in keys])
+    purge_endpoint('dataset', ['inline-context'])
