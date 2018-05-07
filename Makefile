@@ -1,9 +1,9 @@
 VENV_DIR := venv
 PIP3 := $(VENV_DIR)/bin/pip3
 PYTHON3 := $(VENV_DIR)/bin/python3
-DB := './db.sqlite'
+DB := ./db.sqlite
 
-CLIENT_REPO := '../periodo-client'
+CLIENT_REPO := ../periodo-client
 CLIENT_VERSION := latest
 
 VOCAB_FILES := $(shell find vocab -name *.ttl)
