@@ -39,6 +39,16 @@ ifeq ($(DATA),)
 endif
 	$(PYTHON3) -c "from periodo.commands import load_data; load_data('$(DATA)')"
 
+export.sql.gz:
+ifeq ($(IMPORT_URL),)
+	$(error No import URL provided. Run e.g. `make import IMPORT_URL=https://staging.perio.do/export.sql`)
+endif
+	curl -X GET -H 'Accept-Encoding: gzip' "$(IMPORT_URL)" > $@
+
+.PHONY: import
+import: export.sql.gz
+	cat $< | gunzip | sqlite3 $(DB)
+
 .PHONY: set_permissions
 set_permissions:
 ifeq ($(ORCID),)
