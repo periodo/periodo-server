@@ -47,6 +47,9 @@ endif
 
 .PHONY: import
 import: export.sql.gz
+ifneq ($(wildcard $(DB)),)
+	TS=`date -u +%FT%TZ` && mv $(DB) "$(DB)-$$TS.bak"
+endif
 	cat $< | gunzip | sqlite3 $(DB)
 
 .PHONY: set_permissions
