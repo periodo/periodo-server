@@ -2,8 +2,9 @@ import json
 import random
 import requests
 import string
-from io import StringIO
-from flask import request, make_response, redirect, url_for, session, abort
+from flask import (
+    request, make_response, redirect, url_for, session, abort,
+    Response, stream_with_context)
 from periodo import app, database, identifier, auth, utils
 from urllib.parse import urlencode
 from werkzeug.http import http_date
@@ -188,13 +189,12 @@ def registered():
 
 @app.route('/export.sql')
 def export():
-    sql = StringIO()
-    database.dump(sql)
-    response = make_response(sql.getvalue(), 200, {
+    def generate():
+        for line in database.dump():
+            yield '%s\n' % line
+    return Response(stream_with_context(generate()), status=200, headers={
         'Content-Type':
         'text/plain',
         'Content-Disposition':
         'attachment; filename="periodo-export-{}.sql"'.format(http_date())
     })
-    sql.close()
-    return response
