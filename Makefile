@@ -55,7 +55,7 @@ endif
 .PHONY: set_permissions
 set_permissions:
 ifeq ($(ORCID),)
-	$(error No orcid provided. Run `make load_data ORCID=https://orcid.org/0000-1234 PERMISSIONS=perm1,perm2,perm3)
+	$(error No orcid provided. Run `make set_permissions ORCID=https://orcid.org/0000-1234 PERMISSIONS=perm1,perm2,perm3)
 endif
 	$(PYTHON3) -c "from periodo.commands import set_permissions; set_permissions('$(ORCID)','$(PERMISSIONS)'.split(','))"
 
