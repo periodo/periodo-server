@@ -30,11 +30,15 @@ def get_mimetype():
     return None
 
 
+def build_client_url(page, **values):
+    return url_for('index', page=page, backendID=request.url_root, **values)
+
+
 @app.route('/h', endpoint='history')
 def see_history():
     mimetype = get_mimetype()
     if mimetype is None:
-        url = url_for('index', _anchor='history')
+        url = build_client_url(page='backend-history')
     else:
         url = url_for('history-%s' % mimetype,  **request.args)
     return redirect(url, code=303)
@@ -95,7 +99,8 @@ def see_dataset():
 def see_collection(collection_id):
     mimetype = get_mimetype()
     if mimetype is None:
-        url = url_for('index', _anchor=request.path[1:])
+        url = build_client_url(
+            page='authority-view', authorityID=request.path[1:])
     else:
         url = url_for('collection-%s' % mimetype, collection_id=collection_id,
                       **request.args)
@@ -108,7 +113,10 @@ def see_collection(collection_id):
 def see_definition(definition_id):
     mimetype = get_mimetype()
     if mimetype is None:
-        url = url_for('index', _anchor=request.path[1:])
+        periodID = request.path[1:]
+        authorityID = periodID[0:identifier.COLLECTION_SEQUENCE_LENGTH + 1]
+        url = build_client_url(
+            page='period-view', authorityID=authorityID, periodID=periodID)
     else:
         url = url_for('definition-%s' % mimetype, definition_id=definition_id,
                       **request.args)
