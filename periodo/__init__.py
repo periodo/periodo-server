@@ -4,13 +4,14 @@ from flask import Flask, request
 from flask_principal import Principal
 from flask_restful import Api
 from werkzeug.http import http_date
-from periodo.secrets import (
-    SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
+# from periodo.secrets import (
+#     SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
+from periodo.secrets import (ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
 from periodo.utils import UUIDConverter
 from periodo.middleware import StreamConsumingMiddleware
 
 app = Flask(__name__)
-app.secret_key = SECRET_KEY
+# app.secret_key = SECRET_KEY
 app.url_map.converters['uuid'] = UUIDConverter
 app.wsgi_app = StreamConsumingMiddleware(app.wsgi_app)
 principal = Principal(app, use_sessions=False)
