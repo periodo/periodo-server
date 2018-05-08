@@ -1,7 +1,8 @@
 Flask-Principal==0.4.0
 Flask-RESTful==0.3.6
+Flask==0.12.4
+Pygments==2.2.0
+Werkzeug==0.12.2
 jsonpatch==1.23
 rdflib-jsonld==0.4.0
 requests==2.18.4
-Pygments==2.2.0
-Werkzeug==0.12.2
