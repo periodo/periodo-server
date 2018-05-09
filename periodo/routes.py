@@ -185,14 +185,19 @@ def registered():
         <!doctype html>
         <head>
             <script type="text/javascript">
-            localStorage.auth = '{}';
+            parent.postMessage(
+              {{ name: {}, token: {} }},
+              "{}"
+            )
             window.close();
             </script>
         </head>
         <body>
-        """.format(json.dumps(
-            {'name': credentials['name'], 'token': identity.b64token.decode()}
-        )))
+        """.format(
+            json.dumps(credentials['name']),
+            json.dumps(identity.b64token.decode()),
+            request.host_url
+        ))
 
 
 @app.route('/export.sql')
