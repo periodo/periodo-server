@@ -40,7 +40,7 @@ def highlight_ttl(ttl):
 
 def highlight_json(data):
     return highlight_string(
-        json.dumps(data, indent=2), JsonLexer())
+        json.dumps(data, indent=2, sort_keys=True), JsonLexer())
 
 
 class UUIDConverter(BaseConverter):
