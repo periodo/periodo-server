@@ -5,25 +5,24 @@ from periodo import app, api, cache, routes, utils
 
 
 def abbreviate_context(data):
-    if ((data is None
-         or '@context' not in data
-         or len(data) == 1
-         or type(data['@context']) is list
-         or 'history' in data['@context'])):
+    # don't abbreviate...
+    if ((data is None or                    # empty responses,
+         '@context' not in data or          # non-LD responses,
+         len(data) == 1 or                  # the context object itself,
+         type(data['@context']) is list)):  # or already-abbreviated contexts.
 
-        # don't abbreviate non-LD responses, the context object itself,
-        # bags, or history
         return data
 
     context = data['@context']
 
     if '__inline' in context:
+        # keep context inline as requested
         context.pop('__inline', None)
         context.pop('__version', None)
         data['@context'] = context
     else:
         data['@context'] = [
-            utils.context_url(app, context),
+            utils.absolute_url(app, context, 'context'),
             {'@base': context['@base']}
         ]
         if '__version' in context:

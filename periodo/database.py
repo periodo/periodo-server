@@ -36,6 +36,10 @@ def get_dataset(version=None):
             'SELECT * FROM dataset WHERE dataset.id = ?', (version,), one=True)
 
 
+def get_context(version=None):
+    return json.loads(get_dataset(version)['data']).get('@context')
+
+
 def extract_collection(collection_key, o, raiseErrors=False):
     def maybeRaiseMissingKeyError():
         if raiseErrors:
@@ -95,6 +99,29 @@ def get_definitions_and_context(ids, version=None, raiseErrors=False):
     definitions = {id: extract_definition(id, o, raiseErrors) for id in ids}
 
     return definitions, o['@context']
+
+
+def get_merged_patches():
+    c = get_db().cursor()
+    patches = c.execute('''
+SELECT
+  id,
+  created_at,
+  created_by,
+  updated_by,
+  merged_at,
+  merged_by,
+  applied_to,
+  resulted_in,
+  created_entities,
+  updated_entities,
+  removed_entities
+FROM patch_request
+WHERE merged = 1
+ORDER BY id ASC
+''').fetchall()
+    c.close()
+    return patches
 
 
 def get_bag_uuids():

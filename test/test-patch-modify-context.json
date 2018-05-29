@@ -1,9 +1,9 @@
 [
   {
     "op": "add",
-    "path": "/@context/broader",
+    "path": "/@context/foobar",
     "value": {
-      "@id": "http://www.w3.org/2004/02/skos/core#broader",
+      "@id": "http://example.org/vocab#foobar",
       "@type": "@id"
     }
   }

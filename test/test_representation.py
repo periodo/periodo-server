@@ -15,6 +15,7 @@ VOID = Namespace('http://rdfs.org/ns/void#')
 SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
 PERIODO = Namespace('http://n2t.net/ark:/99152/')
 FOAF = Namespace('http://xmlns.com/foaf/0.1/')
+HOST = Namespace('http://localhost/')
 
 
 class TestRepresentationsAndRedirects(unittest.TestCase):
@@ -535,8 +536,8 @@ WHERE {
 
         g = Graph()
         g.parse(data=res1.get_data(as_text=True), format='turtle')
-        self.assertIn((PERIODO['p0h#patch-1'],
-                       FOAF.page, PERIODO['p0patches/1/patch.jsonpatch']), g)
+        self.assertIn((HOST['h#patch-1'],
+                       FOAF.page, HOST['patches/1/patch.jsonpatch']), g)
 
         res3 = self.client.get('/h.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
@@ -567,8 +568,8 @@ WHERE {
 
         g = Graph()
         g.parse(data=res1.get_data(as_text=True), format='turtle')
-        self.assertIn((PERIODO['p0h#patch-1'],
-                       FOAF.page, PERIODO['p0patches/1/patch.jsonpatch']), g)
+        self.assertIn((HOST['h#patch-1'],
+                       FOAF.page, HOST['patches/1/patch.jsonpatch']), g)
 
         res3 = self.client.get('/history.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
@@ -587,7 +588,7 @@ WHERE {
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
 
-        res1 = self.client.get('/history.json')
+        res1 = self.client.get('/history.json?inline-context')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
         self.assertEqual(
@@ -603,8 +604,8 @@ WHERE {
 
         g = ConjunctiveGraph()
         g.parse(data=res1.get_data(as_text=True), format='json-ld')
-        self.assertIn((PERIODO['p0h#patch-1'],
-                       FOAF.page, PERIODO['p0patches/1/patch.jsonpatch']), g)
+        self.assertIn((HOST['h#patch-1'],
+                       FOAF.page, HOST['patches/1/patch.jsonpatch']), g)
 
         res3 = self.client.get('/history.json/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)

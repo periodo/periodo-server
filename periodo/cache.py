@@ -64,7 +64,7 @@ def purge_endpoint(endpoint, params):
 
 
 def purge_history():
-    purge_endpoint('history', ['full'])
+    purge_endpoint('history', ['full', 'inline-context'])
 
 
 def purge_dataset():

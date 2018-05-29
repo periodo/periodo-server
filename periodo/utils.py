@@ -8,13 +8,15 @@ from rdflib import ConjunctiveGraph
 from pygments import highlight
 from pygments.lexers import TurtleLexer, JsonLexer
 from pygments.formatters import HtmlFormatter
+from periodo import identifier
 
 
-def context_url(app, context):
+def absolute_url(app, context, endpoint, **kwargs):
     if app.config['CANONICAL']:
-        return context['@base'] + 'p0c'
+        return (context['@base']
+                + identifier.prefix(url_for(endpoint, **kwargs)))
     else:
-        return url_for('context', _external=True)
+        return url_for(endpoint, _external=True, **kwargs)
 
 
 def isoformat(value):

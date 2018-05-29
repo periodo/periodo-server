@@ -1,133 +1,78 @@
 import json
-from flask import url_for
 from rdflib import Graph, URIRef, Literal
 from rdflib.collection import Collection
 from rdflib.namespace import Namespace, XSD, FOAF
-from periodo import database, identifier, utils
+from periodo import database
+from periodo.utils import isoformat, absolute_url
 
 PROV = Namespace('http://www.w3.org/ns/prov#')
-PERIODO = Namespace('http://n2t.net/ark:/99152/')
-
-CONTEXT = {
-    "@base": "http://n2t.net/ark:/99152/p0h",
-    "by": {"@id": "prov:wasAssociatedWith", "@type": "@id"},
-    "foaf": "http://xmlns.com/foaf/0.1/",
-    "generated": {"@id": "prov:generated", "@type": "@id"},
-    "history": "@graph",
-    "initialDataLoad": {"@id": "rdf:first", "@type": "@id"},
-    "invalidated": {"@id": "prov:invalidated", "@type": "@id"},
-    "mergedAt": {"@id": "prov:endedAtTime", "@type": "xsd:dateTime"},
-    "mergedPatches": {"@id": "rdf:rest"},
-    "name": "foaf:name",
-    "prov": "http://www.w3.org/ns/prov#",
-    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-    "role": {"@id": "prov:hadRole", "@type": "@id"},
-    "roles": {"@id": "prov:qualifiedAssociation", "@type": "@id"},
-    "specializationOf": {"@id": "prov:specializationOf", "@type": "@id"},
-    "submittedAt": {"@id": "prov:startedAtTime", "@type": "xsd:dateTime"},
-    "type": "@type",
-    "url": {"@id": "foaf:page", "@type": "@id"},
-    "used": {"@id": "prov:used", "@type": "@id"},
-    "wasRevisionOf": {"@id": "prov:wasRevisionOf", "@type": "@id"},
-    "xsd": "http://www.w3.org/2001/XMLSchema#"
-}
 
 
-def add_entity_details(g, row, change):
-    def add_entity_version(entity_id):
-        entity = PERIODO[entity_id]
-        entity_version = PERIODO[
-            entity_id + '?version={}'.format(row['resulted_in'])]
-        g.add((entity_version, PROV.specializationOf, entity))
-        g.add((change, PROV.generated, entity_version))
-        return entity_version
-
-    for entity_id in json.loads(row['created_entities']):
-        add_entity_version(entity_id)
-
-    for entity_id in json.loads(row['updated_entities']):
-        entity_version = add_entity_version(entity_id)
-        prev_entity_version = PERIODO[
-            entity_id + '?version={}'.format(row['applied_to'])]
-        g.add(
-            (entity_version, PROV.wasRevisionOf, prev_entity_version))
-
-    for entity_id in json.loads(row['removed_entities']):
-        g.add((change, PROV.invalidated, PERIODO[entity_id]))
+def timestamp(ts):
+    return Literal(isoformat(ts), datatype=XSD.dateTime)
 
 
-def history(include_entity_details=False):
+def history(app, inline_context=False):
+    context = database.get_context()
+
+    def uri(endpoint, **kwargs):
+        return URIRef(absolute_url(app, context, endpoint, **kwargs))
+
+    history_uri = uri('history')
+    vocab_uri = uri('vocab')
+    dataset_uri = uri('abstract_dataset')
+
     g = Graph()
-    changelog = Collection(g, URIRef('#changelog'))
-    cursor = database.get_db().cursor()
-    for row in cursor.execute('''
-SELECT
-  id,
-  created_at,
-  created_by,
-  updated_by,
-  merged_at,
-  merged_by,
-  applied_to,
-  resulted_in,
-  created_entities,
-  updated_entities,
-  removed_entities
-FROM patch_request
-WHERE merged = 1
-ORDER BY id ASC
-''').fetchall():
-        change = URIRef('#change-{}'.format(row['id']))
-        patch = URIRef('#patch-{}'.format(row['id']))
-        g.add((patch,
-               FOAF.page,
-               PERIODO[identifier.prefix(url_for('patch', id=row['id']))]))
-        g.add((change,
-               PROV.startedAtTime,
-               Literal(utils.isoformat(row['created_at']),
-                       datatype=XSD.dateTime)))
-        g.add((change,
-               PROV.endedAtTime,
-               Literal(utils.isoformat(row['merged_at']),
-                       datatype=XSD.dateTime)))
-        dataset = PERIODO[identifier.prefix(url_for('abstract_dataset'))]
-        version_in = PERIODO[identifier.prefix(
-            url_for('abstract_dataset', version=row['applied_to']))]
-        g.add((version_in, PROV.specializationOf, dataset))
-        version_out = PERIODO[identifier.prefix(
-            url_for('abstract_dataset', version=row['resulted_in']))]
-        g.add((version_out, PROV.specializationOf, dataset))
+    changelog = Collection(g, history_uri + '#changelog')
+
+    for row in database.get_merged_patches():
+
+        change = history_uri + '#change-{}'.format(row['id'])
+        patch = history_uri + '#patch-{}'.format(row['id'])
+        patch_uri = uri('patch', id=row['id'])
+        version_in = uri('abstract_dataset', version=row['applied_to'])
+        version_out = uri('abstract_dataset', version=row['resulted_in'])
+
+        g.add((patch, FOAF.page, patch_uri))
+        g.add((change, PROV.startedAtTime, timestamp(row['created_at'])))
+        g.add((change, PROV.endedAtTime, timestamp(row['merged_at'])))
+
+        g.add((version_in, PROV.specializationOf, dataset_uri))
+        g.add((version_out, PROV.specializationOf, dataset_uri))
 
         g.add((change, PROV.used, version_in))
         g.add((change, PROV.used, patch))
         g.add((change, PROV.generated, version_out))
 
-        if include_entity_details:
-            add_entity_details(g, row, change)
-
         for field, term in (('created_by', 'submitted'),
                             ('updated_by', 'updated'),
                             ('merged_by', 'merged')):
+
             if row[field] == 'initial-data-loader':
                 continue
+
             agent = URIRef(row[field])
-            association = URIRef('#patch-{}-{}'.format(row['id'], term))
+            assoc = history_uri + '#patch-{}-{}'.format(row['id'], term)
+
             g.add((change, PROV.wasAssociatedWith, agent))
-            g.add((change, PROV.qualifiedAssociation, association))
-            g.add((association, PROV.agent, agent))
-            g.add((association,
-                   PROV.hadRole,
-                   PERIODO[identifier.prefix(url_for('vocab') + '#' + term)]))
+            g.add((change, PROV.qualifiedAssociation, assoc))
+            g.add((assoc, PROV.agent, agent))
+            g.add((assoc, PROV.hadRole, vocab_uri + '#{}'.format(term)))
 
         changelog.append(change)
 
     def ordering(o):
-        if o['@id'] == '#changelog':
+        if o['id'].endswith('#changelog'):
             # sort first
             return ' '
-        return o['@id']
+        return o['id']
 
     jsonld = json.loads(
-        g.serialize(format='json-ld', context=CONTEXT).decode('utf-8'))
+        g.serialize(format='json-ld', context=context).decode('utf-8')
+    )
     jsonld['history'] = sorted(jsonld['history'], key=ordering)
+
+    if inline_context:
+        jsonld['@context']['__inline'] = True
+
     return jsonld
