@@ -121,6 +121,8 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
 
         g = Graph()
         g.parse(format='turtle', data=res2.get_data(as_text=True))
+        self.assertIn(
+            (PERIODO['p0d'], DCTERMS.provenance, PERIODO['p0h#changes']), g)
         desc = g.value(predicate=RDF.type, object=VOID.DatasetDescription)
         self.assertEqual(
             desc.n3(), '<http://n2t.net/ark:/99152/p0>')
@@ -258,9 +260,11 @@ WHERE {
         g = Graph().parse(
             data=json.dumps({**jsonld, **context}), format='json-ld')
         self.assertIn((PERIODO['p0d/#periodCollections'],
-                       FOAF.isPrimaryTopicOf, PERIODO['p0d/']), g)
-        self.assertIn((PERIODO['p0d/'],
-                       VOID.inDataset, PERIODO['p0d']), g)
+                       FOAF.isPrimaryTopicOf, HOST['d/']), g)
+        self.assertIn((HOST['d/'],
+                       VOID.inDataset, HOST['d']), g)
+        self.assertIn((HOST['d'],
+                       DCTERMS.provenance, HOST['h#changes']), g)
 
     def test_inline_context(self):
         res1 = self.client.get('/d.json?inline-context')
@@ -340,9 +344,9 @@ WHERE {
             data=json.dumps({**jsonld, **context}), format='json-ld')
         self.assertIsNone(g.value(predicate=RDF.type, object=RDF.Bag))
         self.assertIn((PERIODO['p0trgkv'],
-                       FOAF.isPrimaryTopicOf, PERIODO['p0trgkv.jsonld']), g)
-        self.assertIn((PERIODO['p0trgkv.jsonld'],
-                       VOID.inDataset, PERIODO['p0d']), g)
+                       FOAF.isPrimaryTopicOf, HOST['trgkv.jsonld']), g)
+        self.assertIn((HOST['trgkv.jsonld'],
+                       VOID.inDataset, HOST['d']), g)
 
         res3 = self.client.get('/trgkv.json/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
@@ -367,9 +371,9 @@ WHERE {
         g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
         self.assertIsNone(g.value(predicate=RDF.type, object=RDF.Bag))
         self.assertIn((PERIODO['p0trgkv'],
-                       FOAF.isPrimaryTopicOf, PERIODO['p0trgkv.ttl']), g)
-        self.assertIn((PERIODO['p0trgkv.ttl'],
-                       VOID.inDataset, PERIODO['p0d']), g)
+                       FOAF.isPrimaryTopicOf, HOST['trgkv.ttl']), g)
+        self.assertIn((HOST['trgkv.ttl'],
+                       VOID.inDataset, HOST['d']), g)
 
         res2 = self.client.get('/trgkv.ttl.html')
         self.assertEqual(res2.status_code, http.client.OK)
@@ -435,9 +439,9 @@ WHERE {
         self.assertIsNone(
             g.value(predicate=RDF.type, object=SKOS.ConceptScheme))
         self.assertIn((PERIODO['p0trgkvwbjd'],
-                       FOAF.isPrimaryTopicOf, PERIODO['p0trgkvwbjd.json']), g)
-        self.assertIn((PERIODO['p0trgkvwbjd.json'],
-                       VOID.inDataset, PERIODO['p0d']), g)
+                       FOAF.isPrimaryTopicOf, HOST['trgkvwbjd.json']), g)
+        self.assertIn((HOST['trgkvwbjd.json'],
+                       VOID.inDataset, HOST['d']), g)
         self.assertIn((PERIODO['p0trgkvwbjd'],
                        SKOS.inScheme, PERIODO['p0trgkv']), g)
         res3 = self.client.get('/trgkvwbjd.json.html')
@@ -454,13 +458,14 @@ WHERE {
         self.assertEqual(
             res1.headers['Content-Disposition'],
             'attachment; filename="periodo-definition-trgkvwbjd.ttl"')
+
         g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
         self.assertIsNone(
             g.value(predicate=RDF.type, object=SKOS.ConceptScheme))
         self.assertIn((PERIODO['p0trgkvwbjd'],
-                       FOAF.isPrimaryTopicOf, PERIODO['p0trgkvwbjd.ttl']), g)
-        self.assertIn((PERIODO['p0trgkvwbjd.ttl'],
-                       VOID.inDataset, PERIODO['p0d']), g)
+                       FOAF.isPrimaryTopicOf, HOST['trgkvwbjd.ttl']), g)
+        self.assertIn((HOST['trgkvwbjd.ttl'],
+                       VOID.inDataset, HOST['d']), g)
         self.assertIn((PERIODO['p0trgkvwbjd'],
                        SKOS.inScheme, PERIODO['p0trgkv']), g)
         res2 = self.client.get('/trgkvwbjd.ttl.html')
@@ -483,9 +488,11 @@ WHERE {
 
         g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
         self.assertIn((PERIODO['p0d/#periodCollections'],
-                       FOAF.isPrimaryTopicOf, PERIODO['p0d.ttl']), g)
-        self.assertIn((PERIODO['p0d.ttl'],
-                       VOID.inDataset, PERIODO['p0d']), g)
+                       FOAF.isPrimaryTopicOf, HOST['d.ttl']), g)
+        self.assertIn((HOST['d.ttl'],
+                       VOID.inDataset, HOST['d']), g)
+        self.assertIn((HOST['d'],
+                       DCTERMS.provenance, HOST['h#changes']), g)
 
         res3 = self.client.get('/d.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
@@ -503,9 +510,11 @@ WHERE {
 
         g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
         self.assertIn((PERIODO['p0d/#periodCollections'],
-                       FOAF.isPrimaryTopicOf, PERIODO['p0dataset.ttl']), g)
-        self.assertIn((PERIODO['p0dataset.ttl'],
-                       VOID.inDataset, PERIODO['p0d']), g)
+                       FOAF.isPrimaryTopicOf, HOST['dataset.ttl']), g)
+        self.assertIn((HOST['dataset.ttl'],
+                       VOID.inDataset, HOST['d']), g)
+        self.assertIn((HOST['d'],
+                       DCTERMS.provenance, HOST['h#changes']), g)
 
         res3 = self.client.get('/dataset.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
@@ -538,6 +547,8 @@ WHERE {
         g.parse(data=res1.get_data(as_text=True), format='turtle')
         self.assertIn((HOST['h#patch-1'],
                        FOAF.page, HOST['patches/1/patch.jsonpatch']), g)
+        self.assertIn((HOST['d'],
+                       DCTERMS.provenance, HOST['h#changes']), g)
 
         res3 = self.client.get('/h.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
@@ -570,6 +581,8 @@ WHERE {
         g.parse(data=res1.get_data(as_text=True), format='turtle')
         self.assertIn((HOST['h#patch-1'],
                        FOAF.page, HOST['patches/1/patch.jsonpatch']), g)
+        self.assertIn((HOST['d'],
+                       DCTERMS.provenance, HOST['h#changes']), g)
 
         res3 = self.client.get('/history.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
@@ -606,6 +619,8 @@ WHERE {
         g.parse(data=res1.get_data(as_text=True), format='json-ld')
         self.assertIn((HOST['h#patch-1'],
                        FOAF.page, HOST['patches/1/patch.jsonpatch']), g)
+        self.assertIn((HOST['d'],
+                       DCTERMS.provenance, HOST['h#changes']), g)
 
         res3 = self.client.get('/history.json/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)

@@ -1,7 +1,7 @@
 import json
 from rdflib import Graph, URIRef, Literal
 from rdflib.collection import Collection
-from rdflib.namespace import Namespace, XSD, FOAF
+from rdflib.namespace import Namespace, XSD, FOAF, DCTERMS
 from periodo import database
 from periodo.utils import isoformat, absolute_url
 
@@ -21,9 +21,10 @@ def history(app, inline_context=False):
     history_uri = uri('history')
     vocab_uri = uri('vocab')
     dataset_uri = uri('abstract_dataset')
+    changes_uri = history_uri + '#changes'
 
     g = Graph()
-    changelog = Collection(g, history_uri + '#changelog')
+    changes = Collection(g, changes_uri)
 
     for row in database.get_merged_patches():
 
@@ -59,10 +60,12 @@ def history(app, inline_context=False):
             g.add((assoc, PROV.agent, agent))
             g.add((assoc, PROV.hadRole, vocab_uri + '#{}'.format(term)))
 
-        changelog.append(change)
+        changes.append(change)
+
+    g.add((dataset_uri, DCTERMS.provenance, changes_uri))
 
     def ordering(o):
-        if o['id'].endswith('#changelog'):
+        if o['id'] == str(changes_uri):
             # sort first
             return ' '
         return o['id']

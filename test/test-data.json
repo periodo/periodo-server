@@ -21,8 +21,10 @@
     "PeriodDefinition": "skos:Concept",
 
     "abstract": "dcterms:abstract",
+    "agent": {"@id": "prov:agent", "@type": "@id"},
     "broader": {"@id": "skos:broader", "@type": "@id"},
     "by": {"@id": "prov:wasAssociatedWith", "@type": "@id"},
+    "changes": {"@id": "dcterms:provenance", "@type": "@id"},
     "collection": {"@id": "skos:inScheme", "@type": "@id"},
     "contributors": {"@id": "dcterms:contributor", "@container": "@set"},
     "creator": {"@id": "dcterms:creator", "@type": "@id"},

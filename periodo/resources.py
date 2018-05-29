@@ -65,8 +65,22 @@ versioned_parser.add_argument(
 
 def attach_to_dataset(o):
     if len(o) > 0:
-        o['primaryTopicOf'] = {'id': identifier.prefix(request.path[1:]),
-                               'inDataset': identifier.prefix('d')}
+        if app.config['CANONICAL']:
+            o['primaryTopicOf'] = {
+                'id': identifier.prefix(request.full_path[1:]),
+                'inDataset': {
+                    'id': identifier.prefix('d'),
+                    'changes': identifier.prefix('h#changes')
+                }
+            }
+        else:
+            o['primaryTopicOf'] = {
+                'id': request.url,
+                'inDataset': {
+                    'id': url_for('abstract_dataset', _external=True),
+                    'changes': url_for('history', _external=True) + '#changes'
+                }
+            }
     return o
 
 
