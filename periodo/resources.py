@@ -301,7 +301,7 @@ class Dataset(Resource):
 class History(Resource):
     def get(self):
         response = api.make_response(
-            provenance.history(app, 'inline-context' in request.args),
+            provenance.history('inline-context' in request.args),
             200, filename='periodo-history'
         )
         return cache.medium_time(response, server_only=True)
@@ -591,7 +591,7 @@ class Bag(Resource):
 
         base = ctx['@base']
         bag_ctx = data.get('@context', {})
-        context_url = utils.absolute_url(app, ctx, 'context')
+        context_url = utils.absolute_url(ctx['@base'], 'context')
         if type(bag_ctx) is list:
             contexts = bag_ctx
             if context_url not in contexts:

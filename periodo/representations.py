@@ -14,6 +14,7 @@ def abbreviate_context(data):
         return data
 
     context = data['@context']
+    base = context['@base']
 
     if '__inline' in context:
         # keep context inline as requested
@@ -22,8 +23,8 @@ def abbreviate_context(data):
         data['@context'] = context
     else:
         data['@context'] = [
-            utils.absolute_url(app, context, 'context'),
-            {'@base': context['@base']}
+            utils.absolute_url(base, 'context'),
+            {'@base': base}
         ]
         if '__version' in context:
             data['@context'][0] += '?version=%s' % context['__version']

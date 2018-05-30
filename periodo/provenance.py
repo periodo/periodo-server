@@ -12,11 +12,11 @@ def timestamp(ts):
     return Literal(isoformat(ts), datatype=XSD.dateTime)
 
 
-def history(app, inline_context=False):
+def history(inline_context=False):
     context = database.get_context()
 
     def uri(endpoint, **kwargs):
-        return URIRef(absolute_url(app, context, endpoint, **kwargs))
+        return URIRef(absolute_url(context['@base'], endpoint, **kwargs))
 
     history_uri = uri('history')
     vocab_uri = uri('vocab')

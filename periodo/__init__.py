@@ -1,13 +1,24 @@
 import os
 import json
+from uuid import UUID
 from flask import Flask, request
 from flask_principal import Principal
 from flask_restful import Api
 from werkzeug.http import http_date
+from werkzeug.routing import BaseConverter
 from periodo.secrets import (
     SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
-from periodo.utils import UUIDConverter
 from periodo.middleware import StreamConsumingMiddleware
+
+
+class UUIDConverter(BaseConverter):
+
+    def to_python(self, s):
+        return UUID(s)
+
+    def to_url(self, uuid):
+        return str(uuid)
+
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -18,6 +29,7 @@ principal = Principal(app, use_sessions=False)
 app.config.update(
     DATABASE=os.environ.get('DATABASE', './db.sqlite'),
     CACHE=os.environ.get('CACHE', None),
+    SERVER_NAME=os.environ.get('SERVER_NAME', 'localhost'),
     CANONICAL=json.loads(os.environ.get('CANONICAL', 'false')),
     ORCID_CLIENT_ID=ORCID_CLIENT_ID,
     ORCID_CLIENT_SECRET=ORCID_CLIENT_SECRET,

@@ -122,7 +122,7 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         g = Graph()
         g.parse(format='turtle', data=res2.get_data(as_text=True))
         self.assertIn(
-            (PERIODO['p0d'], DCTERMS.provenance, PERIODO['p0h#changes']), g)
+            (PERIODO['p0d'], DCTERMS.provenance, HOST['h#changes']), g)
         desc = g.value(predicate=RDF.type, object=VOID.DatasetDescription)
         self.assertEqual(
             desc.n3(), '<http://n2t.net/ark:/99152/p0>')

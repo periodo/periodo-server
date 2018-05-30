@@ -1,20 +1,17 @@
 import json
 import re
 from datetime import datetime
-from uuid import UUID
 from flask import url_for
-from werkzeug.routing import BaseConverter
 from rdflib import ConjunctiveGraph
 from pygments import highlight
 from pygments.lexers import TurtleLexer, JsonLexer
 from pygments.formatters import HtmlFormatter
-from periodo import identifier
+from periodo import app, identifier
 
 
-def absolute_url(app, context, endpoint, **kwargs):
+def absolute_url(base, endpoint, **kwargs):
     if app.config['CANONICAL']:
-        return (context['@base']
-                + identifier.prefix(url_for(endpoint, **kwargs)))
+        return (base + identifier.prefix(url_for(endpoint, **kwargs)))
     else:
         return url_for(endpoint, _external=True, **kwargs)
 
@@ -41,15 +38,6 @@ def highlight_ttl(ttl):
 def highlight_json(data):
     return highlight_string(
         json.dumps(data, indent=2, sort_keys=True), JsonLexer())
-
-
-class UUIDConverter(BaseConverter):
-
-    def to_python(self, s):
-        return UUID(s)
-
-    def to_url(self, uuid):
-        return str(uuid)
 
 
 # match URL values in Pygmented JSON or TTL HTML output
