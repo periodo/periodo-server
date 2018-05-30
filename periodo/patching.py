@@ -7,8 +7,8 @@ from periodo import database, void
 from periodo.identifier import replace_skolem_ids, IDENTIFIER_RE
 
 CHANGE_PATH_PATTERN = re.compile(r'''
-/periodCollections/
-({id_pattern})   # match collection ID
+/authorities/
+({id_pattern})   # match authority ID
 (?:
   /definitions/
   ({id_pattern}) # optionally match definition ID
@@ -41,8 +41,8 @@ def from_text(patch_text):
     return patch
 
 
-def definitions_of(collection, data):
-    return set(data['periodCollections'][collection]['definitions'].keys())
+def definitions_of(authority, data):
+    return set(data['authorities'][authority]['definitions'].keys())
 
 
 def analyze_change_path(path):
@@ -52,18 +52,18 @@ def analyze_change_path(path):
 
 def analyze_change(change, data):
     o = {'updated': [], 'removed': []}
-    [collection, definition] = analyze_change_path(change['path'])
+    [authority, definition] = analyze_change_path(change['path'])
     if change['op'] == 'remove':
         if definition:
             o['removed'] = [definition]
-            o['updated'] = [collection]
-        elif collection:
-            o['removed'] = set([collection]) | definitions_of(collection, data)
+            o['updated'] = [authority]
+        elif authority:
+            o['removed'] = set([authority]) | definitions_of(authority, data)
     else:
         if definition:
-            o['updated'] = [definition, collection]
-        elif collection:
-            o['updated'] = [collection]
+            o['updated'] = [definition, authority]
+        elif authority:
+            o['updated'] = [authority]
     return o
 
 

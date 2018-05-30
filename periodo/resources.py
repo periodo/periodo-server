@@ -308,30 +308,30 @@ class History(Resource):
 
 
 @add_resources(
-    '<string(length={}):collection_id>'.format(
-        identifier.COLLECTION_SEQUENCE_LENGTH + 1),
-    endpoint='collection',
+    '<string(length={}):authority_id>'.format(
+        identifier.AUTHORITY_SEQUENCE_LENGTH + 1),
+    endpoint='authority',
     barepaths=None)
-class PeriodCollection(Resource):
-    def get(self, collection_id):
+class Authority(Resource):
+    def get(self, authority_id):
         version = request.args.get('version')
-        new_location = redirect_to_last_update(collection_id, version)
+        new_location = redirect_to_last_update(authority_id, version)
         if new_location is not None:
             return new_location
         try:
-            collection = attach_to_dataset(
-                database.get_collection(collection_id, version))
-            filename = 'periodo-collection-{}{}'.format(
-                collection_id,
+            authority = attach_to_dataset(
+                database.get_authority(authority_id, version))
+            filename = 'periodo-authority-{}{}'.format(
+                authority_id,
                 '' if version is None else '-v{}'.format(version))
-            return api.make_response(collection, 200, filename=filename)
+            return api.make_response(authority, 200, filename=filename)
         except database.MissingKeyError as e:
             abort_gone_or_not_found(e.key)
 
 
 @add_resources(
     '<string(length={}):definition_id>'.format(
-        identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
+        identifier.AUTHORITY_SEQUENCE_LENGTH + 1 +
         identifier.DEFINITION_SEQUENCE_LENGTH + 1),
     endpoint='definition',
     barepaths=None)
@@ -353,7 +353,7 @@ class PeriodDefinition(Resource):
 
 
 @api.resource('/<string(length=%s):definition_id>/nanopub<int:version>'
-              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
+              % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1 +
                  identifier.DEFINITION_SEQUENCE_LENGTH + 1),
               endpoint='definition-nanopub')
 class PeriodNanopublication(Resource):

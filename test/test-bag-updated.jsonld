@@ -11,7 +11,7 @@
   "items": {
     "p0trgkvkhrv": {
       "id": "p0trgkvkhrv",
-      "collection": "p0trgkv",
+      "authority": "p0trgkv",
       "label": "Iron Age",
       "language": "eng-latn",
       "localizedLabels": {
@@ -41,7 +41,7 @@
     },
     "p0trgkv4kxb": {
       "id": "p0trgkv4kxb",
-      "collection": "p0trgkv",
+      "authority": "p0trgkv",
       "label": "Herakleid",
       "language": "eng-latn",
       "localizedLabels": {
@@ -72,7 +72,7 @@
     },
     "p0trgkvwbjd": {
       "id": "p0trgkvwbjd",
-      "collection": "p0trgkv",
+      "authority": "p0trgkv",
       "type": "PeriodDefinition",
       "label": "Archaic",
       "language": "eng-latn",

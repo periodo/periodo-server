@@ -26,7 +26,7 @@ periodo:DefinitionShape
     periodo:DefinitionLocalizedLabelShape ,
     periodo:DefinitionNoteShape ,
     periodo:DefinitionEditorialNoteShape ,
-    periodo:DefinitionCollectionShape ,
+    periodo:DefinitionAuthorityShape ,
     periodo:DefinitionSourceShape ,
     periodo:DefinitionSourceIsPartOfShape ,
     periodo:DefinitionSourceLocatorShape ,
@@ -80,16 +80,16 @@ periodo:DefinitionEditorialNoteShape
   sh:message "Problem with definition editorial note" ;
   .
 
-periodo:DefinitionCollectionShape
+periodo:DefinitionAuthorityShape
   rdf:type sh:PropertyShape ;
   sh:path skos:inScheme ;
-  sh:name "collection" ;
-  sh:description "Collection to which this period definition belongs" ;
+  sh:name "authority" ;
+  sh:description "Authority to which this period definition belongs" ;
   sh:nodeKind sh:IRI ;
   sh:class skos:ConceptScheme ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
-  sh:message "Problem with definition link to collection" ;
+  sh:message "Problem with definition link to authority" ;
   .
 
 periodo:DefinitionSourceShape

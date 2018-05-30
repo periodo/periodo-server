@@ -43,12 +43,12 @@ def make_nanopub(definition_id, version):
 
     data = json.loads(result['data'])
 
-    collection_id = identifier.prefix(
-        definition_id[:identifier.COLLECTION_SEQUENCE_LENGTH + 1])
-    collection = data['periodCollections'][collection_id]
-    source = collection['source']
-    definition = collection['definitions'][identifier.prefix(definition_id)]
-    definition['collection'] = collection_id
+    authority_id = identifier.prefix(
+        definition_id[:identifier.AUTHORITY_SEQUENCE_LENGTH + 1])
+    authority = data['authorities'][authority_id]
+    source = authority['source']
+    definition = authority['definitions'][identifier.prefix(definition_id)]
+    definition['authority'] = authority_id
 
     nanopub_uri = '{}/nanopub{}'.format(
         identifier.prefix(definition_id), version)

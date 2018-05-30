@@ -40,20 +40,20 @@ def get_context(version=None):
     return json.loads(get_dataset(version)['data']).get('@context')
 
 
-def extract_collection(collection_key, o, raiseErrors=False):
+def extract_authority(authority_key, o, raiseErrors=False):
     def maybeRaiseMissingKeyError():
         if raiseErrors:
-            raise MissingKeyError(collection_key)
+            raise MissingKeyError(authority_key)
 
-    if 'periodCollections' not in o:
+    if 'authorities' not in o:
         maybeRaiseMissingKeyError()
         return None
 
-    if collection_key not in o['periodCollections']:
+    if authority_key not in o['authorities']:
         maybeRaiseMissingKeyError()
         return None
 
-    return o['periodCollections'][collection_key]
+    return o['authorities'][authority_key]
 
 
 def extract_definition(definition_key, o, raiseErrors=False):
@@ -61,15 +61,15 @@ def extract_definition(definition_key, o, raiseErrors=False):
         if raiseErrors:
             raise MissingKeyError(definition_key)
 
-    collection_key = definition_key[:7]
-    collection = extract_collection(collection_key, o, raiseErrors)
+    authority_key = definition_key[:7]
+    authority = extract_authority(authority_key, o, raiseErrors)
 
-    if definition_key not in collection['definitions']:
+    if definition_key not in authority['definitions']:
         maybeRaiseMissingKeyError()
         return None
 
-    definition = collection['definitions'][definition_key]
-    definition['collection'] = collection_key
+    definition = authority['definitions'][definition_key]
+    definition['authority'] = authority_key
 
     return definition
 
@@ -85,8 +85,8 @@ def get_item(extract_item, id, version=None):
     return item
 
 
-def get_collection(id, version=None):
-    return get_item(extract_collection, id, version)
+def get_authority(id, version=None):
+    return get_item(extract_authority, id, version)
 
 
 def get_definition(id, version=None):

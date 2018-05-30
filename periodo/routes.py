@@ -94,27 +94,27 @@ def see_dataset():
     return redirect(url_for('dataset', **request.args), code=303)
 
 
-@app.route('/<string(length=%s):collection_id>'
-           % (identifier.COLLECTION_SEQUENCE_LENGTH + 1))
-def see_collection(collection_id):
+@app.route('/<string(length=%s):authority_id>'
+           % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1))
+def see_authority(authority_id):
     mimetype = get_mimetype()
     if mimetype is None:
         url = build_client_url(
             page='authority-view', authorityID=request.path[1:])
     else:
-        url = url_for('collection-%s' % mimetype, collection_id=collection_id,
+        url = url_for('authority-%s' % mimetype, authority_id=authority_id,
                       **request.args)
     return redirect(url, code=303)
 
 
 @app.route('/<string(length=%s):definition_id>'
-           % (identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
+           % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1 +
               identifier.DEFINITION_SEQUENCE_LENGTH + 1))
 def see_definition(definition_id):
     mimetype = get_mimetype()
     if mimetype is None:
         periodID = request.path[1:]
-        authorityID = periodID[0:identifier.COLLECTION_SEQUENCE_LENGTH + 1]
+        authorityID = periodID[0:identifier.AUTHORITY_SEQUENCE_LENGTH + 1]
         url = build_client_url(
             page='period-view', authorityID=authorityID, periodID=periodID)
     else:

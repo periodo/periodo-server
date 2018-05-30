@@ -1,7 +1,7 @@
 [
   {
     "op": "add",
-    "path": "/periodCollections/p0trgkv/definitions/https:~1~1perio.do~1.well-known~1genid~153f38e07f928ecdb849c1a98bbc24917",
+    "path": "/authorities/p0trgkv/definitions/https:~1~1perio.do~1.well-known~1genid~153f38e07f928ecdb849c1a98bbc24917",
     "value": {
       "id": "https://perio.do/.well-known/genid/53f38e07f928ecdb849c1a98bbc24917",
       "label": "Herakleid",
@@ -32,7 +32,7 @@
   },
   {
     "op": "add",
-    "path": "/periodCollections/https:~1~1perio.do~1.well-known~1genid~136c1db27acc00e91c8a628abcaa64eb0",
+    "path": "/authorities/https:~1~1perio.do~1.well-known~1genid~136c1db27acc00e91c8a628abcaa64eb0",
     "value": {
       "definitions": {
         "https://perio.do/.well-known/genid/8d3df296ba8665cf4045d34a2d983c97": {

@@ -400,8 +400,8 @@ class TestPatchMethods(unittest.TestCase):
             self.assertEqual(len(generated), 1)
             self.assertIn(HOST['d?version=2'], generated)
 
-    def test_remove_collection(self):
-        with open(filepath('test-patch-remove-collection.json')) as f:
+    def test_remove_authority(self):
+        with open(filepath('test-patch-remove-authority.json')) as f:
             patch1 = f.read()
         with self.client as client:
             res = client.patch(

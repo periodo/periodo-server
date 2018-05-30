@@ -259,7 +259,7 @@ WHERE {
 
         g = Graph().parse(
             data=json.dumps({**jsonld, **context}), format='json-ld')
-        self.assertIn((PERIODO['p0d/#periodCollections'],
+        self.assertIn((PERIODO['p0d/#authorities'],
                        FOAF.isPrimaryTopicOf, HOST['d/']), g)
         self.assertIn((HOST['d/'],
                        VOID.inDataset, HOST['d']), g)
@@ -286,7 +286,7 @@ WHERE {
             'If-None-Match': 'W/"periodo-dataset-version-1"'})
         self.assertEqual(res2.status_code, http.client.NOT_MODIFIED)
 
-    def test_period_collection(self):
+    def test_authority(self):
         res1 = self.client.get('/trgkv')
         self.assertEqual(res1.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res1.headers['Location']).path, '/')
@@ -318,13 +318,13 @@ WHERE {
         self.assertEqual(
             urlparse(res6.headers['Location']).path, '/trgkv.ttl')
 
-    def test_period_collection_json(self):
+    def test_authority_json(self):
         res1 = self.client.get('/trgkv.json')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
         self.assertEqual(
             res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-collection-trgkv.json"')
+            'attachment; filename="periodo-authority-trgkv.json"')
         context = json.loads(res1.get_data(as_text=True))['@context']
         self.assertEqual(context, [
             'http://localhost/c',
@@ -335,7 +335,7 @@ WHERE {
         self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
         self.assertEqual(
             res2.headers['Content-Disposition'],
-            'attachment; filename="periodo-collection-trgkv.json"')
+            'attachment; filename="periodo-authority-trgkv.json"')
 
         jsonld = json.loads(res2.get_data(as_text=True))
         context = json.loads(self.client.get('/c', buffered=True)
@@ -357,7 +357,7 @@ WHERE {
         self.assertEqual(res5.status_code, http.client.OK)
         self.assertEqual(res5.headers['Content-Type'], 'text/html')
 
-    def test_period_collection_turtle(self):
+    def test_authority_turtle(self):
         res1 = self.client.get('/trgkv.ttl')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
@@ -366,7 +366,7 @@ WHERE {
             'public, max-age={}'.format(cache.SHORT_TIME))
         self.assertEqual(
             res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-collection-trgkv.ttl"')
+            'attachment; filename="periodo-authority-trgkv.ttl"')
 
         g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
         self.assertIsNone(g.value(predicate=RDF.type, object=RDF.Bag))
@@ -487,7 +487,7 @@ WHERE {
             'attachment; filename="periodo-dataset.ttl"')
 
         g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
-        self.assertIn((PERIODO['p0d/#periodCollections'],
+        self.assertIn((PERIODO['p0d/#authorities'],
                        FOAF.isPrimaryTopicOf, HOST['d.ttl']), g)
         self.assertIn((HOST['d.ttl'],
                        VOID.inDataset, HOST['d']), g)
@@ -509,7 +509,7 @@ WHERE {
             'attachment; filename="periodo-dataset.ttl"')
 
         g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
-        self.assertIn((PERIODO['p0d/#periodCollections'],
+        self.assertIn((PERIODO['p0d/#authorities'],
                        FOAF.isPrimaryTopicOf, HOST['dataset.ttl']), g)
         self.assertIn((HOST['dataset.ttl'],
                        VOID.inDataset, HOST['d']), g)
