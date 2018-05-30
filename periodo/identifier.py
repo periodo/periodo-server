@@ -7,19 +7,19 @@ from jsonpatch import JsonPatch
 PREFIX = 'p0'  # shoulder assigned by EZID service
 XDIGITS = '23456789bcdfghjkmnpqrstvwxz'
 AUTHORITY_SEQUENCE_LENGTH = 4
-DEFINITION_SEQUENCE_LENGTH = 3
+PERIOD_SEQUENCE_LENGTH = 3
 IDENTIFIER_RE = re.compile(
     r'^%s[%s]{%s}(?:[%s]{1}[%s]{%s})?[%s]{1}$' % (
         PREFIX,
         XDIGITS, AUTHORITY_SEQUENCE_LENGTH,
         XDIGITS,
-        XDIGITS, DEFINITION_SEQUENCE_LENGTH,
+        XDIGITS, PERIOD_SEQUENCE_LENGTH,
         XDIGITS))
-ADD_DEFINITION_PATH = re.compile(
-    r'^(?P<path_prefix>/authorities/(?P<authority_id>.*)/definitions/)'
+ADD_PERIOD_PATH = re.compile(
+    r'^(?P<path_prefix>/authorities/(?P<authority_id>.*)/periods/)'
     + r'(.*)~1\.well-known~1genid~1(.*)$')
-REPLACE_DEFINITIONS_PATH = re.compile(
-    r'^/authorities/(?P<authority_id>.*)/definitions$')
+REPLACE_PERIODS_PATH = re.compile(
+    r'^/authorities/(?P<authority_id>.*)/periods$')
 ADD_AUTHORITY_PATH = re.compile(
     r'^(?P<path_prefix>/authorities/)(.*)~1\.well-known~1genid~1(.*)$')
 SKOLEM_BASE = r'^(.*)/\.well-known/genid/'
@@ -27,11 +27,11 @@ SKOLEM_URI = re.compile(SKOLEM_BASE + r'(.*)$')
 ASSIGNED_SKOLEM_URI = re.compile(SKOLEM_BASE + r'assigned/(?P<id>.*)$')
 
 
-def for_definition(authority_id):
+def for_period(authority_id):
     check(authority_id)
     return id_from_sequence(
         authority_id[len(PREFIX):] +
-        random_sequence(DEFINITION_SEQUENCE_LENGTH))
+        random_sequence(PERIOD_SEQUENCE_LENGTH))
 
 
 def for_authority():
@@ -102,7 +102,7 @@ def replace_skolem_ids(patch_or_obj, dataset, removed_entity_keys):
     existing_ids = set([unprefix(key) for key in removed_entity_keys])
     if (len(dataset) > 0):
         existing_ids |= set(chain.from_iterable(
-            ([cid] + list(c['definitions'].keys())
+            ([cid] + list(c['periods'].keys())
              for cid, c in dataset['authorities'].items())))
 
     def unused_identifier(id_generator, *args):
@@ -128,36 +128,36 @@ def replace_skolem_ids(patch_or_obj, dataset, removed_entity_keys):
         existing_ids.add(permanent_id)
         return permanent_id
 
-    def assign_definition_id(definition, authority_id):
-        definition['id'] = deskolemize(
-            definition['id'], for_definition, authority_id)
-        return definition
+    def assign_period_id(period, authority_id):
+        period['id'] = deskolemize(
+            period['id'], for_period, authority_id)
+        return period
 
     def assign_authority_ids(authority):
         authority['id'] = deskolemize(authority['id'], for_authority)
-        authority['definitions'] = index_by_id(
-            [assign_definition_id(d, authority['id'])
-             for d in authority['definitions'].values()])
+        authority['periods'] = index_by_id(
+            [assign_period_id(d, authority['id'])
+             for d in authority['periods'].values()])
         return authority
 
     def modify_operation(op):
         new_op = deepcopy(op)
 
-        m = ADD_DEFINITION_PATH.match(op['path'])
+        m = ADD_PERIOD_PATH.match(op['path'])
         if m and op['op'] == 'add':
-            # adding a new definition to an authority
+            # adding a new period to an authority
             authority_id = m.group('authority_id')
-            new_op['value'] = assign_definition_id(
+            new_op['value'] = assign_period_id(
                 new_op['value'], authority_id)
             new_op['path'] = m.group('path_prefix') + new_op['value']['id']
             return new_op
 
-        m = REPLACE_DEFINITIONS_PATH.match(op['path'])
+        m = REPLACE_PERIODS_PATH.match(op['path'])
         if m and op['op'] in ['add', 'replace']:
-            # replacing all definitions in an authority
+            # replacing all periods in an authority
             authority_id = m.group('authority_id')
             new_op['value'] = index_by_id(
-                [assign_definition_id(d, authority_id)
+                [assign_period_id(d, authority_id)
                  for d in new_op['value'].values()])
             return new_op
 

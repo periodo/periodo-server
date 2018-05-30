@@ -15,7 +15,7 @@ If you are working on the client, and want to see your changes reflected from re
 
 ## Working with bags
 
-You can create a "bag" of definition URIs by sending an authenticated `PUT` request to `http://n2t.net/ark:/99152/p0bags/[UUID]`, where `[UUID]` is a [UUID (universally unique identifier)](https://en.wikipedia.org/wiki/Universally_unique_identifier) that you generate. The body of the request should be a JSON object with at least the keys `title` and `items`. The value of the `items` key must be either a list of PeriodO period identifiers, or an objects with PeriodO period identifiers as keys:
+You can create a "bag" of period URIs by sending an authenticated `PUT` request to `http://n2t.net/ark:/99152/p0bags/[UUID]`, where `[UUID]` is a [UUID (universally unique identifier)](https://en.wikipedia.org/wiki/Universally_unique_identifier) that you generate. The body of the request should be a JSON object with at least the keys `title` and `items`. The value of the `items` key must be either a list of PeriodO period identifiers, or an objects with PeriodO period identifiers as keys:
 
 ```
 $ export BAG_UUID=$(uuid)
@@ -27,7 +27,7 @@ $ curl -L -X PUT\
   "http://n2t.net/ark:/99152/p0bags/$BAG_UUID"
 ```
 
-A `GET` request for a bag returns a JSON-LD representation including the full details of the bag's period definitions:
+A `GET` request for a bag returns a JSON-LD representation including the full details of the bag's periods:
 
 ```
 $ curl -L -X GET "http://n2t.net/ark:/99152/p0bags/$BAG_UUID" | jq .
@@ -39,8 +39,8 @@ $ curl -L -X GET "http://n2t.net/ark:/99152/p0bags/$BAG_UUID" | jq .
   "creator": "https://orcid.org/...",
   "title": "my bag of periods",
   "items": {
-    "p03377fkhrv": { ... full JSON-LD for period definition ... },
-    "p0d39r7d5km": { ... full JSON-LD for period definition ... }
+    "p03377fkhrv": { ... full JSON-LD for period ... },
+    "p0d39r7d5km": { ... full JSON-LD for period ... }
     }
   }
 }

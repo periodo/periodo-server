@@ -107,10 +107,10 @@ def see_authority(authority_id):
     return redirect(url, code=303)
 
 
-@app.route('/<string(length=%s):definition_id>'
+@app.route('/<string(length=%s):period_id>'
            % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1 +
-              identifier.DEFINITION_SEQUENCE_LENGTH + 1))
-def see_definition(definition_id):
+              identifier.PERIOD_SEQUENCE_LENGTH + 1))
+def see_period(period_id):
     mimetype = get_mimetype()
     if mimetype is None:
         periodID = request.path[1:]
@@ -118,7 +118,7 @@ def see_definition(definition_id):
         url = build_client_url(
             page='period-view', authorityID=authorityID, periodID=periodID)
     else:
-        url = url_for('definition-%s' % mimetype, definition_id=definition_id,
+        url = url_for('period-%s' % mimetype, period_id=period_id,
                       **request.args)
     return redirect(url, code=303)
 

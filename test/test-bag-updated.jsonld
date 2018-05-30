@@ -37,7 +37,7 @@
         },
         "label": "550 B.C."
       },
-      "type": "PeriodDefinition"
+      "type": "Period"
     },
     "p0trgkv4kxb": {
       "id": "p0trgkv4kxb",
@@ -68,12 +68,12 @@
         },
         "label": "680 B.C."
       },
-      "type": "PeriodDefinition"
+      "type": "Period"
     },
     "p0trgkvwbjd": {
       "id": "p0trgkvwbjd",
       "authority": "p0trgkv",
-      "type": "PeriodDefinition",
+      "type": "Period",
       "label": "Archaic",
       "language": "eng-latn",
       "localizedLabels": {

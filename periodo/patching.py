@@ -10,8 +10,8 @@ CHANGE_PATH_PATTERN = re.compile(r'''
 /authorities/
 ({id_pattern})   # match authority ID
 (?:
-  /definitions/
-  ({id_pattern}) # optionally match definition ID
+  /periods/
+  ({id_pattern}) # optionally match period ID
 )?
 '''.format(id_pattern=IDENTIFIER_RE.pattern[1:-1]), re.VERBOSE)
 
@@ -41,8 +41,8 @@ def from_text(patch_text):
     return patch
 
 
-def definitions_of(authority, data):
-    return set(data['authorities'][authority]['definitions'].keys())
+def periods_of(authority, data):
+    return set(data['authorities'][authority]['periods'].keys())
 
 
 def analyze_change_path(path):
@@ -52,16 +52,16 @@ def analyze_change_path(path):
 
 def analyze_change(change, data):
     o = {'updated': [], 'removed': []}
-    [authority, definition] = analyze_change_path(change['path'])
+    [authority, period] = analyze_change_path(change['path'])
     if change['op'] == 'remove':
-        if definition:
-            o['removed'] = [definition]
+        if period:
+            o['removed'] = [period]
             o['updated'] = [authority]
         elif authority:
-            o['removed'] = set([authority]) | definitions_of(authority, data)
+            o['removed'] = set([authority]) | periods_of(authority, data)
     else:
-        if definition:
-            o['updated'] = [definition, authority]
+        if period:
+            o['updated'] = [period, authority]
         elif authority:
             o['updated'] = [authority]
     return o

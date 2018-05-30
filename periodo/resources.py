@@ -330,35 +330,35 @@ class Authority(Resource):
 
 
 @add_resources(
-    '<string(length={}):definition_id>'.format(
+    '<string(length={}):period_id>'.format(
         identifier.AUTHORITY_SEQUENCE_LENGTH + 1 +
-        identifier.DEFINITION_SEQUENCE_LENGTH + 1),
-    endpoint='definition',
+        identifier.PERIOD_SEQUENCE_LENGTH + 1),
+    endpoint='period',
     barepaths=None)
-class PeriodDefinition(Resource):
-    def get(self, definition_id):
+class Period(Resource):
+    def get(self, period_id):
         version = request.args.get('version')
-        new_location = redirect_to_last_update(definition_id, version)
+        new_location = redirect_to_last_update(period_id, version)
         if new_location is not None:
             return new_location
         try:
-            definition = attach_to_dataset(
-                database.get_definition(definition_id, version))
-            filename = 'periodo-definition-{}{}'.format(
-                definition_id,
+            period = attach_to_dataset(
+                database.get_period(period_id, version))
+            filename = 'periodo-period-{}{}'.format(
+                period_id,
                 '' if version is None else '-v{}'.format(version))
-            return api.make_response(definition, 200, filename=filename)
+            return api.make_response(period, 200, filename=filename)
         except database.MissingKeyError as e:
             abort_gone_or_not_found(e.key)
 
 
-@api.resource('/<string(length=%s):definition_id>/nanopub<int:version>'
+@api.resource('/<string(length=%s):period_id>/nanopub<int:version>'
               % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1 +
-                 identifier.DEFINITION_SEQUENCE_LENGTH + 1),
-              endpoint='definition-nanopub')
+                 identifier.PERIOD_SEQUENCE_LENGTH + 1),
+              endpoint='period-nanopub')
 class PeriodNanopublication(Resource):
-    def get(self, definition_id, version):
-        return nanopub.make_nanopub(definition_id, version)
+    def get(self, period_id, version):
+        return nanopub.make_nanopub(period_id, version)
 
 
 @add_resources('patches', suffixes=['json'], barepaths=['/patches/'])
@@ -585,7 +585,7 @@ class Bag(Resource):
 
         try:
             defs, ctx = database.\
-                        get_definitions_and_context(items, raiseErrors=True)
+                        get_periods_and_context(items, raiseErrors=True)
         except database.MissingKeyError as e:
             return {'message': 'No resource with key: ' + e.key}, 400
 
@@ -630,7 +630,7 @@ class Bag(Resource):
         headers['Last-Modified'] = format_date_time(bag['created_at'])
 
         data = json.loads(bag['data'])
-        defs, defs_ctx = database.get_definitions_and_context(data['items'])
+        defs, defs_ctx = database.get_periods_and_context(data['items'])
 
         data['@id'] = identifier.prefix('bags/%s' % uuid)
         data['creator'] = bag['created_by']

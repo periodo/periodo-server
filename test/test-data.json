@@ -18,7 +18,7 @@
     "xsd": "http://www.w3.org/2001/XMLSchema#",
 
     "Authority": "skos:ConceptScheme",
-    "PeriodDefinition": "skos:Concept",
+    "Period": "skos:Concept",
 
     "abstract": "dcterms:abstract",
     "agent": {"@id": "prov:agent", "@type": "@id"},
@@ -30,7 +30,7 @@
     "creator": {"@id": "dcterms:creator", "@type": "@id"},
     "creators": {"@id": "dcterms:creator", "@container": "@set"},
     "dateAccessed": {"@id": "dcterms:date", "@type": "xsd:date"},
-    "definitions": {"@reverse": "skos:inScheme", "@container": "@index"},
+    "periods": {"@reverse": "skos:inScheme", "@container": "@index"},
     "derivedFrom": {"@id": "prov:wasDerivedFrom", "@type": "@id"},
     "earliestYear": {"@id": "periodo:earliestYear", "@type": "xsd:gYear"},
     "editorialNote": "skos:editorialNote",
@@ -79,7 +79,7 @@
   "type": "rdf:Bag",
   "authorities": {
     "https://perio.do/.well-known/genid/assigned/p0trgkv": {
-      "definitions": {
+      "periods": {
         "https://perio.do/.well-known/genid/assigned/p0trgkvkhrv": {
           "id": "https://perio.do/.well-known/genid/assigned/p0trgkvkhrv",
           "label": "Iron Age",
@@ -107,7 +107,7 @@
             },
             "label": "550 B.C."
           },
-          "type": "PeriodDefinition"
+          "type": "Period"
         },
         "https://perio.do/.well-known/genid/assigned/p0trgkv4kxb": {
           "id": "https://perio.do/.well-known/genid/assigned/p0trgkv4kxb",
@@ -137,11 +137,11 @@
             },
             "label": "680 B.C."
           },
-          "type": "PeriodDefinition"
+          "type": "Period"
         },
         "https://perio.do/.well-known/genid/assigned/p0trgkvwbjd": {
           "id": "https://perio.do/.well-known/genid/assigned/p0trgkvwbjd",
-          "type": "PeriodDefinition",
+          "type": "Period",
           "label": "Archaic",
           "language": "eng-latn",
           "localizedLabels": {

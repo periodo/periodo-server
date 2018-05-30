@@ -386,7 +386,7 @@ WHERE {
         res3 = self.client.get('/trgkv.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
 
-    def test_period_definition(self):
+    def test_period(self):
         res1 = self.client.get('/trgkvwbjd')
         self.assertEqual(res1.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res1.headers['Location']).path, '/')
@@ -412,13 +412,13 @@ WHERE {
         self.assertEqual(
             urlparse(res5.headers['Location']).path, '/trgkvwbjd.ttl')
 
-    def test_period_definition_json(self):
+    def test_period_json(self):
         res1 = self.client.get('/trgkvwbjd.json')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
         self.assertEqual(
             res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-definition-trgkvwbjd.json"')
+            'attachment; filename="periodo-period-trgkvwbjd.json"')
         context = json.loads(res1.get_data(as_text=True))['@context']
         self.assertEqual(context, [
             'http://localhost/c',
@@ -429,7 +429,7 @@ WHERE {
         self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
         self.assertEqual(
             res2.headers['Content-Disposition'],
-            'attachment; filename="periodo-definition-trgkvwbjd.json"')
+            'attachment; filename="periodo-period-trgkvwbjd.json"')
 
         jsonld = json.loads(res1.get_data(as_text=True))
         context = json.loads(self.client.get('/c', buffered=True)
@@ -448,7 +448,7 @@ WHERE {
         self.assertEqual(res3.status_code, http.client.OK)
         self.assertEqual(res3.headers['Content-Type'], 'text/html')
 
-    def test_period_definition_turtle(self):
+    def test_period_turtle(self):
         res1 = self.client.get('/trgkvwbjd.ttl')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
@@ -457,7 +457,7 @@ WHERE {
             'public, max-age={}'.format(cache.SHORT_TIME))
         self.assertEqual(
             res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-definition-trgkvwbjd.ttl"')
+            'attachment; filename="periodo-period-trgkvwbjd.ttl"')
 
         g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
         self.assertIsNone(

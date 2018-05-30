@@ -56,22 +56,22 @@ def extract_authority(authority_key, o, raiseErrors=False):
     return o['authorities'][authority_key]
 
 
-def extract_definition(definition_key, o, raiseErrors=False):
+def extract_period(period_key, o, raiseErrors=False):
     def maybeRaiseMissingKeyError():
         if raiseErrors:
-            raise MissingKeyError(definition_key)
+            raise MissingKeyError(period_key)
 
-    authority_key = definition_key[:7]
+    authority_key = period_key[:7]
     authority = extract_authority(authority_key, o, raiseErrors)
 
-    if definition_key not in authority['definitions']:
+    if period_key not in authority['periods']:
         maybeRaiseMissingKeyError()
         return None
 
-    definition = authority['definitions'][definition_key]
-    definition['authority'] = authority_key
+    period = authority['periods'][period_key]
+    period['authority'] = authority_key
 
-    return definition
+    return period
 
 
 def get_item(extract_item, id, version=None):
@@ -89,16 +89,16 @@ def get_authority(id, version=None):
     return get_item(extract_authority, id, version)
 
 
-def get_definition(id, version=None):
-    return get_item(extract_definition, id, version)
+def get_period(id, version=None):
+    return get_item(extract_period, id, version)
 
 
-def get_definitions_and_context(ids, version=None, raiseErrors=False):
+def get_periods_and_context(ids, version=None, raiseErrors=False):
     dataset = get_dataset(version=version)
     o = json.loads(dataset['data'])
-    definitions = {id: extract_definition(id, o, raiseErrors) for id in ids}
+    periods = {id: extract_period(id, o, raiseErrors) for id in ids}
 
-    return definitions, o['@context']
+    return periods, o['@context']
 
 
 def get_merged_patches():
