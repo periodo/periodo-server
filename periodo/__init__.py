@@ -1,5 +1,6 @@
 import os
 import json
+import rdflib
 from uuid import UUID
 from flask import Flask, request
 from flask_principal import Principal
@@ -9,6 +10,10 @@ from werkzeug.routing import BaseConverter
 from periodo.secrets import (
     SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
 from periodo.middleware import StreamConsumingMiddleware
+
+# Disable normalization of literals because rdflib handles gYears improperly:
+# https://github.com/RDFLib/rdflib/issues/806
+rdflib.NORMALIZE_LITERALS = False
 
 
 class UUIDConverter(BaseConverter):
