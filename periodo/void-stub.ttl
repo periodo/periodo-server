@@ -33,7 +33,7 @@
    foaf:homepage <p0> ;
    void:feature <http://www.w3.org/ns/formats/JSON-LD> ;
    void:dataDump <p0d/> ;
-   void:rootResource <p0d/#periodCollections> ;
+   void:rootResource <p0d/#authorities> ;
    void:exampleResource <p0fh3zc> , <p0fh3zcqs6h> , <p0fh3zcg927> ;
    void:uriSpace "http://n2t.net/ark:/99152/p0" ;
    void:vocabulary

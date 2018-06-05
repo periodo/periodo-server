@@ -17,20 +17,20 @@
     "void": "http://rdfs.org/ns/void#",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
 
-    "PeriodCollection": "skos:ConceptScheme",
-    "PeriodDefinition": "skos:Concept",
+    "Authority": "skos:ConceptScheme",
+    "Period": "skos:Concept",
 
     "abstract": "dcterms:abstract",
     "agent": {"@id": "prov:agent", "@type": "@id"},
     "broader": {"@id": "skos:broader", "@type": "@id"},
     "by": {"@id": "prov:wasAssociatedWith", "@type": "@id"},
     "changes": {"@id": "dcterms:provenance", "@type": "@id"},
-    "collection": {"@id": "skos:inScheme", "@type": "@id"},
+    "authority": {"@id": "skos:inScheme", "@type": "@id"},
     "contributors": {"@id": "dcterms:contributor", "@container": "@set"},
     "creator": {"@id": "dcterms:creator", "@type": "@id"},
     "creators": {"@id": "dcterms:creator", "@container": "@set"},
     "dateAccessed": {"@id": "dcterms:date", "@type": "xsd:date"},
-    "definitions": {"@reverse": "skos:inScheme", "@container": "@index"},
+    "periods": {"@reverse": "skos:inScheme", "@container": "@index"},
     "derivedFrom": {"@id": "prov:wasDerivedFrom", "@type": "@id"},
     "earliestYear": {"@id": "periodo:earliestYear", "@type": "xsd:gYear"},
     "editorialNote": "skos:editorialNote",
@@ -51,7 +51,7 @@
     "narrower": {"@id": "skos:narrower", "@type": "@id"},
     "note": "skos:note",
     "partOf": {"@id": "dcterms:isPartOf", "@type": "@id"},
-    "periodCollections": {"@id": "rdfs:member", "@container": "@index"},
+    "authorities": {"@id": "rdfs:member", "@container": "@index"},
     "primaryTopicOf": {"@id": "foaf:isPrimaryTopicOf", "@type": "@id"},
     "role": {"@id": "prov:hadRole", "@type": "@id"},
     "roles": {"@id": "prov:qualifiedAssociation", "@type": "@id"},
@@ -75,11 +75,11 @@
     "type": "@type",
     "history": "@graph"
   },
-  "id": "p0d/#periodCollections",
+  "id": "p0d/#authorities",
   "type": "rdf:Bag",
-  "periodCollections": {
+  "authorities": {
     "https://perio.do/.well-known/genid/assigned/p0trgkv": {
-      "definitions": {
+      "periods": {
         "https://perio.do/.well-known/genid/assigned/p0trgkvkhrv": {
           "id": "https://perio.do/.well-known/genid/assigned/p0trgkvkhrv",
           "label": "Iron Age",
@@ -107,7 +107,7 @@
             },
             "label": "550 B.C."
           },
-          "type": "PeriodDefinition"
+          "type": "Period"
         },
         "https://perio.do/.well-known/genid/assigned/p0trgkv4kxb": {
           "id": "https://perio.do/.well-known/genid/assigned/p0trgkv4kxb",
@@ -137,11 +137,11 @@
             },
             "label": "680 B.C."
           },
-          "type": "PeriodDefinition"
+          "type": "Period"
         },
         "https://perio.do/.well-known/genid/assigned/p0trgkvwbjd": {
           "id": "https://perio.do/.well-known/genid/assigned/p0trgkvwbjd",
-          "type": "PeriodDefinition",
+          "type": "Period",
           "label": "Archaic",
           "language": "eng-latn",
           "localizedLabels": {
@@ -169,7 +169,7 @@
         }
       },
       "id": "https://perio.do/.well-known/genid/assigned/p0trgkv",
-      "type": "PeriodCollection",
+      "type": "Authority",
       "source": {
         "locator": "page 4",
         "partOf": {

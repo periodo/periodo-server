@@ -15,13 +15,13 @@ class TestIdentifiers(unittest.TestCase):
                 % len(identifier.XDIGITS)]
             return ''.join(chars)
 
-        cid = identifier.for_collection()
+        cid = identifier.for_authority()
         identifier.check(cid)
         cid2 = substitute(cid)
         with self.assertRaises(identifier.IdentifierException):
             identifier.check(cid2)
 
-        did = identifier.for_definition(cid)
+        did = identifier.for_period(cid)
         identifier.check(did)
         did2 = substitute(did)
         with self.assertRaises(identifier.IdentifierException):
@@ -35,13 +35,13 @@ class TestIdentifiers(unittest.TestCase):
                     chars[i], chars[i+1] = chars[i+1], chars[i]
                     return ''.join(chars)
 
-        cid = identifier.for_collection()
+        cid = identifier.for_authority()
         identifier.check(cid)
         cid2 = transpose(cid)
         with self.assertRaises(identifier.IdentifierException):
             identifier.check(cid2)
 
-        did = identifier.for_definition(cid)
+        did = identifier.for_period(cid)
         identifier.check(did)
         did2 = transpose(did)
         with self.assertRaises(identifier.IdentifierException):
@@ -49,13 +49,13 @@ class TestIdentifiers(unittest.TestCase):
 
     def test_id_has_wrong_shape(self):
         with self.assertRaises(identifier.IdentifierException):
-            identifier.check('p06rw8')  # collection id too short
+            identifier.check('p06rw8')  # authority id too short
         with self.assertRaises(identifier.IdentifierException):
-            identifier.check('p06rw87/669p')  # definition id has slash
+            identifier.check('p06rw87/669p')  # period id has slash
 
-    def test_generate_definition_id(self):
-        cid = identifier.for_collection()
-        did = identifier.for_definition(cid)
+    def test_generate_period_id(self):
+        cid = identifier.for_authority()
+        did = identifier.for_period(cid)
         self.assertTrue(did.startswith(cid))
         self.assertEqual(len(did), 11)
 
@@ -68,7 +68,7 @@ class TestIdentifiers(unittest.TestCase):
             original_patch, data, [])
         self.assertRegex(
             applied_patch.patch[0]['path'],
-            r'^/periodCollections/p0trgkv/definitions/p0trgkv[%s]{4}$'
+            r'^/authorities/p0trgkv/periods/p0trgkv[%s]{4}$'
             % identifier.XDIGITS)
         self.assertRegex(
             applied_patch.patch[0]['value']['id'],
@@ -79,45 +79,45 @@ class TestIdentifiers(unittest.TestCase):
 
         self.assertRegex(
             applied_patch.patch[1]['path'],
-            r'^/periodCollections/p0[%s]{5}$' % identifier.XDIGITS)
+            r'^/authorities/p0[%s]{5}$' % identifier.XDIGITS)
         self.assertRegex(
             applied_patch.patch[1]['value']['id'],
             r'^p0[%s]{5}$' % identifier.XDIGITS)
-        collection_id = applied_patch.patch[1]['value']['id']
-        identifier.check(collection_id)
-        self.assertTrue(collection_id in id_map.values())
-        defs = applied_patch.patch[1]['value']['definitions']
+        authority_id = applied_patch.patch[1]['value']['id']
+        identifier.check(authority_id)
+        self.assertTrue(authority_id in id_map.values())
+        defs = applied_patch.patch[1]['value']['periods']
         self.assertRegex(
             list(defs.keys())[0],
-            r'^%s[%s]{4}$' % (collection_id, identifier.XDIGITS))
+            r'^%s[%s]{4}$' % (authority_id, identifier.XDIGITS))
         self.assertEqual(
             list(defs.values())[0]['id'],
             list(defs.keys())[0])
         identifier.check(list(defs.keys())[0])
 
-    def test_replace_skolem_ids_when_replacing_definitions(self):
+    def test_replace_skolem_ids_when_replacing_periods(self):
         with open(filepath('test-data.json')) as f:
             data = json.load(f)
-        with open(filepath('test-patch-replaces-definitions.json')) as f:
+        with open(filepath('test-patch-replaces-periods.json')) as f:
             original_patch = JsonPatch(json.load(f))
         applied_patch, id_map = identifier.replace_skolem_ids(
             original_patch, data, [])
         self.assertEqual(
             applied_patch.patch[0]['path'],
             original_patch.patch[0]['path'])
-        definition_id, definition = list(
+        period_id, period = list(
             applied_patch.patch[0]['value'].items())[0]
-        self.assertTrue(definition_id in id_map.values())
+        self.assertTrue(period_id in id_map.values())
         self.assertRegex(
-            definition_id,
+            period_id,
             r'^p0trgkv[%s]{4}$' % identifier.XDIGITS)
-        self.assertEqual(definition_id, definition['id'])
-        identifier.check(definition_id)
+        self.assertEqual(period_id, period['id'])
+        identifier.check(period_id)
 
-    def test_replace_skolem_ids_when_replacing_collections(self):
+    def test_replace_skolem_ids_when_replacing_authorities(self):
         with open(filepath('test-data.json')) as f:
             data = json.load(f)
-        with open(filepath('test-patch-replaces-collections.json')) as f:
+        with open(filepath('test-patch-replaces-authorities.json')) as f:
             original_patch = JsonPatch(json.load(f))
         applied_patch, id_map = identifier.replace_skolem_ids(
             original_patch, data, [])
@@ -125,21 +125,21 @@ class TestIdentifiers(unittest.TestCase):
             applied_patch.patch[0]['path'],
             original_patch.patch[0]['path'])
 
-        collection_id, collection = list(
+        authority_id, authority = list(
             applied_patch.patch[0]['value'].items())[0]
-        self.assertTrue(collection_id in id_map.values())
+        self.assertTrue(authority_id in id_map.values())
         self.assertRegex(
-            collection_id,
+            authority_id,
             r'^p0[%s]{5}$' % identifier.XDIGITS)
-        self.assertEqual(collection_id, collection['id'])
-        identifier.check(collection_id)
+        self.assertEqual(authority_id, authority['id'])
+        identifier.check(authority_id)
 
-        definition_id, definition = list(
-            applied_patch.patch[0]['value'][collection_id]['definitions']
+        period_id, period = list(
+            applied_patch.patch[0]['value'][authority_id]['periods']
             .items())[0]
-        self.assertTrue(definition_id in id_map.values())
+        self.assertTrue(period_id in id_map.values())
         self.assertRegex(
-            definition_id,
-            r'^%s[%s]{4}$' % (collection_id, identifier.XDIGITS))
-        self.assertEqual(definition_id, definition['id'])
-        identifier.check(definition_id)
+            period_id,
+            r'^%s[%s]{4}$' % (authority_id, identifier.XDIGITS))
+        self.assertEqual(period_id, period['id'])
+        identifier.check(period_id)

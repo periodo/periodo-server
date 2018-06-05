@@ -214,7 +214,7 @@ class TestPatchMethods(unittest.TestCase):
     def test_versioning(self):
         with open(filepath('test-patch-adds-items.json')) as f:
             patch1 = f.read()
-        with open(filepath('test-patch-add-definition.json')) as f:
+        with open(filepath('test-patch-add-period.json')) as f:
             patch2 = f.read()
         with self.client as client:
             res = client.patch(
@@ -340,8 +340,8 @@ class TestPatchMethods(unittest.TestCase):
             ctx = json.loads(res.get_data(as_text=True))['@context']
             self.assertIn('foobar', ctx)
 
-    def test_remove_definition(self):
-        with open(filepath('test-patch-remove-definition.json')) as f:
+    def test_remove_period(self):
+        with open(filepath('test-patch-remove-period.json')) as f:
             patch1 = f.read()
         with self.client as client:
             res = client.patch(
@@ -400,8 +400,8 @@ class TestPatchMethods(unittest.TestCase):
             self.assertEqual(len(generated), 1)
             self.assertIn(HOST['d?version=2'], generated)
 
-    def test_remove_collection(self):
-        with open(filepath('test-patch-remove-collection.json')) as f:
+    def test_remove_authority(self):
+        with open(filepath('test-patch-remove-authority.json')) as f:
             patch1 = f.read()
         with self.client as client:
             res = client.patch(

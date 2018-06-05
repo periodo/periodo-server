@@ -40,38 +40,38 @@ def get_context(version=None):
     return json.loads(get_dataset(version)['data']).get('@context')
 
 
-def extract_collection(collection_key, o, raiseErrors=False):
+def extract_authority(authority_key, o, raiseErrors=False):
     def maybeRaiseMissingKeyError():
         if raiseErrors:
-            raise MissingKeyError(collection_key)
+            raise MissingKeyError(authority_key)
 
-    if 'periodCollections' not in o:
+    if 'authorities' not in o:
         maybeRaiseMissingKeyError()
         return None
 
-    if collection_key not in o['periodCollections']:
+    if authority_key not in o['authorities']:
         maybeRaiseMissingKeyError()
         return None
 
-    return o['periodCollections'][collection_key]
+    return o['authorities'][authority_key]
 
 
-def extract_definition(definition_key, o, raiseErrors=False):
+def extract_period(period_key, o, raiseErrors=False):
     def maybeRaiseMissingKeyError():
         if raiseErrors:
-            raise MissingKeyError(definition_key)
+            raise MissingKeyError(period_key)
 
-    collection_key = definition_key[:7]
-    collection = extract_collection(collection_key, o, raiseErrors)
+    authority_key = period_key[:7]
+    authority = extract_authority(authority_key, o, raiseErrors)
 
-    if definition_key not in collection['definitions']:
+    if period_key not in authority['periods']:
         maybeRaiseMissingKeyError()
         return None
 
-    definition = collection['definitions'][definition_key]
-    definition['collection'] = collection_key
+    period = authority['periods'][period_key]
+    period['authority'] = authority_key
 
-    return definition
+    return period
 
 
 def get_item(extract_item, id, version=None):
@@ -85,20 +85,20 @@ def get_item(extract_item, id, version=None):
     return item
 
 
-def get_collection(id, version=None):
-    return get_item(extract_collection, id, version)
+def get_authority(id, version=None):
+    return get_item(extract_authority, id, version)
 
 
-def get_definition(id, version=None):
-    return get_item(extract_definition, id, version)
+def get_period(id, version=None):
+    return get_item(extract_period, id, version)
 
 
-def get_definitions_and_context(ids, version=None, raiseErrors=False):
+def get_periods_and_context(ids, version=None, raiseErrors=False):
     dataset = get_dataset(version=version)
     o = json.loads(dataset['data'])
-    definitions = {id: extract_definition(id, o, raiseErrors) for id in ids}
+    periods = {id: extract_period(id, o, raiseErrors) for id in ids}
 
-    return definitions, o['@context']
+    return periods, o['@context']
 
 
 def get_merged_patches():
