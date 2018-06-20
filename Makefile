@@ -85,5 +85,5 @@ test: setup periodo/static/vocab.html periodo/static/html
 	$(PYTHON3) -m unittest discover
 
 .PHONY: run
-run:
+run: test
 	$(PYTHON3) runserver.py
