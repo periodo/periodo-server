@@ -34,7 +34,7 @@ principal = Principal(app, use_sessions=False)
 app.config.update(
     DATABASE=os.environ.get('DATABASE', './db.sqlite'),
     CACHE=os.environ.get('CACHE', None),
-    SERVER_NAME=os.environ.get('SERVER_NAME', '127.0.0.1:5000'),
+    SERVER_NAME=os.environ.get('SERVER_NAME', 'localhost:5000'),
     CANONICAL=json.loads(os.environ.get('CANONICAL', 'false')),
     ORCID_CLIENT_ID=ORCID_CLIENT_ID,
     ORCID_CLIENT_SECRET=ORCID_CLIENT_SECRET,

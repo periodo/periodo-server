@@ -12,7 +12,7 @@ from periodo import app, database, identifier, commands, auth, cache
 
 PERIODO = Namespace('http://n2t.net/ark:/99152/')
 PROV = Namespace('http://www.w3.org/ns/prov#')
-HOST = Namespace('http://localhost/')
+HOST = Namespace('http://localhost:5000/')
 
 
 class TestPatchMethods(unittest.TestCase):
@@ -265,7 +265,7 @@ class TestPatchMethods(unittest.TestCase):
                 ctx = json.loads(res.get_data(as_text=True))['@context']
                 self.assertEqual(
                     ctx[0],
-                    'http://localhost/c?version={}'.format(version)
+                    'http://localhost:5000/c?version={}'.format(version)
                 )
 
             res = client.get('/history.jsonld?inline-context')
@@ -314,7 +314,7 @@ class TestPatchMethods(unittest.TestCase):
                 res.headers['Cache-Control'],
                 'public, max-age={}'.format(cache.LONG_TIME))
             ctx = json.loads(res.get_data(as_text=True))['@context']
-            self.assertEqual(ctx[0], 'http://localhost/c?version=1')
+            self.assertEqual(ctx[0], 'http://localhost:5000/c?version=1')
 
             res = client.get('/c?version=1',
                              headers={'Accept': 'application/json'},
@@ -331,7 +331,7 @@ class TestPatchMethods(unittest.TestCase):
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
             ctx = json.loads(res.get_data(as_text=True))['@context']
-            self.assertEqual(ctx[0], 'http://localhost/c?version=2')
+            self.assertEqual(ctx[0], 'http://localhost:5000/c?version=2')
 
             res = client.get('/c?version=2',
                              headers={'Accept': 'application/json'},
