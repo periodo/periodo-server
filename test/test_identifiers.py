@@ -86,14 +86,22 @@ class TestIdentifiers(unittest.TestCase):
         authority_id = applied_patch.patch[1]['value']['id']
         identifier.check(authority_id)
         self.assertTrue(authority_id in id_map.values())
-        defs = applied_patch.patch[1]['value']['periods']
-        self.assertRegex(
-            list(defs.keys())[0],
-            r'^%s[%s]{4}$' % (authority_id, identifier.XDIGITS))
-        self.assertEqual(
-            list(defs.values())[0]['id'],
-            list(defs.keys())[0])
-        identifier.check(list(defs.keys())[0])
+        periods = applied_patch.patch[1]['value']['periods']
+        for key in periods.keys():
+            self.assertRegex(
+                key,
+                r'^%s[%s]{4}$' % (authority_id, identifier.XDIGITS))
+            self.assertEqual(
+                key,
+                periods[key]['id'])
+            identifier.check(key)
+            # check that skolem IDs in prop values get replaced too
+            prop = 'broader' if 'broader' in periods[key] else 'narrower'
+            self.assertRegex(
+                periods[key][prop],
+                r'^%s[%s]{4}$' % (authority_id, identifier.XDIGITS))
+            identifier.check(periods[key][prop])
+            self.assertTrue(periods[key][prop] in id_map.values())
 
     def test_replace_skolem_ids_when_replacing_periods(self):
         with open(filepath('test-data.json')) as f:

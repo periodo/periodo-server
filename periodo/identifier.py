@@ -177,13 +177,31 @@ def replace_skolem_ids(patch_or_obj, dataset, removed_entity_keys):
 
         return new_op
 
+    def is_skolem_uri(v):
+        if not isinstance(v, str):
+            return False
+        if ASSIGNED_SKOLEM_URI.match(v):
+            return True
+        if SKOLEM_URI.match(v):
+            return True
+        return False
+
+    def replace_skolem_values(d):
+        for k, v in d.items():
+            if isinstance(v, dict):
+                d[k] = replace_skolem_values(v)
+            elif is_skolem_uri(v):
+                d[k] = id_map[v]
+        return d
+
     if hasattr(patch_or_obj, 'patch'):
-        result = JsonPatch([modify_operation(op) for op in patch_or_obj])
+        ops = [modify_operation(op) for op in patch_or_obj]
+        result = JsonPatch([replace_skolem_values(op) for op in ops])
     else:
         result = deepcopy(patch_or_obj)
-        result['authorities'] = index_by_id(
+        result['authorities'] = replace_skolem_values(index_by_id(
             [assign_authority_ids(c)
-             for c in patch_or_obj['authorities'].values()])
+             for c in patch_or_obj['authorities'].values()]))
 
     return result, id_map
 

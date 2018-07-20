@@ -147,7 +147,7 @@ class TestPatchMethods(unittest.TestCase):
             created_entities = json.loads(database.query_db(
                 'SELECT created_entities FROM patch_request WHERE id = ?',
                 (patch_id,), one=True)['created_entities'])
-            self.assertEqual(3, len(created_entities))
+            self.assertEqual(4, len(created_entities))
             for entity_id in created_entities:
                 self.assertRegex(entity_id, identifier.IDENTIFIER_RE)
 
