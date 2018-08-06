@@ -3,7 +3,7 @@ import tempfile
 import unittest
 import http.client
 from rdflib import ConjunctiveGraph, URIRef
-from rdflib.namespace import Namespace, XSD, RDFS
+from rdflib.namespace import Namespace, XSD, RDF, RDFS
 from urllib.parse import urlparse
 from flask_principal import ActionNeed
 from .filepath import filepath
@@ -14,6 +14,7 @@ SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
 PERIODO = Namespace('http://n2t.net/ark:/99152/')
 FOAF = Namespace('http://xmlns.com/foaf/0.1/')
 PROV = Namespace('http://www.w3.org/ns/prov#')
+AS = Namespace('https://www.w3.org/ns/activitystreams#')
 HOST = Namespace('http://localhost:5000/')
 
 W3CDTF = r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00.00$'
@@ -57,22 +58,39 @@ class TestProvenance(unittest.TestCase):
                 content_type='application/json',
                 headers={'Authorization': 'Bearer '
                          + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+
             patch_url = urlparse(res1.headers['Location']).path
+
+            client.post(
+                patch_url + 'messages',
+                data='{"message": "Here is my patch"}',
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+
+            client.post(
+                patch_url + 'messages',
+                data='{"message": "Looks good to me"}',
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+
             client.post(
                 patch_url + 'merge',
                 buffered=True,
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
-            res2 = client.get('/h', headers={'Accept': 'application/ld+json'})
-            self.assertEqual(res2.status_code, http.client.SEE_OTHER)
-            self.assertEqual(
-                urlparse(res2.headers['Location']).path, '/h.jsonld')
 
-            res3 = client.get('/history.jsonld?inline-context')
-            self.assertEqual(res3.status_code, http.client.OK)
+            res3 = client.get('/h', headers={'Accept': 'application/ld+json'})
+            self.assertEqual(res3.status_code, http.client.SEE_OTHER)
             self.assertEqual(
-                res3.headers['Content-Type'], 'application/ld+json')
-            jsonld = res3.get_data(as_text=True)
+                urlparse(res3.headers['Location']).path, '/h.jsonld')
+
+            res4 = client.get('/history.jsonld?inline-context')
+            self.assertEqual(res4.status_code, http.client.OK)
+            self.assertEqual(
+                res4.headers['Content-Type'], 'application/ld+json')
+            jsonld = res4.get_data(as_text=True)
 
         g = ConjunctiveGraph()
         g.parse(format='json-ld', data=jsonld)
@@ -89,6 +107,9 @@ class TestProvenance(unittest.TestCase):
             (HOST['h#change-1'], RDFS.seeAlso, HOST['h#patch-request-1']), g)
         self.assertIn(
             (HOST['h#patch-request-1'], FOAF.page, HOST['patches/1/']), g)
+        self.assertNotIn(
+            (HOST['h#patch-request-1'],
+             AS.replies, HOST['h#patch-request-1-comments']), g)
         self.assertIn(
             (HOST['h#change-1'], PROV.used, HOST['h#patch-1']), g)
         self.assertIn(
@@ -144,6 +165,57 @@ class TestProvenance(unittest.TestCase):
             (HOST['h#change-2'], RDFS.seeAlso, HOST['h#patch-request-2']), g)
         self.assertIn(
             (HOST['h#patch-request-2'], FOAF.page, HOST['patches/2/']), g)
+        self.assertIn(
+            (HOST['h#patch-request-2'],
+             AS.replies, HOST['h#patch-request-2-comments']), g)
+        commentCount = g.value(
+            subject=HOST['h#patch-request-2-comments'],
+            predicate=AS.totalItems)
+        self.assertEqual(commentCount.value, 2)
+        self.assertIn(
+            (HOST['h#patch-request-2-comments'],
+             AS.first, HOST['h#patch-request-2-comment-1']), g)
+        self.assertIn(
+            (HOST['h#patch-request-2-comments'],
+             AS.last, HOST['h#patch-request-2-comment-2']), g)
+        self.assertIn(
+            (HOST['h#patch-request-2-comments'],
+             AS.items, HOST['h#patch-request-2-comment-1']), g)
+        self.assertIn(
+            (HOST['h#patch-request-2-comments'],
+             AS.items, HOST['h#patch-request-2-comment-2']), g)
+        self.assertIn(
+            (HOST['h#patch-request-2-comment-1'], RDF.type, AS.Note), g)
+        self.assertIn(
+            (HOST['h#patch-request-2-comment-1'],
+             AS.attributedTo,
+             URIRef('https://orcid.org/1234-5678-9101-112X')), g)
+        self.assertIn(  # None means any
+            (HOST['h#patch-request-2-comment-1'], AS.published, None), g)
+        comment1_media_type = g.value(
+            subject=HOST['h#patch-request-2-comment-1'],
+            predicate=AS.mediaType)
+        self.assertEqual(comment1_media_type.value, 'text/plain')
+        comment1_content = g.value(
+            subject=HOST['h#patch-request-2-comment-1'],
+            predicate=AS.content)
+        self.assertEqual(comment1_content.value, 'Here is my patch')
+        self.assertIn(
+            (HOST['h#patch-request-2-comment-2'], RDF.type, AS.Note), g)
+        self.assertIn(
+            (HOST['h#patch-request-2-comment-2'],
+             AS.attributedTo,
+             URIRef('https://orcid.org/1211-1098-7654-321X')), g)
+        self.assertIn(  # None means any
+            (HOST['h#patch-request-2-comment-2'], AS.published, None), g)
+        comment2_media_type = g.value(
+            subject=HOST['h#patch-request-2-comment-2'],
+            predicate=AS.mediaType)
+        self.assertEqual(comment2_media_type.value, 'text/plain')
+        comment2_content = g.value(
+            subject=HOST['h#patch-request-2-comment-2'],
+            predicate=AS.content)
+        self.assertEqual(comment2_content.value, 'Looks good to me')
         self.assertIn(
             (HOST['h#change-2'], PROV.used, HOST['h#patch-2']), g)
         self.assertIn(

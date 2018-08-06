@@ -439,19 +439,9 @@ class PatchRequest(Resource):
             abort(404)
         data = process_patch_row(row)
         data['mergeable'] = patching.is_mergeable(data['original_patch'])
+        data['comments'] = [dict(c) for c in
+                            database.get_patch_request_comments(id)]
         headers = {}
-
-        comments = database.query_db(
-            '''
-            SELECT author, message, posted_at
-            FROM patch_request_comment
-            WHERE patch_request_id=?
-            ORDER BY posted_at ASC
-            ''',
-            (id,)
-        )
-        data['comments'] = [dict(row) for row in comments]
-
         try:
             if auth.accept_patch_permission.can():
                 headers['Link'] = '<{}>;rel="merge"'.format(

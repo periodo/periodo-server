@@ -101,11 +101,19 @@ def get_periods_and_context(ids, version=None, raiseErrors=False):
     return periods, o['@context']
 
 
+def get_patch_request_comments(patch_request_id):
+    return query_db('''
+SELECT id, author, message, posted_at
+FROM patch_request_comment
+WHERE patch_request_id=?
+ORDER BY posted_at ASC''', (patch_request_id,))
+
+
 def get_merged_patches():
     c = get_db().cursor()
     patches = c.execute('''
 SELECT
-  id,
+  patch_request.id AS id,
   created_at,
   created_by,
   updated_by,
@@ -115,9 +123,13 @@ SELECT
   resulted_in,
   created_entities,
   updated_entities,
-  removed_entities
+  removed_entities,
+  COUNT(patch_request_comment.id) AS comment_count
 FROM patch_request
+LEFT OUTER JOIN patch_request_comment
+ON patch_request_comment.patch_request_id = patch_request.id
 WHERE merged = 1
+GROUP BY patch_request.id
 ORDER BY id ASC
 ''').fetchall()
     c.close()

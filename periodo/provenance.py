@@ -1,15 +1,20 @@
 import json
 from rdflib import Graph, URIRef, Literal
 from rdflib.collection import Collection
-from rdflib.namespace import Namespace, XSD, FOAF, DCTERMS, RDFS
+from rdflib.namespace import Namespace, XSD, FOAF, DCTERMS, RDF, RDFS
 from periodo import database
 from periodo.utils import isoformat, absolute_url
 
 PROV = Namespace('http://www.w3.org/ns/prov#')
+AS = Namespace('https://www.w3.org/ns/activitystreams#')
 
 
 def timestamp(ts):
     return Literal(isoformat(ts), datatype=XSD.dateTime)
+
+
+def count(n):
+    return Literal(n, datatype=XSD.nonNegativeInteger)
 
 
 def history(inline_context=False):
@@ -33,6 +38,7 @@ def history(inline_context=False):
         patch_uri = uri('patch', id=row['id'])
         patchrequest = history_uri + '#patch-request-{}'.format(row['id'])
         patchrequest_uri = uri('patchrequest', id=row['id'])
+        comments = history_uri + '#patch-request-{}-comments'.format(row['id'])
         version_in = uri('abstract_dataset', version=row['applied_to'])
         version_out = uri('abstract_dataset', version=row['resulted_in'])
 
@@ -50,6 +56,26 @@ def history(inline_context=False):
         g.add((change, PROV.generated, version_out))
 
         g.add((change, RDFS.seeAlso, patchrequest))
+
+        if row['comment_count'] > 0:
+            g.add((patchrequest, AS.replies, comments))
+            g.add((comments, AS.totalItems, count(row['comment_count'])))
+
+            for i, subrow in enumerate(
+                    database.get_patch_request_comments(row['id'])):
+
+                comment = history_uri + '#patch-request-{}-comment-{}'.format(
+                    row['id'], subrow['id'])
+                g.add((comments, AS.items, comment))
+                if i == 0:
+                    g.add((comments, AS.first, comment))
+                if i == (row['comment_count'] - 1):
+                    g.add((comments, AS.last, comment))
+                g.add((comment, RDF.type, AS.Note))
+                g.add((comment, AS.attributedTo, URIRef(subrow['author'])))
+                g.add((comment, AS.published, timestamp(subrow['posted_at'])))
+                g.add((comment, AS.mediaType, Literal('text/plain')))
+                g.add((comment, AS.content, Literal(subrow['message'])))
 
         for field, term in (('created_by', 'submitted'),
                             ('updated_by', 'updated'),
