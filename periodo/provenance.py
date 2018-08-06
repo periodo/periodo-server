@@ -1,7 +1,7 @@
 import json
 from rdflib import Graph, URIRef, Literal
 from rdflib.collection import Collection
-from rdflib.namespace import Namespace, XSD, FOAF, DCTERMS
+from rdflib.namespace import Namespace, XSD, FOAF, DCTERMS, RDFS
 from periodo import database
 from periodo.utils import isoformat, absolute_url
 
@@ -31,10 +31,14 @@ def history(inline_context=False):
         change = history_uri + '#change-{}'.format(row['id'])
         patch = history_uri + '#patch-{}'.format(row['id'])
         patch_uri = uri('patch', id=row['id'])
+        patchrequest = history_uri + '#patch-request-{}'.format(row['id'])
+        patchrequest_uri = uri('patchrequest', id=row['id'])
         version_in = uri('abstract_dataset', version=row['applied_to'])
         version_out = uri('abstract_dataset', version=row['resulted_in'])
 
         g.add((patch, FOAF.page, patch_uri))
+        g.add((patchrequest, FOAF.page, patchrequest_uri))
+
         g.add((change, PROV.startedAtTime, timestamp(row['created_at'])))
         g.add((change, PROV.endedAtTime, timestamp(row['merged_at'])))
 
@@ -44,6 +48,8 @@ def history(inline_context=False):
         g.add((change, PROV.used, version_in))
         g.add((change, PROV.used, patch))
         g.add((change, PROV.generated, version_out))
+
+        g.add((change, RDFS.seeAlso, patchrequest))
 
         for field, term in (('created_by', 'submitted'),
                             ('updated_by', 'updated'),

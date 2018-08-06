@@ -3,7 +3,7 @@ import tempfile
 import unittest
 import http.client
 from rdflib import ConjunctiveGraph, URIRef
-from rdflib.namespace import Namespace, XSD
+from rdflib.namespace import Namespace, XSD, RDFS
 from urllib.parse import urlparse
 from flask_principal import ActionNeed
 from .filepath import filepath
@@ -86,6 +86,10 @@ class TestProvenance(unittest.TestCase):
             (HOST['d?version=0'],
              PROV.specializationOf, HOST['d']), g)
         self.assertIn(
+            (HOST['h#change-1'], RDFS.seeAlso, HOST['h#patch-request-1']), g)
+        self.assertIn(
+            (HOST['h#patch-request-1'], FOAF.page, HOST['patches/1/']), g)
+        self.assertIn(
             (HOST['h#change-1'], PROV.used, HOST['h#patch-1']), g)
         self.assertIn(
             (HOST['h#patch-1'],
@@ -136,6 +140,10 @@ class TestProvenance(unittest.TestCase):
         self.assertIn(
             (HOST['d?version=1'],
              PROV.specializationOf, HOST['d']), g)
+        self.assertIn(
+            (HOST['h#change-2'], RDFS.seeAlso, HOST['h#patch-request-2']), g)
+        self.assertIn(
+            (HOST['h#patch-request-2'], FOAF.page, HOST['patches/2/']), g)
         self.assertIn(
             (HOST['h#change-2'], PROV.used, HOST['h#patch-2']), g)
         self.assertIn(
