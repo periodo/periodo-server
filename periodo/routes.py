@@ -10,16 +10,6 @@ from urllib.parse import urlencode
 from werkzeug.http import http_date
 
 
-if app.config['HTML_REPR_EXISTS']:
-    @app.route('/images/<path:path>')
-    @app.route('/periodo-client.js')
-    @app.route('/periodo-client-<path:path>.js')
-    @app.route('/favicon.ico')
-    @app.route('/index.html')
-    def static_proxy(path=None):
-        return app.send_static_file('html' + request.path)
-
-
 def get_mimetype():
     if request.accept_mimetypes.best == 'application/json':
         return 'json'
@@ -31,7 +21,10 @@ def get_mimetype():
 
 
 def build_client_url(page, **values):
-    return url_for('index', page=page, backendID=request.url_root, **values)
+    return '%s/?%s' % (
+        app.config['CLIENT_URL'],
+        urlencode(dict(page=page, backendID=request.url_root, **values))
+    )
 
 
 @app.route('/h', endpoint='history')
@@ -48,19 +41,9 @@ def see_history():
 @app.route('/v', endpoint='vocabulary')
 def vocab():
     if request.accept_mimetypes.best == 'text/turtle':
-        return redirect(url_for('vocab_as_turtle'), code=303)
+        return redirect('v.ttl', code=303)
     else:
-        return redirect(url_for('vocab_as_html'), code=303)
-
-
-@app.route('/v.ttl')
-def vocab_as_turtle():
-    return app.send_static_file('vocab.ttl')
-
-
-@app.route('/v.ttl.html')
-def vocab_as_html():
-    return app.send_static_file('vocab.html')
+        return redirect('v.ttl.html', code=303)
 
 
 # http://www.w3.org/TR/void/#well-known
@@ -97,13 +80,20 @@ def see_dataset():
 @app.route('/<string(length=%s):authority_id>'
            % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1))
 def see_authority(authority_id):
+    try:
+        identifier.assert_valid(authority_id)
+    except identifier.IdentifierException:
+        return abort(404)
+
     mimetype = get_mimetype()
     if mimetype is None:
         url = build_client_url(
-            page='authority-view', authorityID=request.path[1:])
+            page='authority-view', authorityID=authority_id)
     else:
-        url = url_for('authority-%s' % mimetype, authority_id=authority_id,
-                      **request.args)
+        url = url_for(
+            'authority-%s' % mimetype, authority_id=authority_id,
+            **request.args)
+
     return redirect(url, code=303)
 
 
@@ -111,6 +101,11 @@ def see_authority(authority_id):
            % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1 +
               identifier.PERIOD_SEQUENCE_LENGTH + 1))
 def see_period(period_id):
+    try:
+        identifier.assert_valid(period_id)
+    except identifier.IdentifierException:
+        return abort(404)
+
     mimetype = get_mimetype()
     if mimetype is None:
         periodID = request.path[1:]
@@ -118,8 +113,9 @@ def see_period(period_id):
         url = build_client_url(
             page='period-view', authorityID=authorityID, periodID=periodID)
     else:
-        url = url_for('period-%s' % mimetype, period_id=period_id,
-                      **request.args)
+        url = url_for(
+            'period-%s' % mimetype, period_id=period_id, **request.args)
+
     return redirect(url, code=303)
 
 

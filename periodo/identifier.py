@@ -57,6 +57,10 @@ def id_from_sequence(sequence):
     return prefix(add_check_digit(sequence))
 
 
+def assert_valid(identifier):
+    return check(prefix(identifier))
+
+
 def check(identifier):
     if not IDENTIFIER_RE.match(identifier):
         raise IdentifierException(

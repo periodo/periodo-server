@@ -35,16 +35,10 @@ app.config.update(
     DATABASE=os.environ.get('DATABASE', './db.sqlite'),
     CACHE=os.environ.get('CACHE', None),
     SERVER_NAME=os.environ.get('SERVER_NAME', 'localhost:5000'),
+    CLIENT_URL=os.environ.get('CLIENT_URL', 'https://client.perio.do'),
     CANONICAL=json.loads(os.environ.get('CANONICAL', 'false')),
     ORCID_CLIENT_ID=ORCID_CLIENT_ID,
-    ORCID_CLIENT_SECRET=ORCID_CLIENT_SECRET,
-    # HTML representation of root resource is optional and dependent on the
-    # existence of a folder in static/html containing an index.html file.
-    HTML_REPR_EXISTS=os.path.exists(os.path.join(
-        os.path.dirname(__file__),
-        'static',
-        'html',
-        'index.html'))
+    ORCID_CLIENT_SECRET=ORCID_CLIENT_SECRET
 )
 
 if not app.debug:

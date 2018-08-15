@@ -5,7 +5,7 @@ import http.client
 import json
 from rdflib import Graph, ConjunctiveGraph, URIRef
 from rdflib.plugins import sparql
-from rdflib.namespace import Namespace, RDF, DCTERMS, OWL
+from rdflib.namespace import Namespace, RDF, DCTERMS
 from urllib.parse import urlparse
 from flask_principal import ActionNeed
 from .filepath import filepath
@@ -65,33 +65,12 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
         self.assertEqual(res2.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res2.headers['Location']).path, '/v.ttl')
 
-        res3 = self.client.get('/v.ttl', buffered=True)
-        self.assertEqual(res3.status_code, http.client.OK)
-        self.assertEqual(res3.headers['Content-Type'],
-                         'text/turtle; charset=utf-8')
-
-        res4 = self.client.get('/v.ttl.html', buffered=True)
-        self.assertEqual(res4.status_code, http.client.OK)
-        self.assertEqual(res4.headers['Content-Type'],
-                         'text/html; charset=utf-8')
-
-        g = Graph()
-        g.parse(format='turtle', data=res3.get_data(as_text=True))
-        self.assertIn(
-            (PERIODO['p0v#spatialCoverageDescription'],
-             RDF.type, OWL.DatatypeProperty), g)
-        self.assertIn(
-            (PERIODO['p0v#earliestYear'],
-             RDF.type, OWL.DatatypeProperty), g)
-        self.assertIn(
-            (PERIODO['p0v#latestYear'],
-             RDF.type, OWL.DatatypeProperty), g)
-
     def test_dataset_description(self):
         res1 = self.client.get(
             '/', headers={'Accept': 'text/html'}, buffered=True)
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'text/html')
+        self.assertEqual(res1.status_code, http.client.SEE_OTHER)
+        self.assertEqual(urlparse(res1.headers['Location']).path,
+                         '/index.json.html')
 
         res2 = self.client.get('/', headers={'Accept': 'text/turtle'})
         self.assertEqual(res2.status_code, http.client.OK)
@@ -387,49 +366,49 @@ WHERE {
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
 
     def test_period(self):
-        res1 = self.client.get('/trgkvwbjd')
+        res1 = self.client.get('/trgkvwbjp')
         self.assertEqual(res1.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res1.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res1.headers['Location']).query, 'page=period-view&backendID=http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv&periodID=trgkvwbjd') # noqa
+        self.assertEqual(urlparse(res1.headers['Location']).query, 'page=period-view&backendID=http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv&periodID=trgkvwbjp') # noqa
         res2 = self.client.get(
-            '/trgkvwbjd', headers={'Accept': 'application/json'})
+            '/trgkvwbjp', headers={'Accept': 'application/json'})
         self.assertEqual(res2.status_code, http.client.SEE_OTHER)
         self.assertEqual(
-            urlparse(res2.headers['Location']).path, '/trgkvwbjd.json')
+            urlparse(res2.headers['Location']).path, '/trgkvwbjp.json')
         res3 = self.client.get(
-            '/trgkvwbjd', headers={'Accept': 'application/ld+json'})
+            '/trgkvwbjp', headers={'Accept': 'application/ld+json'})
         self.assertEqual(res3.status_code, http.client.SEE_OTHER)
         self.assertEqual(
-            urlparse(res3.headers['Location']).path, '/trgkvwbjd.jsonld')
+            urlparse(res3.headers['Location']).path, '/trgkvwbjp.jsonld')
         res4 = self.client.get(
-            '/trgkvwbjd', headers={'Accept': 'text/html'})
+            '/trgkvwbjp', headers={'Accept': 'text/html'})
         self.assertEqual(res4.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res4.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res4.headers['Location']).query, 'page=period-view&backendID=http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv&periodID=trgkvwbjd') # noqa
+        self.assertEqual(urlparse(res4.headers['Location']).query, 'page=period-view&backendID=http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv&periodID=trgkvwbjp') # noqa
         res5 = self.client.get(
-            '/trgkvwbjd', headers={'Accept': 'text/turtle'})
+            '/trgkvwbjp', headers={'Accept': 'text/turtle'})
         self.assertEqual(res5.status_code, http.client.SEE_OTHER)
         self.assertEqual(
-            urlparse(res5.headers['Location']).path, '/trgkvwbjd.ttl')
+            urlparse(res5.headers['Location']).path, '/trgkvwbjp.ttl')
 
     def test_period_json(self):
-        res1 = self.client.get('/trgkvwbjd.json')
+        res1 = self.client.get('/trgkvwbjp.json')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'application/json')
         self.assertEqual(
             res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-period-trgkvwbjd.json"')
+            'attachment; filename="periodo-period-trgkvwbjp.json"')
         context = json.loads(res1.get_data(as_text=True))['@context']
         self.assertEqual(context, [
             'http://localhost:5000/c',
             {'@base': 'http://n2t.net/ark:/99152/'}])
 
-        res2 = self.client.get('/trgkvwbjd.jsonld')
+        res2 = self.client.get('/trgkvwbjp.jsonld')
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
         self.assertEqual(
             res2.headers['Content-Disposition'],
-            'attachment; filename="periodo-period-trgkvwbjd.json"')
+            'attachment; filename="periodo-period-trgkvwbjp.json"')
 
         jsonld = json.loads(res1.get_data(as_text=True))
         context = json.loads(self.client.get('/c', buffered=True)
@@ -438,18 +417,18 @@ WHERE {
             data=json.dumps({**jsonld, **context}), format='json-ld')
         self.assertIsNone(
             g.value(predicate=RDF.type, object=SKOS.ConceptScheme))
-        self.assertIn((PERIODO['p0trgkvwbjd'],
-                       FOAF.isPrimaryTopicOf, HOST['trgkvwbjd.json']), g)
-        self.assertIn((HOST['trgkvwbjd.json'],
+        self.assertIn((PERIODO['p0trgkvwbjp'],
+                       FOAF.isPrimaryTopicOf, HOST['trgkvwbjp.json']), g)
+        self.assertIn((HOST['trgkvwbjp.json'],
                        VOID.inDataset, HOST['d']), g)
-        self.assertIn((PERIODO['p0trgkvwbjd'],
+        self.assertIn((PERIODO['p0trgkvwbjp'],
                        SKOS.inScheme, PERIODO['p0trgkv']), g)
-        res3 = self.client.get('/trgkvwbjd.json.html')
+        res3 = self.client.get('/trgkvwbjp.json.html')
         self.assertEqual(res3.status_code, http.client.OK)
         self.assertEqual(res3.headers['Content-Type'], 'text/html')
 
     def test_period_turtle(self):
-        res1 = self.client.get('/trgkvwbjd.ttl')
+        res1 = self.client.get('/trgkvwbjp.ttl')
         self.assertEqual(res1.status_code, http.client.OK)
         self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
         self.assertEqual(
@@ -457,18 +436,18 @@ WHERE {
             'public, max-age={}'.format(cache.SHORT_TIME))
         self.assertEqual(
             res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-period-trgkvwbjd.ttl"')
+            'attachment; filename="periodo-period-trgkvwbjp.ttl"')
 
         g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
         self.assertIsNone(
             g.value(predicate=RDF.type, object=SKOS.ConceptScheme))
-        self.assertIn((PERIODO['p0trgkvwbjd'],
-                       FOAF.isPrimaryTopicOf, HOST['trgkvwbjd.ttl']), g)
-        self.assertIn((HOST['trgkvwbjd.ttl'],
+        self.assertIn((PERIODO['p0trgkvwbjp'],
+                       FOAF.isPrimaryTopicOf, HOST['trgkvwbjp.ttl']), g)
+        self.assertIn((HOST['trgkvwbjp.ttl'],
                        VOID.inDataset, HOST['d']), g)
-        self.assertIn((PERIODO['p0trgkvwbjd'],
+        self.assertIn((PERIODO['p0trgkvwbjp'],
                        SKOS.inScheme, PERIODO['p0trgkv']), g)
-        res2 = self.client.get('/trgkvwbjd.ttl.html')
+        res2 = self.client.get('/trgkvwbjp.ttl.html')
         self.assertEqual(res2.status_code, http.client.OK)
         self.assertEqual(res2.headers['Content-Type'], 'text/html')
         self.assertEqual(

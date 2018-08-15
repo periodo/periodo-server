@@ -1,6 +1,6 @@
 {
   "title": "Minimal bag of periods",
-  "items": [ "p0trgkv4kxb", "p0trgkvwbjd", "p0trgkvkhrv" ],
+  "items": [ "p0trgkv4kxb", "p0trgkvwbjp", "p0trgkvkhrv" ],
   "foo": "bar",
   "@context": {"foo": "http://example.org/foo"}
 }

@@ -1,7 +1,7 @@
 import json
 from urllib.parse import urlencode
 from flask import request, make_response, redirect, url_for
-from periodo import app, api, cache, routes, utils
+from periodo import api, cache, routes, utils
 
 
 def abbreviate_context(data):
@@ -33,7 +33,9 @@ def abbreviate_context(data):
 
 
 def html_version(path):
-    if path.endswith('.jsonpatch'):
+    if path == '/':
+        return 'index.json.html'
+    elif path.endswith('.jsonpatch'):
         return path.replace('.jsonpatch', '.json.html')
     else:
         return (path[:-1] if path.endswith('/') else path) + '.json.html'
@@ -41,9 +43,7 @@ def html_version(path):
 
 @api.representation('text/html')
 def output_html(data, code, headers={}, filename=None):
-    if app.config['HTML_REPR_EXISTS'] and request.path == '/':
-        response = app.send_static_file('html/index.html')
-    elif request.path == '/d/':
+    if request.path == '/d/':
         response = redirect(
             url_for('dataset-json', version=request.args.get('version', None)),
             code=307)
