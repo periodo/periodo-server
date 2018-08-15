@@ -151,8 +151,8 @@
           },
           "type": "Period"
         },
-        "https://perio.do/.well-known/genid/assigned/p0trgkvwbjp": {
-          "id": "https://perio.do/.well-known/genid/assigned/p0trgkvwbjp",
+        "https://perio.do/.well-known/genid/assigned/p0trgkvwbjd": {
+          "id": "https://perio.do/.well-known/genid/assigned/p0trgkvwbjd",
           "type": "Period",
           "label": "Archaic",
           "language": "eng-latn",

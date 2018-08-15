@@ -7,6 +7,10 @@ from periodo import identifier
 
 class TestIdentifiers(unittest.TestCase):
 
+    def test_assert_valid(self):
+        identifier.assert_valid('3wskd4mmt')  # old style checksum
+        identifier.assert_valid('jrrjb8spw')  # new style checksum
+
     def test_substitution_error(self):
         def substitute(s):
             chars = list(s)

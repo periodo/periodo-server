@@ -65,12 +65,30 @@ def check(identifier):
     if not IDENTIFIER_RE.match(identifier):
         raise IdentifierException(
             'malformed identifier: {}'.format(identifier))
-    check_digit = check_digit_for(identifier[len(PREFIX):-1])
-    if not check_digit == identifier[-1]:
-        raise IdentifierException(
-            ('malformed identifier: {}' +
-             ' (check digit was {} but should have been {})').format(
-                 identifier, identifier[-1], check_digit))
+    sequence = identifier[len(PREFIX):-1]
+    check_digit = check_digit_for(sequence)
+    if check_digit == identifier[-1]:
+        return
+
+    # Identifiers minted for periods in the initial data load had their
+    # checksums calculated in a different way (a `/` was inserted
+    # between the authority and period IDs to form the sequence),
+    # so check for that variation as well.
+    check_digit == OLD_check_digit_for(sequence)
+    if check_digit == identifier[-1]:
+        return
+
+    if len(identifier[len(PREFIX):-1]) > AUTHORITY_SEQUENCE_LENGTH:
+        authority_id = identifier[len(PREFIX):-(PERIOD_SEQUENCE_LENGTH + 1)]
+        period_id = identifier[-(PERIOD_SEQUENCE_LENGTH + 1):-1]
+        check_digit = check_digit_for('%s/%s' % (authority_id, period_id))
+        if check_digit == identifier[-1]:
+            return
+
+    raise IdentifierException(
+        ('malformed identifier: {}' +
+         ' (check digit was {} but should have been {})').format(
+             identifier, identifier[-1], check_digit))
 
 
 def random_sequence(length):
@@ -93,6 +111,12 @@ def check_digit_for(sequence):
     total = sum([ordinal_value(char) * position
                  for position, char in enumerate(sequence, start=1)])
     return XDIGITS[total % len(XDIGITS)]
+
+
+def OLD_check_digit_for(sequence):
+    authority_id = sequence[:-PERIOD_SEQUENCE_LENGTH]
+    period_id = sequence[-PERIOD_SEQUENCE_LENGTH:]
+    return check_digit_for('%s/%s' % (authority_id, period_id))
 
 
 def index_by_id(items):

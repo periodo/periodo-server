@@ -57,7 +57,7 @@ class TestPatchMethods(unittest.TestCase):
                 one=True)['created_entities']
             self.assertEqual(
                 created_entities,
-                '["p0trgkv", "p0trgkv4kxb", "p0trgkvkhrv", "p0trgkvwbjp"]')
+                '["p0trgkv", "p0trgkv4kxb", "p0trgkvkhrv", "p0trgkvwbjd"]')
             updated_entities = database.query_db(
                 'SELECT updated_entities FROM patch_request WHERE id = 1',
                 one=True)['updated_entities']
@@ -76,7 +76,7 @@ class TestPatchMethods(unittest.TestCase):
             updated_entities = database.query_db(
                 'SELECT updated_entities FROM patch_request WHERE id = ?',
                 (patch_id,), one=True)['updated_entities']
-            self.assertEqual(updated_entities, '["p0trgkv", "p0trgkvwbjp"]')
+            self.assertEqual(updated_entities, '["p0trgkv", "p0trgkvwbjd"]')
             created_entities = database.query_db(
                 'SELECT created_entities FROM patch_request WHERE id = ?',
                 (patch_id,), one=True)['created_entities']
@@ -358,28 +358,28 @@ class TestPatchMethods(unittest.TestCase):
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
             self.assertEqual(res.status_code, http.client.NO_CONTENT)
             removed_entities = database.get_removed_entity_keys()
-            self.assertEqual(removed_entities, set(['p0trgkvwbjp']))
-            res = client.get('/trgkvwbjp',
+            self.assertEqual(removed_entities, set(['p0trgkvwbjd']))
+            res = client.get('/trgkvwbjd',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.GONE)
-            res = client.get('/trgkvwbjp.json',
+            res = client.get('/trgkvwbjd.json',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.GONE)
-            res = client.get('/trgkvwbjp?version=0',
+            res = client.get('/trgkvwbjd?version=0',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.NOT_FOUND)
-            res = client.get('/trgkvwbjp.json?version=0',
+            res = client.get('/trgkvwbjd.json?version=0',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.NOT_FOUND)
-            res = client.get('/trgkvwbjp?version=1',
+            res = client.get('/trgkvwbjd?version=1',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
-            res = client.get('/trgkvwbjp.json?version=1',
+            res = client.get('/trgkvwbjd.json?version=1',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
@@ -420,7 +420,7 @@ class TestPatchMethods(unittest.TestCase):
             removed_entities = database.get_removed_entity_keys()
             self.assertEqual(
                 removed_entities,
-                set(['p0trgkv', 'p0trgkv4kxb', 'p0trgkvkhrv', 'p0trgkvwbjp']))
+                set(['p0trgkv', 'p0trgkv4kxb', 'p0trgkvkhrv', 'p0trgkvwbjd']))
             res = client.get('/trgkv',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
@@ -445,27 +445,27 @@ class TestPatchMethods(unittest.TestCase):
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
-            res = client.get('/trgkvwbjp',
+            res = client.get('/trgkvwbjd',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.GONE)
-            res = client.get('/trgkvwbjp.json',
+            res = client.get('/trgkvwbjd.json',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.GONE)
-            res = client.get('/trgkvwbjp?version=0',
+            res = client.get('/trgkvwbjd?version=0',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.NOT_FOUND)
-            res = client.get('/trgkvwbjp.json?version=0',
+            res = client.get('/trgkvwbjd.json?version=0',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.NOT_FOUND)
-            res = client.get('/trgkvwbjp?version=1',
+            res = client.get('/trgkvwbjd?version=1',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
-            res = client.get('/trgkvwbjp.json?version=1',
+            res = client.get('/trgkvwbjd.json?version=1',
                              headers={'Accept': 'application/json'},
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
