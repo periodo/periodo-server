@@ -7,7 +7,7 @@ VOCAB_FILES := $(shell find vocab -name *.ttl)
 SHAPE_FILES := $(shell find shapes -name *.ttl)
 
 .PHONY: all
-all: setup periodo/static/vocab.html $(DB)
+all: setup vocab.html $(DB)
 
 $(PYTHON3):
 	python3 -m venv $(VENV_DIR)
@@ -17,11 +17,10 @@ $(DB):
 	DATABASE=$(DB) $(PYTHON3) -c\
 	 "from periodo.commands import init_db; init_db()";
 
-periodo/static/vocab.ttl: $(VOCAB_FILES) $(SHAPE_FILES)
-	mkdir -p periodo/static
+vocab.ttl: $(VOCAB_FILES) $(SHAPE_FILES)
 	./bin/ttlcat $^ > $@
 
-periodo/static/vocab.html: periodo/static/vocab.ttl
+vocab.html: vocab.ttl
 	highlight -i $< -o $@ -s zellner -l -a -T 'PeriodO vocabulary and shapes' --inline-css
 
 .PHONY: load_data
@@ -58,10 +57,9 @@ setup: $(PYTHON3) requirements.txt
 .PHONY: clean
 clean:
 	rm -rf $(VENV_DIR)
-	rm -rf periodo/static
 
 .PHONY: test
-test: setup periodo/static/vocab.html
+test: setup
 	$(PYTHON3) -m unittest discover
 
 .PHONY: run
