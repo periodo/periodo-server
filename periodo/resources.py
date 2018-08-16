@@ -534,7 +534,7 @@ class PatchMessages(Resource):
         try:
             data = json.loads(data)
             message = data['message']
-        except:
+        except KeyError:
             return {'message': 'No message present in request data.'}, 400
 
         try:
