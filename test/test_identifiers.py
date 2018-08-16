@@ -7,9 +7,18 @@ from periodo import identifier
 
 class TestIdentifiers(unittest.TestCase):
 
-    def test_assert_valid(self):
-        identifier.assert_valid('3wskd4mmt')  # old style checksum
-        identifier.assert_valid('jrrjb8spw')  # new style checksum
+    def test_assert_valid_loose(self):
+        # old style checksum
+        identifier.assert_valid('3wskd4mmt', strict=False)
+        # new style checksum
+        identifier.assert_valid('jrrjb8spw', strict=False)
+
+    def test_assert_valid_strict(self):
+        with self.assertRaises(identifier.IdentifierException):
+            # old style checksum
+            identifier.assert_valid('3wskd4mmt')
+        # new style checksum
+        identifier.assert_valid('jrrjb8spw')
 
     def test_substitution_error(self):
         def substitute(s):

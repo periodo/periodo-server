@@ -81,7 +81,7 @@ def see_dataset():
            % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1))
 def see_authority(authority_id):
     try:
-        identifier.assert_valid(authority_id)
+        identifier.assert_valid(authority_id, strict=False)
     except identifier.IdentifierException:
         return abort(404)
 
@@ -102,7 +102,7 @@ def see_authority(authority_id):
               identifier.PERIOD_SEQUENCE_LENGTH + 1))
 def see_period(period_id):
     try:
-        identifier.assert_valid(period_id)
+        identifier.assert_valid(period_id, strict=False)
     except identifier.IdentifierException:
         return abort(404)
 

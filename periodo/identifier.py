@@ -57,11 +57,11 @@ def id_from_sequence(sequence):
     return prefix(add_check_digit(sequence))
 
 
-def assert_valid(identifier):
-    return check(prefix(identifier))
+def assert_valid(identifier, strict=True):
+    return check(prefix(identifier), strict)
 
 
-def check(identifier):
+def check(identifier, strict=True):
     if not IDENTIFIER_RE.match(identifier):
         raise IdentifierException(
             'malformed identifier: {}'.format(identifier))
@@ -70,19 +70,13 @@ def check(identifier):
     if check_digit == identifier[-1]:
         return
 
-    # Identifiers minted for periods in the initial data load had their
-    # checksums calculated in a different way (a `/` was inserted
-    # between the authority and period IDs to form the sequence),
-    # so check for that variation as well.
-    check_digit == OLD_check_digit_for(sequence)
-    if check_digit == identifier[-1]:
-        return
-
-    if len(identifier[len(PREFIX):-1]) > AUTHORITY_SEQUENCE_LENGTH:
-        authority_id = identifier[len(PREFIX):-(PERIOD_SEQUENCE_LENGTH + 1)]
-        period_id = identifier[-(PERIOD_SEQUENCE_LENGTH + 1):-1]
-        check_digit = check_digit_for('%s/%s' % (authority_id, period_id))
-        if check_digit == identifier[-1]:
+    if not strict:
+        # Identifiers minted for periods in the initial data load had their
+        # checksums calculated in a different way (a `/` was inserted
+        # between the authority and period IDs to form the sequence),
+        # so check for that variation as well.
+        old_check_digit = OLD_check_digit_for(sequence)
+        if old_check_digit == identifier[-1]:
             return
 
     raise IdentifierException(
@@ -114,9 +108,12 @@ def check_digit_for(sequence):
 
 
 def OLD_check_digit_for(sequence):
-    authority_id = sequence[:-PERIOD_SEQUENCE_LENGTH]
-    period_id = sequence[-PERIOD_SEQUENCE_LENGTH:]
-    return check_digit_for('%s/%s' % (authority_id, period_id))
+    if len(sequence) > AUTHORITY_SEQUENCE_LENGTH:
+        authority_id = sequence[:-PERIOD_SEQUENCE_LENGTH]
+        period_id = sequence[-PERIOD_SEQUENCE_LENGTH:]
+        return check_digit_for('%s/%s' % (authority_id, period_id))
+
+    return check_digit_for(sequence)
 
 
 def index_by_id(items):
