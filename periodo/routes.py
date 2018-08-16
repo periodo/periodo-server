@@ -23,7 +23,9 @@ def get_mimetype():
 def build_client_url(page, **values):
     return '%s/?%s' % (
         app.config['CLIENT_URL'],
-        urlencode(dict(page=page, backendID=request.url_root, **values))
+        urlencode(dict(page=page,
+                       backendID='web-%s' % request.url_root,
+                       **values))
     )
 
 

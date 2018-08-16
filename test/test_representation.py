@@ -269,7 +269,7 @@ WHERE {
         res1 = self.client.get('/trgkv')
         self.assertEqual(res1.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res1.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res1.headers['Location']).query, 'page=authority-view&backendID=http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv') # noqa
+        self.assertEqual(urlparse(res1.headers['Location']).query, 'page=authority-view&backendID=web-http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv') # noqa
 
         res2 = self.client.get(
             '/trgkv', headers={'Accept': 'application/json'})
@@ -286,7 +286,7 @@ WHERE {
         res4 = self.client.get('/trgkv', headers={'Accept': 'text/html'})
         self.assertEqual(res4.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res4.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res4.headers['Location']).query, 'page=authority-view&backendID=http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv') # noqa
+        self.assertEqual(urlparse(res4.headers['Location']).query, 'page=authority-view&backendID=web-http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv') # noqa
 
         res5 = self.client.get('/trgkv/')
         self.assertEqual(res5.status_code, http.client.NOT_FOUND)
@@ -369,7 +369,7 @@ WHERE {
         res1 = self.client.get('/trgkvwbjd')
         self.assertEqual(res1.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res1.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res1.headers['Location']).query, 'page=period-view&backendID=http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv&periodID=trgkvwbjd') # noqa
+        self.assertEqual(urlparse(res1.headers['Location']).query, 'page=period-view&backendID=web-http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv&periodID=trgkvwbjd') # noqa
         res2 = self.client.get(
             '/trgkvwbjd', headers={'Accept': 'application/json'})
         self.assertEqual(res2.status_code, http.client.SEE_OTHER)
@@ -384,7 +384,7 @@ WHERE {
             '/trgkvwbjd', headers={'Accept': 'text/html'})
         self.assertEqual(res4.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res4.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res4.headers['Location']).query, 'page=period-view&backendID=http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv&periodID=trgkvwbjd') # noqa
+        self.assertEqual(urlparse(res4.headers['Location']).query, 'page=period-view&backendID=web-http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv&periodID=trgkvwbjd') # noqa
         res5 = self.client.get(
             '/trgkvwbjd', headers={'Accept': 'text/turtle'})
         self.assertEqual(res5.status_code, http.client.SEE_OTHER)
