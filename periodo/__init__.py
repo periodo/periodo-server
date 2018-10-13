@@ -7,9 +7,17 @@ from flask_principal import Principal
 from flask_restful import Api
 from werkzeug.http import http_date
 from werkzeug.routing import BaseConverter
-from periodo.secrets import (
-    SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
 from periodo.middleware import StreamConsumingMiddleware
+
+# Allow running tests without access to periodo.secrets
+try:
+    from periodo.secrets import (
+        SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
+except ModuleNotFoundError as e:
+    if 'TESTING' in os.environ:
+        SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET = 'xxx', 'xxx', 'xxx'
+    else:
+        raise e
 
 # Disable normalization of literals because rdflib handles gYears improperly:
 # https://github.com/RDFLib/rdflib/issues/806
