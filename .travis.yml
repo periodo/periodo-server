@@ -3,4 +3,4 @@ python:
   - "3.6"
   - "3.6-dev"
   - "3.7-dev"
-script: python3 -m unittest discover
+script: TESTING=1 python3 -m unittest discover

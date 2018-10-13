@@ -60,7 +60,7 @@ clean:
 
 .PHONY: test
 test: setup
-	$(PYTHON3) -m unittest discover
+	TESTING=1 $(PYTHON3) -m unittest discover
 
 .PHONY: run
 run: test
