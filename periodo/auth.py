@@ -12,6 +12,7 @@ from werkzeug.exceptions import Unauthorized
 submit_patch_permission = Permission(ActionNeed('submit-patch'))
 accept_patch_permission = Permission(ActionNeed('accept-patch'))
 update_bag_permission = Permission(ActionNeed('create-bag'))
+update_graph_permission = Permission(ActionNeed('create-graph'))
 
 ERROR_URIS = {
     'invalid_request': 'http://tools.ietf.org/html/rfc6750#section-6.2.1',

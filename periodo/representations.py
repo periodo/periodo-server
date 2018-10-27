@@ -6,10 +6,11 @@ from periodo import api, cache, routes, utils
 
 def abbreviate_context(data):
     # don't abbreviate...
-    if ((data is None or                    # empty responses,
-         '@context' not in data or          # non-LD responses,
-         len(data) == 1 or                  # the context object itself,
-         type(data['@context']) is list)):  # or already-abbreviated contexts.
+    if ((data is None or                     # empty responses,
+         '@context' not in data or           # non-LD responses,
+         '@base' not in data['@context'] or  # external LD graphs,
+         len(data) == 1 or                   # the context object itself,
+         type(data['@context']) is list)):   # or already-abbreviated contexts.
 
         return data
 
