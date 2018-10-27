@@ -37,7 +37,8 @@ load_data:
 ifeq ($(DATA),)
 	$(error No data file provided. Run `make load_data DATA=/path/to/data/file`)
 endif
-	$(PYTHON3) -c "from periodo.commands import load_data; load_data('$(DATA)')"
+	DATABASE=$(DB) $(PYTHON3) -c\
+	 "from periodo.commands import load_data; load_data('$(DATA)')"
 
 export.sql.gz:
 ifeq ($(IMPORT_URL),)
@@ -57,7 +58,8 @@ set_permissions:
 ifeq ($(ORCID),)
 	$(error No orcid provided. Run `make set_permissions ORCID=https://orcid.org/0000-1234 PERMISSIONS=perm1,perm2,perm3)
 endif
-	$(PYTHON3) -c "from periodo.commands import set_permissions; set_permissions('$(ORCID)','$(PERMISSIONS)'.split(','))"
+	DATABASE=$(DB) $(PYTHON3) -c\
+	 "from periodo.commands import set_permissions; set_permissions('$(ORCID)','$(PERMISSIONS)'.split(','))"
 
 .PHONY: setup
 setup: $(PYTHON3) requirements.txt
