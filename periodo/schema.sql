@@ -71,11 +71,21 @@ CREATE TABLE IF NOT EXISTS bag (
   FOREIGN KEY(created_by) REFERENCES user(id)
 );
 
+CREATE TABLE IF NOT EXISTS graph (
+  id TEXT NOT NULL,
+  version integer NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  deleted BOOLEAN NOT NULL DEFAULT 0,
+  data TEXT NOT NULL,
+
+  PRIMARY KEY(id, version)
+);
+
 CREATE TABLE IF NOT EXISTS user (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
   permissions TEXT NOT NULL
-    DEFAULT '[["action", "submit-patch", "create-bag"]]',
+    DEFAULT '[["action", "submit-patch"], ["action", "create-bag"]]',
   b64token TEXT UNIQUE NOT NULL,
   token_expires_at INTEGER NOT NULL,
   credentials TEXT NOT NULL,

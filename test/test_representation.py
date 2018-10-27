@@ -15,7 +15,7 @@ VOID = Namespace('http://rdfs.org/ns/void#')
 SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
 PERIODO = Namespace('http://n2t.net/ark:/99152/')
 FOAF = Namespace('http://xmlns.com/foaf/0.1/')
-HOST = Namespace('http://localhost:5000/')
+HOST = Namespace('http://localhost.localdomain:5000/')
 
 
 class TestRepresentationsAndRedirects(unittest.TestCase):
@@ -197,7 +197,7 @@ WHERE {
 
         context = json.loads(res1.get_data(as_text=True))['@context']
         self.assertEqual(context, [
-            'http://localhost:5000/c',
+            'http://localhost.localdomain:5000/c',
             {'@base': 'http://n2t.net/ark:/99152/'}])
         res2 = self.client.get('/d.json')
         self.assertEqual(res2.status_code, http.client.OK)
@@ -269,7 +269,7 @@ WHERE {
         res1 = self.client.get('/trgkv')
         self.assertEqual(res1.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res1.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res1.headers['Location']).query, 'page=authority-view&backendID=web-http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv') # noqa
+        self.assertEqual(urlparse(res1.headers['Location']).query, 'page=authority-view&backendID=web-http%3A%2F%2Flocalhost.localdomain%3A5000%2F&authorityID=trgkv') # noqa
 
         res2 = self.client.get(
             '/trgkv', headers={'Accept': 'application/json'})
@@ -286,7 +286,7 @@ WHERE {
         res4 = self.client.get('/trgkv', headers={'Accept': 'text/html'})
         self.assertEqual(res4.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res4.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res4.headers['Location']).query, 'page=authority-view&backendID=web-http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv') # noqa
+        self.assertEqual(urlparse(res4.headers['Location']).query, 'page=authority-view&backendID=web-http%3A%2F%2Flocalhost.localdomain%3A5000%2F&authorityID=trgkv') # noqa
 
         res5 = self.client.get('/trgkv/')
         self.assertEqual(res5.status_code, http.client.NOT_FOUND)
@@ -306,7 +306,7 @@ WHERE {
             'attachment; filename="periodo-authority-trgkv.json"')
         context = json.loads(res1.get_data(as_text=True))['@context']
         self.assertEqual(context, [
-            'http://localhost:5000/c',
+            'http://localhost.localdomain:5000/c',
             {'@base': 'http://n2t.net/ark:/99152/'}])
 
         res2 = self.client.get('/trgkv.jsonld')
@@ -369,7 +369,7 @@ WHERE {
         res1 = self.client.get('/trgkvwbjd')
         self.assertEqual(res1.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res1.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res1.headers['Location']).query, 'page=period-view&backendID=web-http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv&periodID=trgkvwbjd') # noqa
+        self.assertEqual(urlparse(res1.headers['Location']).query, 'page=period-view&backendID=web-http%3A%2F%2Flocalhost.localdomain%3A5000%2F&authorityID=trgkv&periodID=trgkvwbjd') # noqa
         res2 = self.client.get(
             '/trgkvwbjd', headers={'Accept': 'application/json'})
         self.assertEqual(res2.status_code, http.client.SEE_OTHER)
@@ -384,7 +384,7 @@ WHERE {
             '/trgkvwbjd', headers={'Accept': 'text/html'})
         self.assertEqual(res4.status_code, http.client.SEE_OTHER)
         self.assertEqual(urlparse(res4.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res4.headers['Location']).query, 'page=period-view&backendID=web-http%3A%2F%2Flocalhost%3A5000%2F&authorityID=trgkv&periodID=trgkvwbjd') # noqa
+        self.assertEqual(urlparse(res4.headers['Location']).query, 'page=period-view&backendID=web-http%3A%2F%2Flocalhost.localdomain%3A5000%2F&authorityID=trgkv&periodID=trgkvwbjd') # noqa
         res5 = self.client.get(
             '/trgkvwbjd', headers={'Accept': 'text/turtle'})
         self.assertEqual(res5.status_code, http.client.SEE_OTHER)
@@ -400,7 +400,7 @@ WHERE {
             'attachment; filename="periodo-period-trgkvwbjd.json"')
         context = json.loads(res1.get_data(as_text=True))['@context']
         self.assertEqual(context, [
-            'http://localhost:5000/c',
+            'http://localhost.localdomain:5000/c',
             {'@base': 'http://n2t.net/ark:/99152/'}])
 
         res2 = self.client.get('/trgkvwbjd.jsonld')
