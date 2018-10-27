@@ -633,3 +633,75 @@ class Bag(Resource):
             return cache.no_time(response)
         else:
             return cache.long_time(response)
+
+
+def get_graphs(prefix=None):
+        data = {
+            '@context': {
+                '@version': 1.1,
+                'graphs': {
+                    '@id': url_for('graphs'),
+                    '@container': ['@graph', '@id']
+                }},
+            'graphs': {}
+        }
+        graphs = database.get_graphs()
+        for graph in graphs:
+            graph_url = url_for('graph', id=graph['id'], _external=True)
+            data['graphs'][graph_url] = json.loads(graph['data'])
+        return data
+
+
+@add_resources('graphs', suffixes=['json'], barepaths=['/graphs/'])
+class Graphs(Resource):
+    def get(self):
+        data = get_graphs()
+        dataset = database.get_dataset()
+        if dataset:
+            dataset_url = url_for('dataset', _external=True)
+            data['graphs'][dataset_url] = json.loads(dataset['data'])
+        return cache.medium_time(api.make_response(data, 200))
+
+
+@add_resources('graphs/<path:id>', endpoint='graph', suffixes=['json'])
+class Graph(Resource):
+    @auth.update_graph_permission.require()
+    def put(self, id):
+        version = database.create_or_update_graph(id, request.get_json())
+        return None, 201, {
+            'Location': url_for('graph', id=id, version=version)
+        }
+
+    def get(self, id):
+        if id.endswith('/'):
+            return cache.medium_time(api.make_response(get_graphs(id), 200))
+
+        args = versioned_parser.parse_args()
+        version = args.get('version')
+        graph = database.get_graph(id, version=version)
+
+        if not graph:
+            abort(404)
+
+        graph_etag = 'graph-{}-version-{}'.format(id, graph['version'])
+        if request.if_none_match.contains_weak(graph_etag):
+            return None, 304
+
+        headers = {}
+        headers['Last-Modified'] = format_date_time(graph['created_at'])
+
+        data = json.loads(graph['data'])
+        response = api.make_response(data, 200, headers)
+        response.set_etag(graph_etag, weak=True)
+
+        if version is None:
+            return cache.medium_time(response)
+        else:
+            return cache.long_time(response)
+
+    @auth.update_graph_permission.require()
+    def delete(self, id):
+        if database.delete_graph(id):
+            return None, 204
+        else:
+            abort(404)

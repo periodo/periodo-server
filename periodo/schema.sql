@@ -71,6 +71,16 @@ CREATE TABLE IF NOT EXISTS bag (
   FOREIGN KEY(created_by) REFERENCES user(id)
 );
 
+CREATE TABLE IF NOT EXISTS graph (
+  id TEXT NOT NULL,
+  version integer NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  deleted BOOLEAN NOT NULL DEFAULT 0,
+  data TEXT NOT NULL,
+
+  PRIMARY KEY(id, version)
+);
+
 CREATE TABLE IF NOT EXISTS user (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,

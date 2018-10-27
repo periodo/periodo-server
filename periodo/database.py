@@ -151,6 +151,50 @@ def get_bag(uuid, version=None):
             (uuid.hex, version), one=True)
 
 
+def get_graphs(prefix=None):
+    if prefix is None:
+        return query_db('''
+SELECT graph.id AS id, graph.data AS data
+FROM (
+   SELECT id, MAX(version) AS maxversion
+   FROM graph
+   WHERE deleted = 0
+   GROUP BY id
+) AS g
+INNER JOIN graph
+ON g.id = graph.id
+AND g.maxversion = graph.version
+''')
+    else:
+        return query_db('''
+SELECT graph.id AS id, graph.data AS data
+FROM (
+   SELECT id, MAX(version) AS maxversion
+   FROM graph
+   WHERE deleted = 0
+   AND id LIKE ?
+   GROUP BY id
+) AS g
+INNER JOIN graph
+ON g.id = graph.id
+AND g.maxversion = graph.version
+''', (prefix + '%',))
+
+
+def get_graph(id, version=None):
+    if version is None:
+        return query_db('''
+        SELECT * FROM graph
+        WHERE id = ? AND deleted = 0
+        ORDER BY version DESC LIMIT 1
+        ''', (id,), one=True)
+    else:
+        return query_db('''
+        SELECT * FROM graph
+        WHERE id = ? AND version = ?
+        ''', (id, version), one=True)
+
+
 def create_or_update_bag(uuid, creator_id, data):
     db = get_db()
     c = get_db().cursor()
@@ -179,6 +223,42 @@ def create_or_update_bag(uuid, creator_id, data):
     c.close()
     db.commit()
     return version
+
+
+def create_or_update_graph(id, data):
+    db = get_db()
+    c = get_db().cursor()
+    c.execute('''
+    SELECT MAX(version) AS max_version
+    FROM graph
+    WHERE id = ?''', (id,))
+    row = c.fetchone()
+    version = 0 if row['max_version'] is None else row['max_version'] + 1
+    if version > 0:
+        data['wasRevisionOf'] = identifier.prefix(
+            'graphs/{}?version={}'.format(id, row['max_version']))
+    c.execute('''
+    INSERT INTO graph (
+               id,
+               version,
+               data)
+    VALUES (?, ?, ?)''',
+              (id,
+               version,
+               json.dumps(data)))
+    c.close()
+    db.commit()
+    return version
+
+
+def delete_graph(id):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute('UPDATE graph SET deleted = 1 WHERE id = ?', (id,))
+    deletedRows = cursor.rowcount
+    cursor.close()
+    db.commit()
+    return (deletedRows > 0)
 
 
 def find_version_of_last_update(entity_id, version):
