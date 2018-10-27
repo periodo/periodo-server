@@ -2,6 +2,7 @@ import json
 from collections import OrderedDict
 from flask import request, g, abort, url_for, redirect
 from flask_restful import fields, Resource, marshal, reqparse
+from jsonpatch import JsonPatch
 from periodo import (
     app, api, cache, database, auth, identifier, patching,
     utils, nanopub, provenance)
@@ -61,6 +62,16 @@ patch_list_parser.add_argument('from', type=int, default=0)
 versioned_parser = reqparse.RequestParser()
 versioned_parser.add_argument(
     'version', type=int, location='args', help='Invalid version number')
+
+
+def parse_json(request):
+    data = request.data or ''
+    if isinstance(data, bytes):
+        data = data.decode()
+    try:
+        return json.loads(data)
+    except json.JSONDecodeError:
+        raise ResourceError(400, 'Request data could not be parsed as JSON.')
 
 
 def attach_to_dataset(o):
@@ -288,7 +299,7 @@ class Dataset(Resource):
     def patch(self):
         try:
             patch_request_id = patching.create_request(
-                patching.from_text(request.data), g.identity.id)
+                JsonPatch(parse_json(request)), g.identity.id)
             database.commit()
             return None, 202, {
                 'Location': url_for('patchrequest', id=patch_request_id)
@@ -471,7 +482,7 @@ class Patch(Resource):
         if not permission.can():
             raise auth.PermissionDenied(permission)
         try:
-            patch = patching.from_text(request.data)
+            patch = JsonPatch(parse_json(request))
             affected_entities = patching.validate(
                 patch, database.get_dataset())
         except patching.InvalidPatchError as e:
@@ -563,7 +574,7 @@ class Bag(Resource):
     @auth.update_bag_permission.require()
     def put(self, uuid):
 
-        data = request.get_json()
+        data = parse_json(request)
 
         title = str(data.get('title', ''))
         if len(title) == 0:
@@ -667,7 +678,7 @@ class Graphs(Resource):
 class Graph(Resource):
     @auth.update_graph_permission.require()
     def put(self, id):
-        version = database.create_or_update_graph(id, request.get_json())
+        version = database.create_or_update_graph(id, parse_json(request))
         return None, 201, {
             'Location': url_for('graph', id=id, version=version)
         }
