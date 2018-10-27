@@ -5,7 +5,6 @@ import unittest
 import http.client
 from rdflib.namespace import Namespace
 from urllib.parse import urlparse
-from flask_principal import ActionNeed
 from .filepath import filepath
 from periodo import app, database, commands, auth
 from uuid import UUID
@@ -34,7 +33,7 @@ class TestBags(unittest.TestCase):
                 'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
                 'expires_in': 3600,
                 'orcid': '1211-1098-7654-321X',
-            }, (ActionNeed('create-bag'),))
+            })
             database.commit()
 
     def tearDown(self):
