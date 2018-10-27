@@ -69,12 +69,12 @@ class TestBags(unittest.TestCase):
                 json.loads(res.get_data(as_text=True)))
             context = json.loads(res.get_data(as_text=True))['@context']
             self.assertEqual(context, [
-                'http://localhost:5000/c',
+                'http://localhost.localdomain:5000/c',
                 {'@base': 'http://n2t.net/ark:/99152/'}])
             res = client.get('/bags/')
             self.assertEqual(res.status_code, http.client.OK)
             self.assertEqual(
-                ['http://localhost:5000/bags/%s' % id],
+                ['http://localhost.localdomain:5000/bags/%s' % id],
                 json.loads(res.get_data(as_text=True)))
 
     def test_if_none_match(self):
@@ -265,7 +265,7 @@ class TestBags(unittest.TestCase):
                 json.loads(res.get_data(as_text=True)))
             context = json.loads(res.get_data(as_text=True))['@context']
             self.assertEqual(context, [
-                'http://localhost:5000/c', {
+                'http://localhost.localdomain:5000/c', {
                     '@base': 'http://n2t.net/ark:/99152/',
                     "foo": "http://example.org/foo"
                 }])
