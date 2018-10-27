@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS user (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
   permissions TEXT NOT NULL
-    DEFAULT '[["action", "submit-patch", "create-bag"]]',
+    DEFAULT '[["action", "submit-patch"], ["action", "create-bag"]]',
   b64token TEXT UNIQUE NOT NULL,
   token_expires_at INTEGER NOT NULL,
   credentials TEXT NOT NULL,
