@@ -7,6 +7,8 @@ from flask_principal import Principal
 from flask_restful import Api
 from werkzeug.http import http_date
 from werkzeug.routing import BaseConverter
+from periodo.middleware import RemoveTransferEncodingHeaderMiddleware
+
 
 # Allow running tests without access to periodo.secrets
 try:
@@ -62,6 +64,9 @@ if not app.debug:
         handler.setFormatter(
             logging.Formatter('%(name)s: [%(levelname)s] %(message)s'))
         app.logger.addHandler(handler)
+
+
+app.wsgi_app = RemoveTransferEncodingHeaderMiddleware(app.wsgi_app)
 
 
 @app.before_request
