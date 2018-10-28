@@ -83,7 +83,8 @@ def output_turtle(data, code, headers={}, filename=None):
     if request.path == '/':
         return routes.void()
 
-    response = make_response(utils.jsonld_to_turtle(data), code)
+    ttl = '' if code != 200 else utils.jsonld_to_turtle(data)
+    response = make_response(ttl, code)
     response.content_type = 'text/turtle'
     response.headers.extend(headers)
 
