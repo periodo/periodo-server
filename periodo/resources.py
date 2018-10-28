@@ -65,11 +65,8 @@ versioned_parser.add_argument(
 
 
 def parse_json(request):
-    data = request.data or ''
-    if isinstance(data, bytes):
-        data = data.decode()
     try:
-        return json.loads(data)
+        return json.loads(request.get_data(as_text=True))
     except json.JSONDecodeError:
         raise ResourceError(400, 'Request data could not be parsed as JSON.')
 
