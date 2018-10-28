@@ -4,5 +4,5 @@ class RemoveTransferEncodingHeaderMiddleware(object):
         self.app = app
 
     def __call__(self, environ, start_response):
-        print(environ)
+        environ.pop('HTTP_TRANSFER_ENCODING', None)
         return self.app(environ, start_response)
