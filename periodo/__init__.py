@@ -66,7 +66,7 @@ if not app.debug:
 
 @app.before_request
 def log_request_headers():
-    print(request.headers)
+    app.logger.error('Headers: %s' % request.headers)
 
 
 @app.after_request
