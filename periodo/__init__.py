@@ -39,6 +39,14 @@ app.secret_key = SECRET_KEY
 app.url_map.converters['uuid'] = UUIDConverter
 principal = Principal(app, use_sessions=False)
 
+# When receiving requests with the HTTP header 'Transfer-Encoding: chunked',
+# the combination of nginx + uwsgi somehow adds a (correct) 'Content-Length'
+# header but does not remove the 'Transfer-Encoding' header. But these two
+# headers are incompatible and confuse werkzeug, so we remove the
+# 'Transfer-Encoding' header with this middleware.
+app.wsgi_app = RemoveTransferEncodingHeaderMiddleware(app.wsgi_app)
+
+
 app.config.update(
     DATABASE=os.environ.get('DATABASE', './db.sqlite'),
     CACHE=os.environ.get('CACHE', None),
@@ -64,14 +72,6 @@ if not app.debug:
         handler.setFormatter(
             logging.Formatter('%(name)s: [%(levelname)s] %(message)s'))
         app.logger.addHandler(handler)
-
-
-app.wsgi_app = RemoveTransferEncodingHeaderMiddleware(app.wsgi_app)
-
-
-@app.before_request
-def log_request_headers():
-    app.logger.error('Headers: %s' % request.headers)
 
 
 @app.after_request
