@@ -65,11 +65,11 @@ def purge_endpoint(endpoint, key=attrgetter('rule'), params=[]):
 
 
 def purge_history():
-    purge_endpoint('history', ['full', 'inline-context'])
+    purge_endpoint('history', params=['full', 'inline-context'])
 
 
 def purge_dataset():
-    purge_endpoint('dataset', ['inline-context'])
+    purge_endpoint('dataset', params=['inline-context'])
 
 
 def purge_graphs():
