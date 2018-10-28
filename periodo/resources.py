@@ -304,6 +304,8 @@ class Dataset(Resource):
             return None, 202, {
                 'Location': url_for('patchrequest', id=patch_request_id)
             }
+        except ResourceError as e:
+            return e.response()
         except patching.InvalidPatchError as e:
             return {'status': 400, 'message': str(e)}, 400
 
@@ -485,6 +487,8 @@ class Patch(Resource):
             patch = JsonPatch(parse_json(request))
             affected_entities = patching.validate(
                 patch, database.get_dataset())
+        except ResourceError as e:
+            return e.response()
         except patching.InvalidPatchError as e:
             if str(e) != 'Could not apply JSON patch to dataset.':
                 return {'status': 400, 'message': str(e)}, 400
@@ -574,7 +578,10 @@ class Bag(Resource):
     @auth.update_bag_permission.require()
     def put(self, uuid):
 
-        data = parse_json(request)
+        try:
+            data = parse_json(request)
+        except ResourceError as e:
+            return e.response()
 
         title = str(data.get('title', ''))
         if len(title) == 0:
@@ -678,10 +685,13 @@ class Graphs(Resource):
 class Graph(Resource):
     @auth.update_graph_permission.require()
     def put(self, id):
-        version = database.create_or_update_graph(id, parse_json(request))
-        return None, 201, {
-            'Location': url_for('graph', id=id, version=version)
-        }
+        try:
+            version = database.create_or_update_graph(id, parse_json(request))
+            return None, 201, {
+                'Location': url_for('graph', id=id, version=version)
+            }
+        except ResourceError as e:
+            return e.response()
 
     def get(self, id):
         if id.endswith('/'):
