@@ -683,6 +683,8 @@ class Graphs(Resource):
 class Graph(Resource):
     @auth.update_graph_permission.require()
     def put(self, id):
+        if id.endswith('/'):
+            return {'message': 'graph uri path cannot end in /'}, 400
         try:
             version = database.create_or_update_graph(id, parse_json(request))
             if (version > 0):

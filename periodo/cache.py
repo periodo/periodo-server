@@ -79,8 +79,8 @@ def purge_graphs():
 def subpaths(path):
     if path == '':
         return []
-    else:
-        return [path] + subpaths(path[0:path.rfind('/')])
+    end = -2 if path.endswith('/') else -1
+    return [path] + subpaths(path[0:path.rfind('/', 0, end) + 1])
 
 
 def purge_graph(graph_id):
