@@ -58,7 +58,7 @@ if not app.debug:
         import logging
         from logging.handlers import SysLogHandler
         handler = SysLogHandler(address=socket)
-        handler.setLevel(logging.WARNING)
+        handler.setLevel(logging.DEBUG)
         handler.setFormatter(
             logging.Formatter('%(name)s: [%(levelname)s] %(message)s'))
         app.logger.addHandler(handler)
