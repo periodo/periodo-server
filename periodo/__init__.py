@@ -64,6 +64,11 @@ if not app.debug:
         app.logger.addHandler(handler)
 
 
+@app.before_request
+def log_request_headers():
+    app.logger.debug(request.headers)
+
+
 @app.after_request
 def add_date_header(response):
     response.headers.add('Date', http_date())
