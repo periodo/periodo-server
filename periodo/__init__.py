@@ -7,7 +7,6 @@ from flask_principal import Principal
 from flask_restful import Api
 from werkzeug.http import http_date
 from werkzeug.routing import BaseConverter
-from periodo.middleware import StreamConsumingMiddleware
 
 # Allow running tests without access to periodo.secrets
 try:
@@ -36,7 +35,6 @@ class UUIDConverter(BaseConverter):
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 app.url_map.converters['uuid'] = UUIDConverter
-app.wsgi_app = StreamConsumingMiddleware(app.wsgi_app)
 principal = Principal(app, use_sessions=False)
 
 app.config.update(
