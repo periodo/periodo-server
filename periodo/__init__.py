@@ -58,7 +58,7 @@ if not app.debug:
         import logging
         from logging.handlers import SysLogHandler
         handler = SysLogHandler(address=socket)
-        handler.setLevel(logging.DEBUG)
+        handler.setLevel(logging.INFO)
         handler.setFormatter(
             logging.Formatter('%(name)s: [%(levelname)s] %(message)s'))
         app.logger.addHandler(handler)
@@ -66,7 +66,7 @@ if not app.debug:
 
 @app.before_request
 def log_request_headers():
-    app.logger.debug(request.headers)
+    print(request.headers)
 
 
 @app.after_request
