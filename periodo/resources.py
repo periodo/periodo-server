@@ -516,6 +516,7 @@ class PatchMerge(Resource):
             database.commit()
             cache.purge_history()
             cache.purge_dataset()
+            cache.purge_graphs()
             return None, 204
         except patching.MergeError as e:
             return {'message': e.message}, 404
@@ -667,7 +668,7 @@ def get_graphs(prefix=None):
         return data
 
 
-@add_resources('graphs', suffixes=['json'], barepaths=['/graphs/'])
+@add_resources('graphs', suffixes=['json'], barepaths=['/graphs/'], html=False)
 class Graphs(Resource):
     def get(self):
         data = get_graphs()
@@ -684,6 +685,8 @@ class Graph(Resource):
     def put(self, id):
         try:
             version = database.create_or_update_graph(id, parse_json(request))
+            if (version > 0):
+                cache.purge_graph(id)
             return None, 201, {
                 'Location': url_for('graph', id=id, version=version)
             }
@@ -720,6 +723,7 @@ class Graph(Resource):
     @auth.update_graph_permission.require()
     def delete(self, id):
         if database.delete_graph(id):
+            cache.purge_graph(id)
             return None, 204
         else:
             abort(404)

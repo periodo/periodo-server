@@ -1,6 +1,7 @@
 import os
 from hashlib import md5
 from periodo import app
+from operator import attrgetter
 
 LONG_TIME = 31557600  # 1 year - versioned reprs that should not change
 MEDIUM_TIME = 604800  # 1 week - slow-to-generate reprs that change infreq.
@@ -52,10 +53,10 @@ def purge(keys):
                 app.logger.error('Error was: {}'.format(e))
 
 
-def purge_endpoint(endpoint, params):
+def purge_endpoint(endpoint, key=attrgetter('rule'), params=[]):
     if app.config['CACHE'] is not None:
         keys = [
-            r.rule for r in app.url_map.iter_rules()
+            key(r) for r in app.url_map.iter_rules()
             if r.endpoint.startswith(endpoint)
         ]
         purge(keys)
@@ -69,3 +70,21 @@ def purge_history():
 
 def purge_dataset():
     purge_endpoint('dataset', ['inline-context'])
+
+
+def purge_graphs():
+    purge_endpoint('graphs')
+
+
+def subpaths(path):
+    if path == '':
+        return []
+    else:
+        return [path] + subpaths(path[0:path.rfind('/')])
+
+
+def purge_graph(graph_id):
+    for path in subpaths(graph_id):
+        def key(r):
+            return r.rule.replace('<path:id>', path)
+        purge_endpoint('graph', key=key)
