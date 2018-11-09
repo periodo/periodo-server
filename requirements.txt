@@ -5,4 +5,4 @@ Pygments==2.2.0
 Werkzeug==0.14.1
 jsonpatch==1.23
 rdflib-jsonld==0.4.0
-requests==2.20.0
+requests==2.20.1
