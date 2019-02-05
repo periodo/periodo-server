@@ -661,7 +661,7 @@ def get_graphs(prefix=None):
                 }},
             'graphs': {}
         }
-        graphs = database.get_graphs()
+        graphs = database.get_graphs(prefix)
         for graph in graphs:
             graph_url = url_for('graph', id=graph['id'], _external=True)
             data['graphs'][graph_url] = json.loads(graph['data'])
@@ -679,7 +679,11 @@ class Graphs(Resource):
         return cache.medium_time(api.make_response(data, 200))
 
 
-@add_resources('graphs/<path:id>', endpoint='graph', suffixes=['json'])
+@add_resources(
+    'graphs/<path:id>',
+    endpoint='graph',
+    suffixes=['json'],
+    html=False)
 class Graph(Resource):
     @auth.update_graph_permission.require()
     def put(self, id):
@@ -696,8 +700,9 @@ class Graph(Resource):
             return e.response()
 
     def get(self, id):
-        if id.endswith('/'):
-            return cache.medium_time(api.make_response(get_graphs(id), 200))
+        data = get_graphs(prefix=id)
+        if len(data['graphs']) > 0:
+            return cache.medium_time(api.make_response(data, 200))
 
         args = versioned_parser.parse_args()
         version = args.get('version')

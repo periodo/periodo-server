@@ -222,7 +222,31 @@ class TestGraphs(unittest.TestCase):
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
             self.assertEqual(res.status_code, http.client.CREATED)
+            res = client.put(
+                '/graphs/not-places/C',
+                data=graph_json,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+            self.assertEqual(res.status_code, http.client.CREATED)
+
             res = client.get('/graphs/places/')
+            self.assertEqual(res.status_code, http.client.OK)
+            data = json.loads(res.get_data(as_text=True))
+            self.assertEqual(
+                {'http://localhost.localdomain:5000/graphs/places/A',
+                 'http://localhost.localdomain:5000/graphs/places/B'},
+                set(data['graphs'].keys()))
+
+            res = client.get('/graphs/places.json')
+            self.assertEqual(res.status_code, http.client.OK)
+            data = json.loads(res.get_data(as_text=True))
+            self.assertEqual(
+                {'http://localhost.localdomain:5000/graphs/places/A',
+                 'http://localhost.localdomain:5000/graphs/places/B'},
+                set(data['graphs'].keys()))
+
+            res = client.get('/graphs/places')
             self.assertEqual(res.status_code, http.client.OK)
             data = json.loads(res.get_data(as_text=True))
             self.assertEqual(
