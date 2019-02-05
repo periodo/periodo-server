@@ -652,11 +652,16 @@ class Bag(Resource):
 
 
 def get_graphs(prefix=None):
+        if prefix and prefix.endswith('/'):
+            prefix = prefix[:-1]
+        id = (url_for('graphs', _external=True)
+              + (prefix if prefix else '')
+              + '/')
         data = {
             '@context': {
                 '@version': 1.1,
                 'graphs': {
-                    '@id': url_for('graphs'),
+                    '@id': id,
                     '@container': ['@graph', '@id']
                 }},
             'graphs': {}

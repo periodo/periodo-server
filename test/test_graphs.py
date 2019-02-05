@@ -237,6 +237,9 @@ class TestGraphs(unittest.TestCase):
                 {'http://localhost.localdomain:5000/graphs/places/A',
                  'http://localhost.localdomain:5000/graphs/places/B'},
                 set(data['graphs'].keys()))
+            self.assertEqual(
+                'http://localhost.localdomain:5000/graphs/places/',
+                data['@context']['graphs']['@id'])
 
             res = client.get('/graphs/places.json')
             self.assertEqual(res.status_code, http.client.OK)
@@ -245,6 +248,9 @@ class TestGraphs(unittest.TestCase):
                 {'http://localhost.localdomain:5000/graphs/places/A',
                  'http://localhost.localdomain:5000/graphs/places/B'},
                 set(data['graphs'].keys()))
+            self.assertEqual(
+                'http://localhost.localdomain:5000/graphs/places/',
+                data['@context']['graphs']['@id'])
 
             res = client.get('/graphs/places')
             self.assertEqual(res.status_code, http.client.OK)
@@ -253,3 +259,6 @@ class TestGraphs(unittest.TestCase):
                 {'http://localhost.localdomain:5000/graphs/places/A',
                  'http://localhost.localdomain:5000/graphs/places/B'},
                 set(data['graphs'].keys()))
+            self.assertEqual(
+                'http://localhost.localdomain:5000/graphs/places/',
+                data['@context']['graphs']['@id'])

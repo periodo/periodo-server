@@ -166,8 +166,6 @@ ON g.id = graph.id
 AND g.maxversion = graph.version
 ''')
     else:
-        if prefix.endswith('/'):
-            prefix = prefix[:-1]
         return query_db('''
 SELECT graph.id AS id, graph.data AS data
 FROM (
