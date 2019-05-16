@@ -1,29 +1,60 @@
 import os
+import json
+import rdflib
+from uuid import UUID
 from flask import Flask, request
 from flask_principal import Principal
 from flask_restful import Api
-from periodo.secrets import (
-    SECRET_KEY, DB, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
-from periodo.utils import UUIDConverter
-from periodo.middleware import StreamConsumingMiddleware
+from werkzeug.http import http_date
+from werkzeug.routing import BaseConverter
+from periodo.middleware import RemoveTransferEncodingHeaderMiddleware
+
+
+# Allow running tests without access to periodo.secrets
+try:
+    from periodo.secrets import (
+        SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
+except ModuleNotFoundError as e:
+    if 'TESTING' in os.environ:
+        SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET = 'xxx', 'xxx', 'xxx'
+    else:
+        raise e
+
+# Disable normalization of literals because rdflib handles gYears improperly:
+# https://github.com/RDFLib/rdflib/issues/806
+rdflib.NORMALIZE_LITERALS = False
+
+
+class UUIDConverter(BaseConverter):
+
+    def to_python(self, s):
+        return UUID(s)
+
+    def to_url(self, uuid):
+        return str(uuid)
+
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 app.url_map.converters['uuid'] = UUIDConverter
-app.wsgi_app = StreamConsumingMiddleware(app.wsgi_app)
 principal = Principal(app, use_sessions=False)
 
+# When receiving requests with the HTTP header 'Transfer-Encoding: chunked',
+# the combination of nginx + uwsgi somehow adds a (correct) 'Content-Length'
+# header but does not remove the 'Transfer-Encoding' header. But these two
+# headers are incompatible and confuse werkzeug, so we remove the
+# 'Transfer-Encoding' header with this middleware.
+app.wsgi_app = RemoveTransferEncodingHeaderMiddleware(app.wsgi_app)
+
+
 app.config.update(
-    DATABASE=DB,
+    DATABASE=os.environ.get('DATABASE', './db.sqlite'),
+    CACHE=os.environ.get('CACHE', None),
+    SERVER_NAME=os.environ.get('SERVER_NAME', 'localhost.localdomain:5000'),
+    CLIENT_URL=os.environ.get('CLIENT_URL', 'https://client.perio.do'),
+    CANONICAL=json.loads(os.environ.get('CANONICAL', 'false')),
     ORCID_CLIENT_ID=ORCID_CLIENT_ID,
-    ORCID_CLIENT_SECRET=ORCID_CLIENT_SECRET,
-    # HTML representation of root resource is optional and dependent on the
-    # existence of a folder in static/html containing an index.html file.
-    HTML_REPR_EXISTS=os.path.exists(os.path.join(
-        os.path.dirname(__file__),
-        'static',
-        'html',
-        'index.html'))
+    ORCID_CLIENT_SECRET=ORCID_CLIENT_SECRET
 )
 
 if not app.debug:
@@ -37,10 +68,16 @@ if not app.debug:
         import logging
         from logging.handlers import SysLogHandler
         handler = SysLogHandler(address=socket)
-        handler.setLevel(logging.WARNING)
+        handler.setLevel(logging.INFO)
         handler.setFormatter(
             logging.Formatter('%(name)s: [%(levelname)s] %(message)s'))
         app.logger.addHandler(handler)
+
+
+@app.after_request
+def add_date_header(response):
+    response.headers.add('Date', http_date())
+    return response
 
 
 @app.after_request
@@ -56,6 +93,16 @@ def add_cors_headers(response):
 import periodo.auth  # noqa: E402
 
 
+SUFFIXES = {
+    '.json': 'application/json',
+    '.jsonld': 'application/ld+json',
+    '.ttl': 'text/turtle',
+    '.json.html': 'application/json+html',
+    '.jsonld.html': 'application/json+html',
+    '.ttl.html': 'text/turtle+html',
+}
+
+
 class PeriodOApi(Api):
     def handle_error(self, e):
         response = periodo.auth.handle_auth_error(e)
@@ -66,16 +113,10 @@ class PeriodOApi(Api):
 
     def make_response(self, data, *args, **kwargs):
         # Override content negotation for content-type-specific URLs.
-        if request.path.endswith('.json'):
-            res = self.representations[
-                'application/json'](data, *args, **kwargs)
-            res.content_type = 'application/json'
-            return res
-        if request.path.endswith('.jsonld'):
-            res = self.representations[
-                'application/json'](data, *args, **kwargs)
-            res.content_type = 'application/ld+json'
-            return res
+        for suffix, content_type in SUFFIXES.items():
+            if request.path.endswith(suffix):
+                return self.representations[content_type](
+                    data, *args, **kwargs)
         return super().make_response(data, *args, **kwargs)
 
 

@@ -1,0 +1,10 @@
+[
+  {
+    "op": "add",
+    "path": "/@context/foobar",
+    "value": {
+      "@id": "http://example.org/vocab#foobar",
+      "@type": "@id"
+    }
+  }
+]

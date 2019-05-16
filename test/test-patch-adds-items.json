@@ -1,7 +1,7 @@
 [
   {
     "op": "add",
-    "path": "/periodCollections/p0trgkv/definitions/https:~1~1perio.do~1.well-known~1genid~153f38e07f928ecdb849c1a98bbc24917",
+    "path": "/authorities/p0trgkv/periods/https:~1~1perio.do~1.well-known~1genid~153f38e07f928ecdb849c1a98bbc24917",
     "value": {
       "id": "https://perio.do/.well-known/genid/53f38e07f928ecdb849c1a98bbc24917",
       "label": "Herakleid",
@@ -32,12 +32,13 @@
   },
   {
     "op": "add",
-    "path": "/periodCollections/https:~1~1perio.do~1.well-known~1genid~136c1db27acc00e91c8a628abcaa64eb0",
+    "path": "/authorities/https:~1~1perio.do~1.well-known~1genid~136c1db27acc00e91c8a628abcaa64eb0",
     "value": {
-      "definitions": {
+      "periods": {
         "https://perio.do/.well-known/genid/8d3df296ba8665cf4045d34a2d983c97": {
           "editorialNote": "May be an inference, not statement / assertion.",
           "id": "https://perio.do/.well-known/genid/8d3df296ba8665cf4045d34a2d983c97",
+          "narrower": "https://perio.do/.well-known/genid/d3f3f7b88bb711e8bf5b720004e3fb90",
           "label": "Iron Age",
           "language": "eng-latn",
           "localizedLabels": {
@@ -61,6 +62,34 @@
               "year": "0043"
             },
             "label": "43 A.D."
+          }
+        },
+        "https://perio.do/.well-known/genid/d3f3f7b88bb711e8bf5b720004e3fb90": {
+          "id": "https://perio.do/.well-known/genid/d3f3f7b88bb711e8bf5b720004e3fb90",
+          "broader": "https://perio.do/.well-known/genid/8d3df296ba8665cf4045d34a2d983c97",
+          "label": "Iron Age A",
+          "language": "eng-latn",
+          "localizedLabels": {
+            "eng-latn": [ "Iron Age A" ]
+          },
+          "spatialCoverage": [
+            {
+              "id": "http://dbpedia.org/resource/United_Kingdom",
+              "label": "United Kingdom"
+            }
+          ],
+          "spatialCoverageDescription": "Roman Britain",
+          "start": {
+            "in": {
+              "year": "-0799"
+            },
+            "label": "800 B.C."
+          },
+          "stop": {
+            "in": {
+              "year": "-0699"
+            },
+            "label": "700 B.C."
           }
         }
       },

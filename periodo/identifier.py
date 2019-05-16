@@ -6,37 +6,37 @@ from jsonpatch import JsonPatch
 
 PREFIX = 'p0'  # shoulder assigned by EZID service
 XDIGITS = '23456789bcdfghjkmnpqrstvwxz'
-COLLECTION_SEQUENCE_LENGTH = 4
-DEFINITION_SEQUENCE_LENGTH = 3
+AUTHORITY_SEQUENCE_LENGTH = 4
+PERIOD_SEQUENCE_LENGTH = 3
 IDENTIFIER_RE = re.compile(
     r'^%s[%s]{%s}(?:[%s]{1}[%s]{%s})?[%s]{1}$' % (
         PREFIX,
-        XDIGITS, COLLECTION_SEQUENCE_LENGTH,
+        XDIGITS, AUTHORITY_SEQUENCE_LENGTH,
         XDIGITS,
-        XDIGITS, DEFINITION_SEQUENCE_LENGTH,
+        XDIGITS, PERIOD_SEQUENCE_LENGTH,
         XDIGITS))
-ADD_DEFINITION_PATH = re.compile(
-    r'^(?P<path_prefix>/periodCollections/(?P<collection_id>.*)/definitions/)'
+ADD_PERIOD_PATH = re.compile(
+    r'^(?P<path_prefix>/authorities/(?P<authority_id>.*)/periods/)'
     + r'(.*)~1\.well-known~1genid~1(.*)$')
-REPLACE_DEFINITIONS_PATH = re.compile(
-    r'^/periodCollections/(?P<collection_id>.*)/definitions$')
-ADD_COLLECTION_PATH = re.compile(
-    r'^(?P<path_prefix>/periodCollections/)(.*)~1\.well-known~1genid~1(.*)$')
+REPLACE_PERIODS_PATH = re.compile(
+    r'^/authorities/(?P<authority_id>.*)/periods$')
+ADD_AUTHORITY_PATH = re.compile(
+    r'^(?P<path_prefix>/authorities/)(.*)~1\.well-known~1genid~1(.*)$')
 SKOLEM_BASE = r'^(.*)/\.well-known/genid/'
 SKOLEM_URI = re.compile(SKOLEM_BASE + r'(.*)$')
 ASSIGNED_SKOLEM_URI = re.compile(SKOLEM_BASE + r'assigned/(?P<id>.*)$')
 
 
-def for_definition(collection_id):
-    check(collection_id)
+def for_period(authority_id):
+    check(authority_id)
     return id_from_sequence(
-        collection_id[len(PREFIX):] +
-        random_sequence(DEFINITION_SEQUENCE_LENGTH))
+        authority_id[len(PREFIX):] +
+        random_sequence(PERIOD_SEQUENCE_LENGTH))
 
 
-def for_collection():
+def for_authority():
     return id_from_sequence(
-        random_sequence(COLLECTION_SEQUENCE_LENGTH))
+        random_sequence(AUTHORITY_SEQUENCE_LENGTH))
 
 
 def prefix(s):
@@ -57,16 +57,32 @@ def id_from_sequence(sequence):
     return prefix(add_check_digit(sequence))
 
 
-def check(identifier):
+def assert_valid(identifier, strict=True):
+    return check(prefix(identifier), strict)
+
+
+def check(identifier, strict=True):
     if not IDENTIFIER_RE.match(identifier):
         raise IdentifierException(
             'malformed identifier: {}'.format(identifier))
-    check_digit = check_digit_for(identifier[len(PREFIX):-1])
-    if not check_digit == identifier[-1]:
-        raise IdentifierException(
-            ('malformed identifier: {}' +
-             ' (check digit was {} but should have been {})').format(
-                 identifier, identifier[-1], check_digit))
+    sequence = identifier[len(PREFIX):-1]
+    check_digit = check_digit_for(sequence)
+    if check_digit == identifier[-1]:
+        return
+
+    if not strict:
+        # Identifiers minted for periods in the initial data load had their
+        # checksums calculated in a different way (a `/` was inserted
+        # between the authority and period IDs to form the sequence),
+        # so check for that variation as well.
+        old_check_digit = OLD_check_digit_for(sequence)
+        if old_check_digit == identifier[-1]:
+            return
+
+    raise IdentifierException(
+        ('malformed identifier: {}' +
+         ' (check digit was {} but should have been {})').format(
+             identifier, identifier[-1], check_digit))
 
 
 def random_sequence(length):
@@ -91,6 +107,15 @@ def check_digit_for(sequence):
     return XDIGITS[total % len(XDIGITS)]
 
 
+def OLD_check_digit_for(sequence):
+    if len(sequence) > AUTHORITY_SEQUENCE_LENGTH:
+        authority_id = sequence[:-PERIOD_SEQUENCE_LENGTH]
+        period_id = sequence[-PERIOD_SEQUENCE_LENGTH:]
+        return check_digit_for('%s/%s' % (authority_id, period_id))
+
+    return check_digit_for(sequence)
+
+
 def index_by_id(items):
     return {i['id']: i for i in items}
 
@@ -102,8 +127,8 @@ def replace_skolem_ids(patch_or_obj, dataset, removed_entity_keys):
     existing_ids = set([unprefix(key) for key in removed_entity_keys])
     if (len(dataset) > 0):
         existing_ids |= set(chain.from_iterable(
-            ([cid] + list(c['definitions'].keys())
-             for cid, c in dataset['periodCollections'].items())))
+            ([cid] + list(c['periods'].keys())
+             for cid, c in dataset['authorities'].items())))
 
     def unused_identifier(id_generator, *args):
         for i in range(10):
@@ -128,62 +153,80 @@ def replace_skolem_ids(patch_or_obj, dataset, removed_entity_keys):
         existing_ids.add(permanent_id)
         return permanent_id
 
-    def assign_definition_id(definition, collection_id):
-        definition['id'] = deskolemize(
-            definition['id'], for_definition, collection_id)
-        return definition
+    def assign_period_id(period, authority_id):
+        period['id'] = deskolemize(
+            period['id'], for_period, authority_id)
+        return period
 
-    def assign_collection_ids(collection):
-        collection['id'] = deskolemize(collection['id'], for_collection)
-        collection['definitions'] = index_by_id(
-            [assign_definition_id(d, collection['id'])
-             for d in collection['definitions'].values()])
-        return collection
+    def assign_authority_ids(authority):
+        authority['id'] = deskolemize(authority['id'], for_authority)
+        authority['periods'] = index_by_id(
+            [assign_period_id(d, authority['id'])
+             for d in authority['periods'].values()])
+        return authority
 
     def modify_operation(op):
         new_op = deepcopy(op)
 
-        m = ADD_DEFINITION_PATH.match(op['path'])
+        m = ADD_PERIOD_PATH.match(op['path'])
         if m and op['op'] == 'add':
-            # adding a new definition to a collection
-            collection_id = m.group('collection_id')
-            new_op['value'] = assign_definition_id(
-                new_op['value'], collection_id)
+            # adding a new period to an authority
+            authority_id = m.group('authority_id')
+            new_op['value'] = assign_period_id(
+                new_op['value'], authority_id)
             new_op['path'] = m.group('path_prefix') + new_op['value']['id']
             return new_op
 
-        m = REPLACE_DEFINITIONS_PATH.match(op['path'])
+        m = REPLACE_PERIODS_PATH.match(op['path'])
         if m and op['op'] in ['add', 'replace']:
-            # replacing all definitions in a collection
-            collection_id = m.group('collection_id')
+            # replacing all periods in an authority
+            authority_id = m.group('authority_id')
             new_op['value'] = index_by_id(
-                [assign_definition_id(d, collection_id)
+                [assign_period_id(d, authority_id)
                  for d in new_op['value'].values()])
             return new_op
 
-        m = ADD_COLLECTION_PATH.match(op['path'])
+        m = ADD_AUTHORITY_PATH.match(op['path'])
         if m and op['op'] == 'add':
-            # adding new collection
-            new_op['value'] = assign_collection_ids(new_op['value'])
+            # adding new authority
+            new_op['value'] = assign_authority_ids(new_op['value'])
             new_op['path'] = m.group('path_prefix') + new_op['value']['id']
             return new_op
 
-        if (op['path'] == '/periodCollections'
+        if (op['path'] == '/authorities'
                 and op['op'] in ['add', 'replace']):
-            # replacing all collections
+            # replacing all authorities
             new_op['value'] = index_by_id(
-                [assign_collection_ids(c) for c in new_op['value'].values()])
+                [assign_authority_ids(c) for c in new_op['value'].values()])
             return new_op
 
         return new_op
 
+    def is_skolem_uri(v):
+        if not isinstance(v, str):
+            return False
+        if ASSIGNED_SKOLEM_URI.match(v):
+            return True
+        if SKOLEM_URI.match(v):
+            return True
+        return False
+
+    def replace_skolem_values(d):
+        for k, v in d.items():
+            if isinstance(v, dict):
+                d[k] = replace_skolem_values(v)
+            elif is_skolem_uri(v):
+                d[k] = id_map[v]
+        return d
+
     if hasattr(patch_or_obj, 'patch'):
-        result = JsonPatch([modify_operation(op) for op in patch_or_obj])
+        ops = [modify_operation(op) for op in patch_or_obj]
+        result = JsonPatch([replace_skolem_values(op) for op in ops])
     else:
         result = deepcopy(patch_or_obj)
-        result['periodCollections'] = index_by_id(
-            [assign_collection_ids(c)
-             for c in patch_or_obj['periodCollections'].values()])
+        result['authorities'] = replace_skolem_values(index_by_id(
+            [assign_authority_ids(c)
+             for c in patch_or_obj['authorities'].values()]))
 
     return result, id_map
 

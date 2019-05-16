@@ -32,7 +32,7 @@ class TestAuthentication(unittest.TestCase):
 
     def test_add_user(self):
         self.assertEqual(
-            self.identity.id, 'http://orcid.org/1234-5678-9101-112X')
+            self.identity.id, 'https://orcid.org/1234-5678-9101-112X')
         self.assertEqual(
             self.identity.auth_type, 'bearer')
         with app.app_context():
