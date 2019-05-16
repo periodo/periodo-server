@@ -3,7 +3,9 @@
 @prefix periodo: <p0v#> .
 
 @prefix bibo: <http://purl.org/ontology/bibo/> .
+@prefix dce: <http://purl.org/dc/elements/1.1/> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix lvont: <http://lexvo.org/ontology#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
@@ -37,8 +39,12 @@ periodo:PeriodShape
     periodo:PeriodSpatialCoverageShape ,
     periodo:PeriodSameAsShape ,
     periodo:PeriodDerivedFromShape ,
+    periodo:PeriodBroaderShape ,
+    periodo:PeriodNarrowerShape ,
     periodo:PeriodURLShape ,
-    periodo:PeriodLanguageShape
+    periodo:PeriodLanguageTagShape ,
+    periodo:PeriodLanguageShape ,
+    periodo:PeriodScriptShape
   .
 
 periodo:PeriodPreferredLabelShape
@@ -58,6 +64,35 @@ periodo:PeriodLocalizedLabelShape
   sh:name "localized label" ;
   sh:description "Language-specific name for the period" ;
   sh:datatype rdf:langString ;
+  sh:languageIn (
+    "ar"
+    "bg"
+    "cmn-Hans"
+    "cmn-Hant"
+    "cmn-Latn"
+    "de"
+    "el"
+    "en"
+    "es"
+    "fr"
+    "hu"
+    "it"
+    "ja-Latn"
+    "ko-Latn"
+    "mi-Latn"
+    "mk"
+    "nl"
+    "ota-Arab"
+    "pt"
+    "ro"
+    "scn"
+    "sl"
+    "sq"
+    "sr-Cyrl"
+    "sv"
+    "tr"
+    "uk"
+    ) ;
   sh:minCount 1 ;
   sh:message "Problem with period localized label" ;
   .
@@ -188,6 +223,26 @@ periodo:PeriodDerivedFromShape
   sh:message "Problem with derived from" ;
   .
 
+periodo:PeriodBroaderShape
+  rdf:type sh:PropertyShape ;
+  sh:path skos:broader ;
+  sh:name "see broader period" ;
+  sh:description "Another period period that encompasses this one" ;
+  sh:nodeKind sh:IRI ;
+  sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
+  sh:message "Problem with period broader" ;
+  .
+
+periodo:PeriodNarrowerShape
+  rdf:type sh:PropertyShape ;
+  sh:path skos:narrower ;
+  sh:name "see narrower period" ;
+  sh:description "Another period period encompassed by this one" ;
+  sh:nodeKind sh:IRI ;
+  sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
+  sh:message "Problem with period narrower" ;
+  .
+
 periodo:PeriodURLShape
   rdf:type sh:PropertyShape ;
   sh:path foaf:page ;
@@ -197,13 +252,65 @@ periodo:PeriodURLShape
   sh:message "Problem with period URL" ;
   .
 
+periodo:PeriodLanguageTagShape
+  rdf:type sh:PropertyShape ;
+  sh:path dce:language ;
+  sh:name "language tag" ;
+  sh:description "Language tag of the preferred label for this period" ;
+  sh:datatype xsd:string ;
+  sh:in (
+    "ar"
+    "bg"
+    "cmn-Hans"
+    "cmn-Hant"
+    "cmn-Latn"
+    "de"
+    "el"
+    "en"
+    "es"
+    "fr"
+    "hu"
+    "it"
+    "ja-Latn"
+    "ko-Latn"
+    "mi-Latn"
+    "mk"
+    "nl"
+    "ota-Arab"
+    "pt"
+    "ro"
+    "scn"
+    "sl"
+    "sq"
+    "sr-Cyrl"
+    "sv"
+    "tr"
+    "uk"
+    ) ;
+  sh:minCount 1 ;
+  sh:maxCount 1 ;
+  sh:message "Problem with period language tag" ;
+  .
+
 periodo:PeriodLanguageShape
   rdf:type sh:PropertyShape ;
   sh:path dcterms:language ;
   sh:name "language" ;
   sh:description "Language of the preferred label for this period" ;
-  sh:datatype xsd:string ;
+  sh:nodeKind sh:IRI ;
+  sh:pattern "^http://lexvo.org/id/iso639-[13]/[a-z]{2,3}" ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
   sh:message "Problem with period language" ;
+  .
+
+periodo:PeriodScriptShape
+  rdf:type sh:PropertyShape ;
+  sh:path lvont:inScript ;
+  sh:name "script" ;
+  sh:description "Script of the preferred label for this period" ;
+  sh:nodeKind sh:IRI ;
+  sh:pattern "^http://lexvo.org/id/script/[A-Z][a-z]{3}" ;
+  sh:maxCount 1 ;
+  sh:message "Problem with period script" ;
   .
