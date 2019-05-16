@@ -146,18 +146,29 @@ class TestGraphs(unittest.TestCase):
                 json.loads(res.get_data(as_text=True))[
                     'features'][0]['names'][0]['toponym'],
                 'Minnesooooooota')
+            self.assertEqual(
+                res.headers['Content-Disposition'],
+                'attachment; filename="periodo-graph-places-us-states.json"')
 
             res = client.get('/graphs/%s?version=0' % id)
             self.assertEqual(
                 json.loads(res.get_data(as_text=True))[
                     'features'][0]['names'][0]['toponym'],
                 'Minnesota')
+            self.assertEqual(
+                res.headers['Content-Disposition'],
+                'attachment; '
+                + 'filename="periodo-graph-places-us-states-v0.json"')
 
             res = client.get('/graphs/%s?version=1' % id)
             self.assertEqual(
                 json.loads(res.get_data(as_text=True))[
                     'features'][0]['names'][0]['toponym'],
                 'Minnesooooooota')
+            self.assertEqual(
+                res.headers['Content-Disposition'],
+                'attachment; '
+                + 'filename="periodo-graph-places-us-states-v1.json"')
 
     def test_delete_graph(self):
         with open(filepath('test-graph.json')) as f:
@@ -262,3 +273,22 @@ class TestGraphs(unittest.TestCase):
             self.assertEqual(
                 'http://localhost.localdomain:5000/graphs/places/',
                 data['@context']['graphs']['@id'])
+            self.assertEqual(
+                res.headers['Content-Disposition'],
+                'attachment; filename="periodo-graph-places.json"')
+
+            res = client.get('/graphs/')
+            self.assertEqual(res.status_code, http.client.OK)
+            data = json.loads(res.get_data(as_text=True))
+            self.assertEqual(
+                {'http://localhost.localdomain:5000/graphs/places/A',
+                 'http://localhost.localdomain:5000/graphs/places/B',
+                 'http://localhost.localdomain:5000/graphs/not-places/C',
+                 'http://localhost.localdomain:5000/d/'},
+                set(data['graphs'].keys()))
+            self.assertEqual(
+                'http://localhost.localdomain:5000/graphs/',
+                data['@context']['graphs']['@id'])
+            self.assertEqual(
+                res.headers['Content-Disposition'],
+                'attachment; filename="periodo-graphs.json"')

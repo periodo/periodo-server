@@ -655,8 +655,7 @@ def get_graphs(prefix=None):
         if prefix and prefix.endswith('/'):
             prefix = prefix[:-1]
         id = (url_for('graphs', _external=True)
-              + (prefix if prefix else '')
-              + '/')
+              + ((prefix + '/') if prefix else ''))
         data = {
             '@context': {
                 '@version': 1.1,
@@ -681,7 +680,8 @@ class Graphs(Resource):
         if dataset:
             dataset_url = url_for('dataset', _external=True)
             data['graphs'][dataset_url] = json.loads(dataset['data'])
-        return cache.medium_time(api.make_response(data, 200))
+        return cache.medium_time(
+            api.make_response(data, 200, filename='periodo-graphs'))
 
 
 @add_resources(
@@ -706,12 +706,16 @@ class Graph(Resource):
 
     def get(self, id):
         data = get_graphs(prefix=id)
+        filename = 'periodo-graph-{}'.format(id.replace('/', '-'))
+
         if len(data['graphs']) > 0:
-            return cache.medium_time(api.make_response(data, 200))
+            return cache.medium_time(
+                api.make_response(data, 200, filename=filename))
 
         args = versioned_parser.parse_args()
         version = args.get('version')
         graph = database.get_graph(id, version=version)
+        filename += ('' if version is None else '-v{}'.format(version))
 
         if not graph:
             abort(404)
@@ -724,7 +728,7 @@ class Graph(Resource):
         headers['Last-Modified'] = format_date_time(graph['created_at'])
 
         data = json.loads(graph['data'])
-        response = api.make_response(data, 200, headers)
+        response = api.make_response(data, 200, headers, filename=filename)
         response.set_etag(graph_etag, weak=True)
 
         if version is None:
