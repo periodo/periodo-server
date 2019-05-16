@@ -1,7 +1,7 @@
 [
   {
     "op": "add",
-    "path": "/periodCollections/p0trgkv/definitions/https:~1~1perio.do~1.well-known~1genid~16da6dc770a6f431eb2f1b5766bc5678d",
+    "path": "/authorities/p0trgkv/periods/https:~1~1perio.do~1.well-known~1genid~16da6dc770a6f431eb2f1b5766bc5678d",
     "value": {
       "id": "https://perio.do/.well-known/genid/6da6dc770a6f431eb2f1b5766bc5678d",
       "label": "Blah",

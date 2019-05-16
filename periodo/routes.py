@@ -2,38 +2,73 @@ import json
 import random
 import requests
 import string
-from flask import request, make_response, redirect, url_for, session, abort
-from periodo import app, database, provenance, identifier, auth
+from flask import (
+    request, make_response, redirect, url_for, session, abort,
+    Response, stream_with_context)
+from periodo import app, database, identifier, auth, utils
 from urllib.parse import urlencode
-
-if app.config['HTML_REPR_EXISTS']:
-    @app.route('/images/<path:path>')
-    @app.route('/periodo-client.js')
-    @app.route('/periodo-client-<path:path>.js')
-    @app.route('/favicon.ico')
-    @app.route('/index.html')
-    def static_proxy(path=None):
-        return app.send_static_file('html' + request.path)
+from werkzeug.http import http_date
 
 
-@app.route('/h')
-def history():
-    return make_response(
-        provenance.history(), 200, {'Content-Type': 'application/ld+json'})
+def get_mimetype():
+    if request.accept_mimetypes.best == 'application/json':
+        return 'json'
+    if request.accept_mimetypes.best == 'application/ld+json':
+        return 'jsonld'
+    if request.accept_mimetypes.best == 'text/turtle':
+        return 'ttl'
+    return None
 
 
-@app.route('/v')
+def build_client_url(page, **values):
+    return '%s/?%s' % (
+        app.config['CLIENT_URL'],
+        urlencode(dict(page=page,
+                       backendID='web-%s' % request.url_root,
+                       **values))
+    )
+
+
+@app.route('/h', endpoint='history')
+def see_history():
+    mimetype = get_mimetype()
+    if mimetype is None:
+        url = build_client_url(page='backend-history')
+    else:
+        url = url_for('history-%s' % mimetype,  **request.args)
+    return redirect(url, code=303)
+
+
+@app.route('/v', endpoint='vocab')
+@app.route('/v', endpoint='vocabulary')
 def vocab():
-    return app.send_static_file('vocab.ttl')
+    if request.accept_mimetypes.best == 'text/turtle':
+        return redirect('v.ttl', code=303)
+    else:
+        return redirect('v.ttl.html', code=303)
 
 
 # http://www.w3.org/TR/void/#well-known
-@app.route('/.well-known/void')
+@app.route('/.well-known/void', endpoint='description')
+@app.route('/.well-known/void.ttl')
 # N2T resolver strips hyphens so handle this too
 @app.route('/.wellknown/void')
+@app.route('/.wellknown/void.ttl')
 def void():
+    if request.accept_mimetypes.best == 'text/html':
+        return redirect(url_for('void_as_html'), code=303)
     return make_response(database.get_dataset()['description'], 200, {
         'Content-Type': 'text/turtle',
+        'Link': '</>; rel="alternate"; type="text/html"',
+    })
+
+
+@app.route('/.well-known/void.ttl.html')
+@app.route('/.wellknown/void.ttl.html')
+def void_as_html():
+    ttl = database.get_dataset()['description']
+    return make_response(utils.highlight_ttl(ttl), 200, {
+        'Content-Type': 'text/html',
         'Link': '</>; rel="alternate"; type="text/html"',
     })
 
@@ -44,32 +79,45 @@ def see_dataset():
     return redirect(url_for('dataset', **request.args), code=303)
 
 
-@app.route('/<string(length=%s):collection_id>'
-           % (identifier.COLLECTION_SEQUENCE_LENGTH + 1))
-def see_collection(collection_id):
-    if request.accept_mimetypes.best == 'application/json':
-        url = url_for('collection-json', collection_id=collection_id,
-                      **request.args)
-    elif request.accept_mimetypes.best == 'application/ld+json':
-        url = url_for('collection-jsonld', collection_id=collection_id,
-                      **request.args)
+@app.route('/<string(length=%s):authority_id>'
+           % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1))
+def see_authority(authority_id):
+    try:
+        identifier.assert_valid(authority_id, strict=False)
+    except identifier.IdentifierException:
+        return abort(404)
+
+    mimetype = get_mimetype()
+    if mimetype is None:
+        url = build_client_url(
+            page='authority-view', authorityID=authority_id)
     else:
-        url = url_for('index', _anchor=request.path[1:])
+        url = url_for(
+            'authority-%s' % mimetype, authority_id=authority_id,
+            **request.args)
+
     return redirect(url, code=303)
 
 
-@app.route('/<string(length=%s):definition_id>'
-           % (identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
-              identifier.DEFINITION_SEQUENCE_LENGTH + 1))
-def see_definition(definition_id):
-    if request.accept_mimetypes.best == 'application/json':
-        url = url_for('definition-json', definition_id=definition_id,
-                      **request.args)
-    elif request.accept_mimetypes.best == 'application/ld+json':
-        url = url_for('definition-jsonld', definition_id=definition_id,
-                      **request.args)
+@app.route('/<string(length=%s):period_id>'
+           % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1 +
+              identifier.PERIOD_SEQUENCE_LENGTH + 1))
+def see_period(period_id):
+    try:
+        identifier.assert_valid(period_id, strict=False)
+    except identifier.IdentifierException:
+        return abort(404)
+
+    mimetype = get_mimetype()
+    if mimetype is None:
+        periodID = request.path[1:]
+        authorityID = periodID[0:identifier.AUTHORITY_SEQUENCE_LENGTH + 1]
+        url = build_client_url(
+            page='period-view', authorityID=authorityID, periodID=periodID)
     else:
-        url = url_for('index', _anchor=request.path[1:])
+        url = url_for(
+            'period-%s' % mimetype, period_id=period_id, **request.args)
+
     return redirect(url, code=303)
 
 
@@ -113,7 +161,7 @@ def registered():
         'scope': '/authenticate',
     }
     response = requests.post(
-        'https://pub.orcid.org/oauth/token',
+        'https://orcid.org/oauth/token',
         headers={'Accept': 'application/json'},
         allow_redirects=True, data=data)
     if not response.status_code == 200:
@@ -135,11 +183,29 @@ def registered():
         <!doctype html>
         <head>
             <script type="text/javascript">
-            localStorage.auth = '{}';
+            parent.postMessage(
+              {{ name: {}, token: {} }},
+              "{}"
+            )
             window.close();
             </script>
         </head>
         <body>
-        """.format(json.dumps(
-            {'name': credentials['name'], 'token': identity.b64token.decode()}
-        )))
+        """.format(
+            json.dumps(credentials['name']),
+            json.dumps(identity.b64token.decode()),
+            request.host_url
+        ))
+
+
+@app.route('/export.sql')
+def export():
+    def generate():
+        for line in database.dump():
+            yield '%s\n' % line
+    return Response(stream_with_context(generate()), status=200, headers={
+        'Content-Type':
+        'text/plain',
+        'Content-Disposition':
+        'attachment; filename="periodo-export-{}.sql"'.format(http_date())
+    })

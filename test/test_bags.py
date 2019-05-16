@@ -5,7 +5,6 @@ import unittest
 import http.client
 from rdflib.namespace import Namespace
 from urllib.parse import urlparse
-from flask_principal import ActionNeed
 from .filepath import filepath
 from periodo import app, database, commands, auth
 from uuid import UUID
@@ -34,7 +33,7 @@ class TestBags(unittest.TestCase):
                 'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
                 'expires_in': 3600,
                 'orcid': '1211-1098-7654-321X',
-            }, (ActionNeed('create-bag'),))
+            })
             database.commit()
 
     def tearDown(self):
@@ -66,6 +65,15 @@ class TestBags(unittest.TestCase):
             self.maxDiff = None
             self.assertEqual(
                 json.loads(bag_jsonld),
+                json.loads(res.get_data(as_text=True)))
+            context = json.loads(res.get_data(as_text=True))['@context']
+            self.assertEqual(context, [
+                'http://localhost.localdomain:5000/c',
+                {'@base': 'http://n2t.net/ark:/99152/'}])
+            res = client.get('/bags/')
+            self.assertEqual(res.status_code, http.client.OK)
+            self.assertEqual(
+                ['http://localhost.localdomain:5000/bags/%s' % id],
                 json.loads(res.get_data(as_text=True)))
 
     def test_if_none_match(self):
@@ -254,6 +262,12 @@ class TestBags(unittest.TestCase):
             self.assertEqual(
                 json.loads(updated_bag_jsonld),
                 json.loads(res.get_data(as_text=True)))
+            context = json.loads(res.get_data(as_text=True))['@context']
+            self.assertEqual(context, [
+                'http://localhost.localdomain:5000/c', {
+                    '@base': 'http://n2t.net/ark:/99152/',
+                    "foo": "http://example.org/foo"
+                }])
 
             res = client.get('/bags/%s?version=0' % id)
             self.maxDiff = None

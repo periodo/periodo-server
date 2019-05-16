@@ -7,7 +7,7 @@ def as_uri(string):
     return {"@id": string}
 
 
-def make_nanopub(definition_id, version):
+def make_nanopub(period_id, version):
     cursor = database.get_db().cursor()
 
     cursor.execute(
@@ -29,29 +29,29 @@ def make_nanopub(definition_id, version):
         ORDER BY patch.id ASC
         LIMIT ?, 1;
         ''',
-        ('%"' + identifier.prefix(definition_id) + '"%',
-         '%"' + identifier.prefix(definition_id) + '"%',
+        ('%"' + identifier.prefix(period_id) + '"%',
+         '%"' + identifier.prefix(period_id) + '"%',
          version - 1)
     )
 
     result = cursor.fetchone()
 
     if not result:
-        raise DefinitionNotFoundError(
-            'Could not find version {} of definition {}'.format(
-                version, definition_id))
+        raise PeriodNotFoundError(
+            'Could not find version {} of period {}'.format(
+                version, period_id))
 
     data = json.loads(result['data'])
 
-    collection_id = identifier.prefix(
-        definition_id[:identifier.COLLECTION_SEQUENCE_LENGTH + 1])
-    collection = data['periodCollections'][collection_id]
-    source = collection['source']
-    definition = collection['definitions'][identifier.prefix(definition_id)]
-    definition['collection'] = collection_id
+    authority_id = identifier.prefix(
+        period_id[:identifier.AUTHORITY_SEQUENCE_LENGTH + 1])
+    authority = data['authorities'][authority_id]
+    source = authority['source']
+    period = authority['periods'][identifier.prefix(period_id)]
+    period['authority'] = authority_id
 
     nanopub_uri = '{}/nanopub{}'.format(
-        identifier.prefix(definition_id), version)
+        identifier.prefix(period_id), version)
     patch_uri = identifier.prefix('h#change-{}'.format(result['patch_id']))
 
     context = data['@context'].copy()
@@ -59,7 +59,7 @@ def make_nanopub(definition_id, version):
     context['pub'] = data['@context']['@base'] + nanopub_uri + '#'
     context['prov'] = 'http://www.w3.org/ns/prov#'
 
-    # TODO: Pop "source" from definition and include it in the provenance
+    # TODO: Pop "source" from period and include it in the provenance
     # graph?
 
     return {
@@ -77,7 +77,7 @@ def make_nanopub(definition_id, version):
             },
             {
                 "@id": "pub:assertion",
-                "@graph": [definition]
+                "@graph": [period]
             },
             {
                 "@id": "pub:provenance",
@@ -106,5 +106,5 @@ def make_nanopub(definition_id, version):
     }
 
 
-class DefinitionNotFoundError(Exception):
+class PeriodNotFoundError(Exception):
     pass

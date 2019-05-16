@@ -10,3 +10,6 @@ periodo/secrets.py
 periodo/static
 
 !bin/ttlcat
+
+periodo-client-*.tgz
+export.sql.gz

@@ -12,21 +12,21 @@
 @prefix time: <http://www.w3.org/2006/time#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-periodo:CollectionShape
+periodo:AuthorityShape
   rdf:type sh:NodeShape ;
-  rdfs:label "Period collection shape" ;
+  rdfs:label "Period authority shape" ;
   sh:targetClass skos:ConceptScheme ;
   sh:closed "true"^^xsd:boolean ;
   sh:ignoredProperties (
     rdf:type
     ) ;
   sh:property
-    periodo:CollectionSourceShape ,
-    periodo:CollectionEditorialNoteShape ,
-    periodo:CollectionSameAsShape
+    periodo:AuthoritySourceShape ,
+    periodo:AuthorityEditorialNoteShape ,
+    periodo:AuthoritySameAsShape
   .
 
-periodo:CollectionSourceShape
+periodo:AuthoritySourceShape
   rdf:type sh:PropertyShape ;
   sh:path dcterms:source ;
   sh:name "source" ;
@@ -35,24 +35,24 @@ periodo:CollectionSourceShape
   sh:node periodo:SourceShape ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
-  sh:message "Problem with collection source" ;
+  sh:message "Problem with authority source" ;
   .
 
-periodo:CollectionEditorialNoteShape
+periodo:AuthorityEditorialNoteShape
   rdf:type sh:PropertyShape ;
   sh:path skos:editorialNote ;
   sh:name "editorial note" ;
   sh:description "Administrative or editorial notes from PeriodO curators" ;
   sh:datatype xsd:string ;
   sh:maxCount 1 ;
-  sh:message "Problem with collection editorial note" ;
+  sh:message "Problem with authority editorial note" ;
   .
 
-periodo:CollectionSameAsShape
+periodo:AuthoritySameAsShape
   rdf:type sh:PropertyShape ;
   sh:path owl:sameAs ;
   sh:name "same as" ;
-  sh:description "Alternative URI for this collection" ;
+  sh:description "Alternative URI for this authority" ;
   sh:nodeKind sh:IRI ;
-  sh:message "Problem with collection alternative URI (sameAs" ;
+  sh:message "Problem with authority alternative URI (sameAs" ;
   .
