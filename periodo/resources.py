@@ -1,22 +1,18 @@
 import json
 from collections import OrderedDict
 from flask import request, g, abort, url_for, redirect
-from flask_restful import fields, Resource, marshal, marshal_with, reqparse
-from periodo import api, database, auth, identifier, patching, utils, nanopub
+from flask_restful import fields, Resource, marshal, reqparse
+from jsonpatch import JsonPatch
+from periodo import (
+    app, api, cache, database, auth, identifier, patching,
+    utils, nanopub, provenance)
 from urllib.parse import urlencode
-
 from wsgiref.handlers import format_date_time
 
 PATCH_QUERY = """
 SELECT *
 FROM patch_request
 """
-
-index_fields = {
-    'dataset': fields.Url('dataset', absolute=True),
-    'patches': fields.Url('patchlist', absolute=True),
-    'register': fields.Url('register', absolute=True),
-}
 
 
 # http://www.w3.org/TR/NOTE-datetime
@@ -68,13 +64,31 @@ versioned_parser.add_argument(
     'version', type=int, location='args', help='Invalid version number')
 
 
-def cache_control(args):
-    return 'public, max-age={}'.format(604800 if args['version'] else 0)
+def parse_json(request):
+    try:
+        return json.loads(request.get_data(as_text=True))
+    except json.JSONDecodeError:
+        raise ResourceError(400, 'Request data could not be parsed as JSON.')
 
 
 def attach_to_dataset(o):
-    o['primaryTopicOf'] = {'id': identifier.prefix(request.path[1:]),
-                           'inDataset': identifier.prefix('d')}
+    if len(o) > 0:
+        if app.config['CANONICAL']:
+            o['primaryTopicOf'] = {
+                'id': identifier.prefix(request.full_path[1:]),
+                'inDataset': {
+                    'id': identifier.prefix('d'),
+                    'changes': identifier.prefix('h#changes')
+                }
+            }
+        else:
+            o['primaryTopicOf'] = {
+                'id': request.url,
+                'inDataset': {
+                    'id': url_for('abstract_dataset', _external=True),
+                    'changes': url_for('history', _external=True) + '#changes'
+                }
+            }
     return o
 
 
@@ -111,27 +125,150 @@ def abort_gone_or_not_found(entity_key):
         abort(404)
 
 
-@api.resource('/')
+def get_dataset(version=None):
+    dataset = database.get_dataset(version)
+
+    if not dataset:
+        if version:
+            raise ResourceError(404, 'Could not find given version.')
+        else:
+            raise ResourceError(501, 'No dataset loaded yet.')
+
+    return dataset
+
+
+class ResourceError(Exception):
+    def __init__(self, status, message):
+        self.status = status
+        self.message = message
+
+    def response(self):
+        return {'status': self.status, 'message': self.message}, self.status
+
+
+INDEX = {
+    'dataset':
+    'the PeriodO dataset',
+
+    'description':
+    'description of the PeriodO dataset',
+
+    'patches':
+    'patches submitted to the PeriodO dataset',
+
+    'history':
+    'history of changes to the PeriodO dataset',
+
+    'bags':
+    'user-defined subsets of the PeriodO dataset',
+
+    'context':
+    'PeriodO JSON-LD context',
+
+    'vocabulary':
+    'PeriodO RDF vocabulary',
+}
+
+
+# decorator to add content-type-specific resources for each resource class
+def add_resources(
+        name,
+        shortname=None,
+        endpoint=None,
+        barepaths=[],
+        suffixes=('json', 'jsonld', 'ttl'),
+        html=True
+):
+    def decorator(cls):
+
+        paths = ['/{}'.format(name)]
+        if shortname is not None:
+            paths.insert(0, '/{}'.format(shortname))
+
+        if barepaths is not None:
+            api.add_resource(
+                cls,
+                *(paths if len(barepaths) == 0 else barepaths),
+                endpoint=(endpoint or name))
+
+        for suffix in suffixes:
+            suffixed_paths = ['{}.{}'.format(p, suffix) for p in paths]
+            suffixed_endpoint = '{}-{}'.format(endpoint or name, suffix)
+            api.add_resource(
+                cls,
+                *suffixed_paths,
+                endpoint=suffixed_endpoint)
+
+            if html:
+                api.add_resource(
+                    cls,
+                    *['{}.html'.format(p) for p in suffixed_paths],
+                    endpoint='{}-html'.format(suffixed_endpoint))
+
+        return cls
+
+    return decorator
+
+
+def describe_endpoint(endpoint, description):
+    return {
+        'description': description,
+        'url': url_for(endpoint, _external=True)
+    }
+
+
+@add_resources('index', suffixes=['json'], barepaths=['/'])
 class Index(Resource):
-    @marshal_with(index_fields)
     def get(self):
-        return {}
+        return {
+            endpoint: describe_endpoint(endpoint, description)
+            for (endpoint, description) in INDEX.items()
+        }
 
 
-@api.resource('/d/', '/d.json', '/d.jsonld')
+@add_resources('context', shortname='c', suffixes=['json'])
+class Context(Resource):
+    def get(self):
+        args = versioned_parser.parse_args()
+        version = args.get('version')
+
+        try:
+            dataset = get_dataset(version)
+        except ResourceError as e:
+            return e.response()
+
+        context_etag = 'periodo-context-version-{}'.format(dataset['id'])
+        if request.if_none_match.contains_weak(context_etag):
+            return None, 304
+
+        headers = {}
+        headers['Last-Modified'] = format_date_time(dataset['created_at'])
+
+        context = json.loads(dataset['data']).get('@context')
+        if context is None:
+            return None, 404
+
+        response = api.make_response({'@context': context}, 200, headers)
+        response.set_etag(context_etag, weak=True)
+
+        if version is None:
+            return cache.no_time(response)
+        else:
+            return cache.long_time(response)
+
+
+@add_resources('dataset', shortname='d', barepaths=['/d/'], html=False)
 class Dataset(Resource):
     def get(self):
         args = versioned_parser.parse_args()
+        version = args.get('version')
+        filename = 'periodo-dataset{}'.format(
+            '' if version is None else '-v{}'.format(version))
 
-        dataset = database.get_dataset(args.get('version', None))
-
-        if not dataset:
-            if args['version']:
-                return {'status': 404,
-                        'message': 'Could not find given version.'}, 404
-            else:
-                return {'status': 501,
-                        'message': 'No dataset loaded yet.'}, 501
+        try:
+            dataset = get_dataset(version)
+        except ResourceError as e:
+            return e.response()
 
         dataset_etag = 'periodo-dataset-version-{}'.format(dataset['id'])
         if request.if_none_match.contains_weak(dataset_etag):
@@ -139,82 +276,102 @@ class Dataset(Resource):
 
         headers = {}
         headers['Last-Modified'] = format_date_time(dataset['created_at'])
-        headers['Cache_Control'] = cache_control(args)
+
+        data = json.loads(dataset['data'])
+        if version is not None and '@context' in data:
+            data['@context']['__version'] = version
+        if 'inline-context' in request.args:
+            data['@context']['__inline'] = True
 
         response = api.make_response(
-            attach_to_dataset(json.loads(dataset['data'])), 200, headers)
+            attach_to_dataset(data), 200, headers, filename=filename)
         response.set_etag(dataset_etag, weak=True)
 
-        return response
+        if version is None:
+            return cache.short_time(response, server_only=True)
+        else:
+            return cache.long_time(response)
 
     @auth.submit_patch_permission.require()
     def patch(self):
         try:
             patch_request_id = patching.create_request(
-                patching.from_text(request.data), g.identity.id)
+                JsonPatch(parse_json(request)), g.identity.id)
             database.commit()
             return None, 202, {
-                'Location': api.url_for(PatchRequest, id=patch_request_id)
+                'Location': url_for('patchrequest', id=patch_request_id)
             }
+        except ResourceError as e:
+            return e.response()
         except patching.InvalidPatchError as e:
             return {'status': 400, 'message': str(e)}, 400
 
 
-@api.resource('/<string(length=%s):collection_id>.json'
-              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1),
-              endpoint='collection-json')
-@api.resource('/<string(length=%s):collection_id>.jsonld'
-              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1),
-              endpoint='collection-jsonld')
-class PeriodCollection(Resource):
-    def get(self, collection_id):
-        version = request.args.get('version')
-        new_location = redirect_to_last_update(collection_id, version)
-        if new_location is not None:
-            return new_location
-        dataset = database.get_dataset(version=version)
-        o = json.loads(dataset['data'])
-        if 'periodCollections' not in o:
-            abort(404)
-        collection_key = identifier.prefix(collection_id)
-        if collection_key not in o['periodCollections']:
-            abort_gone_or_not_found(collection_key)
-        collection = o['periodCollections'][collection_key]
-        collection['@context'] = o['@context']
-        return attach_to_dataset(collection)
+@add_resources('history', shortname='h', barepaths=None, html=False)
+class History(Resource):
+    def get(self):
+        response = api.make_response(
+            provenance.history('inline-context' in request.args),
+            200, filename='periodo-history'
+        )
+        return cache.medium_time(response, server_only=True)
 
 
-@api.resource('/<string(length=%s):definition_id>.json'
-              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
-                 identifier.DEFINITION_SEQUENCE_LENGTH + 1),
-              endpoint='definition-json')
-@api.resource('/<string(length=%s):definition_id>.jsonld'
-              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
-                 identifier.DEFINITION_SEQUENCE_LENGTH + 1),
-              endpoint='definition-jsonld')
-class PeriodDefinition(Resource):
-    def get(self, definition_id):
+@add_resources(
+    '<string(length={}):authority_id>'.format(
+        identifier.AUTHORITY_SEQUENCE_LENGTH + 1),
+    endpoint='authority',
+    barepaths=None)
+class Authority(Resource):
+    def get(self, authority_id):
         version = request.args.get('version')
-        new_location = redirect_to_last_update(definition_id, version)
+        new_location = redirect_to_last_update(authority_id, version)
         if new_location is not None:
             return new_location
         try:
-            return attach_to_dataset(
-                database.get_definition(definition_id, version))
+            authority = attach_to_dataset(
+                database.get_authority(authority_id, version))
+            filename = 'periodo-authority-{}{}'.format(
+                authority_id,
+                '' if version is None else '-v{}'.format(version))
+            return api.make_response(authority, 200, filename=filename)
         except database.MissingKeyError as e:
             abort_gone_or_not_found(e.key)
 
 
-@api.resource('/<string(length=%s):definition_id>/nanopub<int:version>'
-              % (identifier.COLLECTION_SEQUENCE_LENGTH + 1 +
-                 identifier.DEFINITION_SEQUENCE_LENGTH + 1),
-              endpoint='definition-nanopub')
+@add_resources(
+    '<string(length={}):period_id>'.format(
+        identifier.AUTHORITY_SEQUENCE_LENGTH + 1 +
+        identifier.PERIOD_SEQUENCE_LENGTH + 1),
+    endpoint='period',
+    barepaths=None)
+class Period(Resource):
+    def get(self, period_id):
+        version = request.args.get('version')
+        new_location = redirect_to_last_update(period_id, version)
+        if new_location is not None:
+            return new_location
+        try:
+            period = attach_to_dataset(
+                database.get_period(period_id, version))
+            filename = 'periodo-period-{}{}'.format(
+                period_id,
+                '' if version is None else '-v{}'.format(version))
+            return api.make_response(period, 200, filename=filename)
+        except database.MissingKeyError as e:
+            abort_gone_or_not_found(e.key)
+
+
+@api.resource('/<string(length=%s):period_id>/nanopub<int:version>'
+              % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1 +
+                 identifier.PERIOD_SEQUENCE_LENGTH + 1),
+              endpoint='period-nanopub')
 class PeriodNanopublication(Resource):
-    def get(self, definition_id, version):
-        return nanopub.make_nanopub(definition_id, version)
+    def get(self, period_id, version):
+        return nanopub.make_nanopub(period_id, version)
 
 
-@api.resource('/patches/')
+@add_resources('patches', suffixes=['json'], barepaths=['/patches/'])
 class PatchList(Resource):
     def get(self):
         args = patch_list_parser.parse_args()
@@ -250,7 +407,7 @@ class PatchList(Resource):
         link_headers = []
 
         if offset > 0:
-            prev_url = url_for('patchlist', _external=True)
+            prev_url = url_for('patches', _external=True)
 
             prev_params = request.args.to_dict().copy()
             prev_params['from'] = offset - limit
@@ -266,7 +423,7 @@ class PatchList(Resource):
         # We fetched 1 more than the limit. If there are limit+1 rows in the
         # retrieved query, then there are more rows to be fetched
         if len(rows) > limit:
-            next_url = url_for('patchlist', _external=True)
+            next_url = url_for('patches', _external=True)
             next_params = request.args.to_dict().copy()
 
             next_params['from'] = offset + limit
@@ -280,7 +437,11 @@ class PatchList(Resource):
         return marshal(data, patch_list_fields), 200, headers
 
 
-@api.resource('/patches/<int:id>/')
+@add_resources(
+    'patches/<int:id>',
+    endpoint='patchrequest',
+    suffixes=['json'],
+    barepaths=['/patches/<int:id>/'])
 class PatchRequest(Resource):
     def get(self, id):
         row = database.query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
@@ -288,19 +449,9 @@ class PatchRequest(Resource):
             abort(404)
         data = process_patch_row(row)
         data['mergeable'] = patching.is_mergeable(data['original_patch'])
+        data['comments'] = [dict(c) for c in
+                            database.get_patch_request_comments(id)]
         headers = {}
-
-        comments = database.query_db(
-            '''
-            SELECT author, message, posted_at
-            FROM patch_request_comment
-            WHERE patch_request_id=?
-            ORDER BY posted_at ASC
-            ''',
-            (id,)
-        )
-        data['comments'] = [dict(row) for row in comments]
-
         try:
             if auth.accept_patch_permission.can():
                 headers['Link'] = '<{}>;rel="merge"'.format(
@@ -311,7 +462,11 @@ class PatchRequest(Resource):
         return marshal(data, patch_fields), 200, headers
 
 
-@api.resource('/patches/<int:id>/patch.jsonpatch')
+@add_resources(
+    'patches/<int:id>/patch',
+    endpoint='patch',
+    suffixes=['json'],
+    barepaths=['/patches/<int:id>/patch.jsonpatch'])
 class Patch(Resource):
     def get(self, id):
         row = database.query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
@@ -326,9 +481,11 @@ class Patch(Resource):
         if not permission.can():
             raise auth.PermissionDenied(permission)
         try:
-            patch = patching.from_text(request.data)
+            patch = JsonPatch(parse_json(request))
             affected_entities = patching.validate(
                 patch, database.get_dataset())
+        except ResourceError as e:
+            return e.response()
         except patching.InvalidPatchError as e:
             if str(e) != 'Could not apply JSON patch to dataset.':
                 return {'status': 400, 'message': str(e)}, 400
@@ -357,6 +514,9 @@ class PatchMerge(Resource):
         try:
             patching.merge(id, g.identity.id)
             database.commit()
+            cache.purge_history()
+            cache.purge_dataset()
+            cache.purge_graphs()
             return None, 204
         except patching.MergeError as e:
             return {'message': e.message}, 404
@@ -387,7 +547,7 @@ class PatchMessages(Resource):
         try:
             data = json.loads(data)
             message = data['message']
-        except:
+        except KeyError:
             return {'message': 'No message present in request data.'}, 400
 
         try:
@@ -396,34 +556,30 @@ class PatchMessages(Resource):
                                  message)
             database.commit()
             return None, 200, {
-                'Location': api.url_for(PatchRequest, id=id)
+                'Location': url_for('patchrequest', id=id)
             }
         except patching.MergeError as e:
             return {'message': e.message}, 404
 
 
-BAG_CONTEXT = {
-    'items': {
-        '@container': '@index',
-        '@id': 'http://www.w3.org/2000/01/rdf-schema#member',
-    },
-    'creator': {
-        '@id': 'http://purl.org/dc/terms/creator',
-        '@type': '@id'
-    },
-    'wasRevisionOf': {
-        '@id': 'http://www.w3.org/ns/prov#wasRevisionOf',
-        '@type': '@id'
-    }
-}
+@add_resources('bags', suffixes=['json'], barepaths=['/bags/'])
+class Bags(Resource):
+    def get(self):
+        return [
+            url_for('bag', uuid=uuid, _external=True)
+            for uuid in database.get_bag_uuids()
+        ]
 
 
-@api.resource('/bags/<uuid:uuid>')
+@add_resources('bags/<uuid:uuid>', endpoint='bag', suffixes=['json'])
 class Bag(Resource):
     @auth.update_bag_permission.require()
     def put(self, uuid):
 
-        data = request.get_json()
+        try:
+            data = parse_json(request)
+        except ResourceError as e:
+            return e.response()
 
         title = str(data.get('title', ''))
         if len(title) == 0:
@@ -435,9 +591,25 @@ class Bag(Resource):
 
         try:
             defs, ctx = database.\
-                        get_definitions_and_context(items, raiseErrors=True)
+                        get_periods_and_context(items, raiseErrors=True)
         except database.MissingKeyError as e:
             return {'message': 'No resource with key: ' + e.key}, 400
+
+        base = ctx['@base']
+        bag_ctx = data.get('@context', {})
+        context_url = utils.absolute_url(ctx['@base'], 'context')
+        if type(bag_ctx) is list:
+            contexts = bag_ctx
+            if context_url not in contexts:
+                contexts.insert(0, context_url)
+            if type(contexts[-1]) is dict:
+                contexts[-1]['@base'] = base
+            else:
+                contexts.append({'@base': base})
+        else:
+            contexts = [context_url, {**bag_ctx, '@base': base}]
+
+        data['@context'] = contexts
 
         bag = database.get_bag(uuid)
         if bag and g.identity.id not in json.loads(bag['owners']):
@@ -445,12 +617,13 @@ class Bag(Resource):
 
         version = database.create_or_update_bag(uuid, g.identity.id, data)
         return None, 201, {
-            'Location': api.url_for(Bag, uuid=uuid, version=version)
+            'Location': url_for('bag', uuid=uuid, version=version)
         }
 
     def get(self, uuid):
         args = versioned_parser.parse_args()
-        bag = database.get_bag(uuid, version=args.get('version', None))
+        version = args.get('version')
+        bag = database.get_bag(uuid, version=version)
 
         if not bag:
             abort(404)
@@ -461,20 +634,112 @@ class Bag(Resource):
 
         headers = {}
         headers['Last-Modified'] = format_date_time(bag['created_at'])
-        headers['Cache_Control'] = cache_control(args)
 
         data = json.loads(bag['data'])
-        defs, defs_ctx = database.get_definitions_and_context(data['items'])
+        defs, defs_ctx = database.get_periods_and_context(data['items'])
 
-        context = data.get('@context', {})
-        context.update(defs_ctx)
-        context.update(BAG_CONTEXT)
-
-        data['@context'] = context
         data['@id'] = identifier.prefix('bags/%s' % uuid)
         data['creator'] = bag['created_by']
         data['items'] = defs
 
         response = api.make_response(data, 200, headers)
         response.set_etag(bag_etag, weak=True)
-        return response
+
+        if version is None:
+            return cache.no_time(response)
+        else:
+            return cache.long_time(response)
+
+
+def get_graphs(prefix=None):
+        if prefix and prefix.endswith('/'):
+            prefix = prefix[:-1]
+        id = (url_for('graphs', _external=True)
+              + ((prefix + '/') if prefix else ''))
+        data = {
+            '@context': {
+                '@version': 1.1,
+                'graphs': {
+                    '@id': id,
+                    '@container': ['@graph', '@id']
+                }},
+            'graphs': {}
+        }
+        graphs = database.get_graphs(prefix)
+        for graph in graphs:
+            graph_url = url_for('graph', id=graph['id'], _external=True)
+            data['graphs'][graph_url] = json.loads(graph['data'])
+        return data
+
+
+@add_resources('graphs', suffixes=['json'], barepaths=['/graphs/'], html=False)
+class Graphs(Resource):
+    def get(self):
+        data = get_graphs()
+        dataset = database.get_dataset()
+        if dataset:
+            dataset_url = url_for('dataset', _external=True)
+            data['graphs'][dataset_url] = json.loads(dataset['data'])
+        return cache.medium_time(
+            api.make_response(data, 200, filename='periodo-graphs'))
+
+
+@add_resources(
+    'graphs/<path:id>',
+    endpoint='graph',
+    suffixes=['json'],
+    html=False)
+class Graph(Resource):
+    @auth.update_graph_permission.require()
+    def put(self, id):
+        if id.endswith('/'):
+            return {'message': 'graph uri path cannot end in /'}, 400
+        try:
+            version = database.create_or_update_graph(id, parse_json(request))
+            if (version > 0):
+                cache.purge_graph(id)
+            return None, 201, {
+                'Location': url_for('graph', id=id, version=version)
+            }
+        except ResourceError as e:
+            return e.response()
+
+    def get(self, id):
+        data = get_graphs(prefix=id)
+        filename = 'periodo-graph-{}'.format(id.replace('/', '-'))
+
+        if len(data['graphs']) > 0:
+            return cache.medium_time(
+                api.make_response(data, 200, filename=filename))
+
+        args = versioned_parser.parse_args()
+        version = args.get('version')
+        graph = database.get_graph(id, version=version)
+        filename += ('' if version is None else '-v{}'.format(version))
+
+        if not graph:
+            abort(404)
+
+        graph_etag = 'graph-{}-version-{}'.format(id, graph['version'])
+        if request.if_none_match.contains_weak(graph_etag):
+            return None, 304
+
+        headers = {}
+        headers['Last-Modified'] = format_date_time(graph['created_at'])
+
+        data = json.loads(graph['data'])
+        response = api.make_response(data, 200, headers, filename=filename)
+        response.set_etag(graph_etag, weak=True)
+
+        if version is None:
+            return cache.medium_time(response)
+        else:
+            return cache.long_time(response)
+
+    @auth.update_graph_permission.require()
+    def delete(self, id):
+        if database.delete_graph(id):
+            cache.purge_graph(id)
+            return None, 204
+        else:
+            abort(404)

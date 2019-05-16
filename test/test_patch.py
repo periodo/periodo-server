@@ -8,10 +8,11 @@ from rdflib.namespace import Namespace
 from urllib.parse import urlparse
 from flask_principal import ActionNeed
 from .filepath import filepath
-from periodo import app, database, identifier, commands, auth
+from periodo import app, database, identifier, commands, auth, cache
 
 PERIODO = Namespace('http://n2t.net/ark:/99152/')
 PROV = Namespace('http://www.w3.org/ns/prov#')
+HOST = Namespace('http://localhost.localdomain:5000/')
 
 
 class TestPatchMethods(unittest.TestCase):
@@ -146,7 +147,7 @@ class TestPatchMethods(unittest.TestCase):
             created_entities = json.loads(database.query_db(
                 'SELECT created_entities FROM patch_request WHERE id = ?',
                 (patch_id,), one=True)['created_entities'])
-            self.assertEqual(3, len(created_entities))
+            self.assertEqual(4, len(created_entities))
             for entity_id in created_entities:
                 self.assertRegex(entity_id, identifier.IDENTIFIER_RE)
 
@@ -201,7 +202,7 @@ class TestPatchMethods(unittest.TestCase):
             row = database.query_db(
                 'SELECT * FROM patch_request_comment WHERE patch_request_id=?',
                 (patch_id,), one=True)
-            self.assertEqual('http://orcid.org/1234-5678-9101-112X',
+            self.assertEqual('https://orcid.org/1234-5678-9101-112X',
                              row['author'])
             self.assertEqual(patch_id, row['patch_request_id'])
             self.assertEqual('This is a comment', row['message'])
@@ -213,7 +214,7 @@ class TestPatchMethods(unittest.TestCase):
     def test_versioning(self):
         with open(filepath('test-patch-adds-items.json')) as f:
             patch1 = f.read()
-        with open(filepath('test-patch-add-definition.json')) as f:
+        with open(filepath('test-patch-add-period.json')) as f:
             patch2 = f.read()
         with self.client as client:
             res = client.patch(
@@ -261,67 +262,86 @@ class TestPatchMethods(unittest.TestCase):
                     res.status_code, http.client.OK)
                 self.assertEqual(
                     res.headers['Content-Type'], 'application/json')
-            res = client.get('/h')
+                ctx = json.loads(res.get_data(as_text=True))['@context']
+                self.assertEqual(
+                    ctx[0],
+                    'http://localhost.localdomain:5000/c?version={}'.format(version)
+                )
 
-            g = ConjunctiveGraph()
-            g.parse(format='json-ld', data=res.get_data(as_text=True))
+            res = client.get('/history.jsonld?inline-context')
+            self.assertEqual(
+                res.headers['Cache-Control'],
+                'public, max-age=0')
+            self.assertEqual(
+                res.headers['X-Accel-Expires'],
+                '{}'.format(cache.MEDIUM_TIME))
 
-            for o in g.objects(subject=PERIODO['p0h#change-3'],
-                               predicate=PROV.generated):
-                path = '/' + urlparse(o).path.split('/')[-1][2:]
-                if path == '/trgkv' or path == '/d':
-                    continue
-                for version in range(0, 3):
-                    res = client.get(
-                        '{}?version={}'.format(path, version),
-                        headers={'Accept': 'application/json'},
-                        follow_redirects=True)
-                    self.assertEqual(res.status_code, http.client.NOT_FOUND)
-                res = client.get('{}?version=3'.format(path),
-                                 headers={'Accept': 'application/json'})
-                self.assertEqual(res.status_code, http.client.SEE_OTHER)
-                self.assertEqual(
-                    '/' + res.headers['Location'].split('/')[-1],
-                    '{}.json?version=3'.format(path))
-                res = client.get(
-                    '{}.json?version=3'.format(path))
-                self.assertEqual(
-                    res.status_code, http.client.OK)
-                self.assertEqual(
-                    res.headers['Content-Type'], 'application/json')
+    def test_context_versioning(self):
+        with open(filepath('test-patch-modify-context.json')) as f:
+            patch = f.read()
+        with self.client as client:
+            res = client.patch(
+                '/d/',
+                data=patch,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            patch_url = urlparse(res.headers['Location']).path
+            res = client.post(
+                patch_url + 'merge',
+                buffered=True,
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+            self.assertEqual(res.status_code, http.client.NO_CONTENT)
 
-            for o in g.objects(subject=PERIODO['p0h#change-2'],
-                               predicate=PROV.generated):
-                path = '/' + urlparse(o).path.split('/')[-1][2:]
-                if path == '/trgkv' or path == '/d':
-                    continue
-                for version in range(0, 2):
-                    res = client.get(
-                        '{}?version={}'.format(path, version),
-                        headers={'Accept': 'application/json'},
-                        follow_redirects=True)
-                    self.assertEqual(res.status_code, http.client.NOT_FOUND)
-                res = client.get('{}?version=3'.format(path),
-                                 headers={'Accept': 'application/json'})
-                self.assertEqual(res.status_code, http.client.SEE_OTHER)
-                self.assertEqual(
-                    '/' + res.headers['Location'].split('/')[-1],
-                    '{}.json?version=3'.format(path))
-                res = client.get('{}.json?version=3'.format(path))
-                self.assertEqual(
-                    res.status_code, http.client.MOVED_PERMANENTLY)
-                self.assertEqual(
-                    '/' + res.headers['Location'].split('/')[-1],
-                    '{}.json?version=2'.format(path))
-                res = client.get(
-                    '{}.json?version=2'.format(path))
-                self.assertEqual(
-                    res.status_code, http.client.OK)
-                self.assertEqual(
-                    res.headers['Content-Type'], 'application/json')
+            res = client.get('/d.json?version=0',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            ctx = json.loads(res.get_data(as_text=True)).get('@context', None)
+            self.assertIsNone(ctx)
 
-    def test_remove_definition(self):
-        with open(filepath('test-patch-remove-definition.json')) as f:
+            res = client.get('/c?version=0',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.NOT_FOUND)
+
+            res = client.get('/d.json?version=1',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            self.assertEqual(
+                res.headers['Cache-Control'],
+                'public, max-age={}'.format(cache.LONG_TIME))
+            ctx = json.loads(res.get_data(as_text=True))['@context']
+            self.assertEqual(ctx[0], 'http://localhost.localdomain:5000/c?version=1')
+
+            res = client.get('/c?version=1',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            self.assertEqual(
+                res.headers['Cache-Control'],
+                'public, max-age={}'.format(cache.LONG_TIME))
+            ctx = json.loads(res.get_data(as_text=True))['@context']
+            self.assertNotIn('foobar', ctx)
+
+            res = client.get('/d.json?version=2',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            ctx = json.loads(res.get_data(as_text=True))['@context']
+            self.assertEqual(ctx[0], 'http://localhost.localdomain:5000/c?version=2')
+
+            res = client.get('/c?version=2',
+                             headers={'Accept': 'application/json'},
+                             follow_redirects=True)
+            self.assertEqual(res.status_code, http.client.OK)
+            ctx = json.loads(res.get_data(as_text=True))['@context']
+            self.assertIn('foobar', ctx)
+
+    def test_remove_period(self):
+        with open(filepath('test-patch-remove-period.json')) as f:
             patch1 = f.read()
         with self.client as client:
             res = client.patch(
@@ -364,24 +384,24 @@ class TestPatchMethods(unittest.TestCase):
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
 
-            res = client.get('/h')
+            res = client.get('/history.jsonld?inline-context')
+            self.assertEqual(
+                res.headers['Cache-Control'],
+                'public, max-age=0')
+            self.assertEqual(
+                res.headers['X-Accel-Expires'],
+                '{}'.format(cache.MEDIUM_TIME))
 
             g = ConjunctiveGraph()
             g.parse(format='json-ld', data=res.get_data(as_text=True))
 
-            invalidated = g.value(subject=PERIODO['p0h#change-2'],
-                                  predicate=PROV.invalidated,
-                                  any=False)
-            self.assertEqual(invalidated, PERIODO['p0trgkvwbjd'])
-
-            generated = list(g.objects(subject=PERIODO['p0h#change-2'],
+            generated = list(g.objects(subject=HOST['h#change-2'],
                                        predicate=PROV.generated))
-            self.assertEqual(len(generated), 2)
-            self.assertIn(PERIODO['p0d?version=2'], generated)
-            self.assertIn(PERIODO['p0trgkv?version=2'], generated)
+            self.assertEqual(len(generated), 1)
+            self.assertIn(HOST['d?version=2'], generated)
 
-    def test_remove_collection(self):
-        with open(filepath('test-patch-remove-collection.json')) as f:
+    def test_remove_authority(self):
+        with open(filepath('test-patch-remove-authority.json')) as f:
             patch1 = f.read()
         with self.client as client:
             res = client.patch(
@@ -450,18 +470,18 @@ class TestPatchMethods(unittest.TestCase):
                              follow_redirects=True)
             self.assertEqual(res.status_code, http.client.OK)
 
-            res = client.get('/h')
+            res = client.get('/h.jsonld?inline-context')
+            self.assertEqual(
+                res.headers['Cache-Control'],
+                'public, max-age=0')
+            self.assertEqual(
+                res.headers['X-Accel-Expires'],
+                '{}'.format(cache.MEDIUM_TIME))
 
             g = ConjunctiveGraph()
             g.parse(format='json-ld', data=res.get_data(as_text=True))
 
-            invalidated = list(g.objects(subject=PERIODO['p0h#change-2'],
-                                         predicate=PROV.invalidated))
-            self.assertEqual(len(invalidated), 4)
-            self.assertIn(PERIODO['p0trgkv'], invalidated)
-            self.assertIn(PERIODO['p0trgkvwbjd'], invalidated)
-
-            generated = g.value(subject=PERIODO['p0h#change-2'],
+            generated = g.value(subject=HOST['h#change-2'],
                                 predicate=PROV.generated,
                                 any=False)
-            self.assertEqual(generated, PERIODO['p0d?version=2'])
+            self.assertEqual(generated, HOST['d?version=2'])

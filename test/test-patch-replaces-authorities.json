@@ -1,10 +1,10 @@
 [
   {
     "op": "replace",
-    "path": "/periodCollections",
+    "path": "/authorities",
     "value": {
       "https://perio.do/.well-known/genid/36c1db27acc00e91c8a628abcaa64eb0": {
-        "definitions": {
+        "periods": {
           "https://perio.do/.well-known/genid/8d3df296ba8665cf4045d34a2d983c97": {
             "spatialCoverageDescription": "Roman Britain",
             "editorialNote": "May be an inference, not statement / assertion.",

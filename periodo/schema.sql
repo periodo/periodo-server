@@ -1,17 +1,15 @@
-DROP TABLE IF EXISTS dataset;
-CREATE TABLE dataset (
+CREATE TABLE IF NOT EXISTS dataset (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   created_at INTEGER DEFAULT (strftime('%s', 'now')),
   data TEXT NOT NULL,
   description TEXT NOT NULL
 );
-INSERT INTO dataset (
+INSERT OR IGNORE INTO dataset (
   id, data, description)
 VALUES (
   0, '{}', 'Initial empty dataset.');
 
-DROP TABLE IF EXISTS patch_request;
-CREATE TABLE patch_request (
+CREATE TABLE IF NOT EXISTS patch_request (
   id integer PRIMARY KEY AUTOINCREMENT,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
   created_by TEXT NOT NULL,
@@ -42,16 +40,15 @@ CREATE TABLE patch_request (
   FOREIGN KEY(resulted_in) REFERENCES dataset(id)
 );
 
-DROP TRIGGER IF EXISTS update_patch;
-CREATE TRIGGER update_patch UPDATE OF original_patch ON patch_request
+CREATE TRIGGER IF NOT EXISTS update_patch
+UPDATE OF original_patch ON patch_request
 BEGIN
   UPDATE patch_request
   SET updated_at = (strftime('%s', 'now'))
   WHERE id = old.id;
 END;
 
-DROP TABLE IF EXISTS patch_request_comment;
-CREATE TABLE patch_request_comment (
+CREATE TABLE IF NOT EXISTS patch_request_comment (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   posted_at INTEGER DEFAULT (strftime('%s', 'now')),
   patch_request_id INTEGER NOT NULL,
@@ -62,8 +59,7 @@ CREATE TABLE patch_request_comment (
   FOREIGN KEY (author) REFERENCES user(id)
 );
 
-DROP TABLE IF EXISTS bag;
-CREATE TABLE bag (
+CREATE TABLE IF NOT EXISTS bag (
   uuid TEXT NOT NULL,
   version integer NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
@@ -75,23 +71,33 @@ CREATE TABLE bag (
   FOREIGN KEY(created_by) REFERENCES user(id)
 );
 
-DROP TABLE IF EXISTS user;
-CREATE TABLE user (
+CREATE TABLE IF NOT EXISTS graph (
+  id TEXT NOT NULL,
+  version integer NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+  deleted BOOLEAN NOT NULL DEFAULT 0,
+  data TEXT NOT NULL,
+
+  PRIMARY KEY(id, version)
+);
+
+CREATE TABLE IF NOT EXISTS user (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
-  permissions TEXT NOT NULL DEFAULT '[["action", "submit-patch", "create-bag"]]',
+  permissions TEXT NOT NULL
+    DEFAULT '[["action", "submit-patch"], ["action", "create-bag"]]',
   b64token TEXT UNIQUE NOT NULL,
   token_expires_at INTEGER NOT NULL,
   credentials TEXT NOT NULL,
   credentials_updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
-INSERT INTO USER (
+INSERT OR IGNORE INTO user (
   id, name, permissions, b64token, token_expires_at, credentials)
 VALUES (
   'initial-data-loader', 'initial data loader', '', '', 0, '');
 
-DROP TRIGGER IF EXISTS update_user_credentials;
-CREATE TRIGGER update_user_credentials UPDATE OF credentials ON user
+CREATE TRIGGER IF NOT EXISTS update_user_credentials
+UPDATE OF credentials ON user
 BEGIN
   UPDATE user
   SET credentials_updated_at = (strftime('%s', 'now'))

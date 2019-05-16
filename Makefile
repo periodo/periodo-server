@@ -1,63 +1,69 @@
 VENV_DIR := venv
 PIP3 := $(VENV_DIR)/bin/pip3
 PYTHON3 := $(VENV_DIR)/bin/python3
-DB := $(shell $(PYTHON3) -c "from periodo.secrets import DB; print(DB)")
-
-CLIENT_REPO := '../periodo-client'
+DB := ./db.sqlite
 
 VOCAB_FILES := $(shell find vocab -name *.ttl)
 SHAPE_FILES := $(shell find shapes -name *.ttl)
 
 .PHONY: all
-all: setup periodo/static/vocab.ttl $(DB)
+all: setup vocab.html $(DB)
 
 $(PYTHON3):
 	python3 -m venv $(VENV_DIR)
 
+.PHONY: $(DB)
 $(DB):
-	$(PYTHON3) -c "from periodo.commands import init_db; init_db()";
+	DATABASE=$(DB) $(PYTHON3) -c\
+	 "from periodo.commands import init_db; init_db()";
 
-periodo/static/vocab.ttl: $(VOCAB_FILES) $(SHAPE_FILES)
-	mkdir -p periodo/static
+vocab.ttl: $(VOCAB_FILES) $(SHAPE_FILES)
 	./bin/ttlcat $^ > $@
+
+vocab.html: vocab.ttl
+	highlight -i $< -o $@ -s zellner -l -a -T 'PeriodO vocabulary and shapes' --inline-css
 
 .PHONY: load_data
 load_data:
 ifeq ($(DATA),)
 	$(error No data file provided. Run `make load_data DATA=/path/to/data/file`)
 endif
-	$(PYTHON3) -c "from periodo.commands import load_data; load_data('$(DATA)')"
+	DATABASE=$(DB) $(PYTHON3) -c\
+	 "from periodo.commands import load_data; load_data('$(DATA)')"
+
+export.sql.gz:
+ifeq ($(IMPORT_URL),)
+	$(error No import URL provided. Run e.g. `make import IMPORT_URL=https://staging.perio.do/export.sql`)
+endif
+	curl -X GET -H 'Accept-Encoding: gzip' "$(IMPORT_URL)" > $@
+
+.PHONY: import
+import: export.sql.gz
+ifneq ($(wildcard $(DB)),)
+	TS=`date -u +%FT%TZ` && mv $(DB) "$(DB)-$$TS.bak"
+endif
+	cat $< | gunzip | sqlite3 $(DB)
 
 .PHONY: set_permissions
 set_permissions:
 ifeq ($(ORCID),)
-	$(error No orcid provided. Run `make load_data ORCID=http://orcid.org/0000-1234 PERMISSIONS=perm1,perm2,perm3)
+	$(error No orcid provided. Run `make set_permissions ORCID=https://orcid.org/0000-1234 PERMISSIONS=perm1,perm2,perm3)
 endif
-	$(PYTHON3) -c "from periodo.commands import set_permissions; set_permissions('$(ORCID)','$(PERMISSIONS)'.split(','))"
+	DATABASE=$(DB) $(PYTHON3) -c\
+	 "from periodo.commands import set_permissions; set_permissions('$(ORCID)','$(PERMISSIONS)'.split(','))"
 
 .PHONY: setup
 setup: $(PYTHON3) requirements.txt
-	$(PIP3) install -r requirements.txt
+	$(PIP3) install -q -r requirements.txt
 
 .PHONY: clean
-clean: clean_static_html
+clean:
 	rm -rf $(VENV_DIR)
-	rm -rf periodo/static
-
-.PHONY: clean_static_html
-clean_static_html:
-	if [ -L periodo/static/html ]; then rm periodo/static/html; else rm -rf periodo/static/html; fi
-
-.PHONY: fetch_latest_client
-fetch_latest_client: clean_static_html
-	mkdir -p periodo/static/html
-	TARBALL=`npm pack periodo-client | tail -n 1` && \
-		tar xvzf $$TARBALL -C periodo/static/html --strip-components=1
-
-.PHONY: link_client_repository
-link_client_repository: clean_static_html
-	ln -s $(abspath $(CLIENT_REPO)) periodo/static/html
 
 .PHONY: test
-test: setup periodo/static/vocab.ttl
-	$(PYTHON3) -m unittest discover
+test: setup
+	TESTING=1 $(PYTHON3) -m unittest discover
+
+.PHONY: run
+run: test
+	$(PYTHON3) runserver.py

@@ -13,35 +13,35 @@
 @prefix time: <http://www.w3.org/2006/time#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-periodo:DefinitionShape
+periodo:PeriodShape
   rdf:type sh:NodeShape ;
-  rdfs:label "Period definition shape" ;
+  rdfs:label "Period shape" ;
   sh:targetClass skos:Concept ;
   sh:closed "true"^^xsd:boolean ;
   sh:ignoredProperties (
     rdf:type
     ) ;
   sh:property
-    periodo:DefinitionPreferredLabelShape ,
-    periodo:DefinitionLocalizedLabelShape ,
-    periodo:DefinitionNoteShape ,
-    periodo:DefinitionEditorialNoteShape ,
-    periodo:DefinitionCollectionShape ,
-    periodo:DefinitionSourceShape ,
-    periodo:DefinitionSourceIsPartOfShape ,
-    periodo:DefinitionSourceLocatorShape ,
-    periodo:DefinitionStartShape ,
-    periodo:DefinitionStopShape ,
-    periodo:DefinitionSpatialCoverageDescriptionShape ,
-    periodo:DefinitionSpatialCoverageShape ,
-    periodo:DefinitionSameAsShape ,
-    periodo:DefinitionBroaderShape ,
-    periodo:DefinitionNarrowerShape ,
-    periodo:DefinitionURLShape ,
-    periodo:DefinitionLanguageShape
+    periodo:PeriodPreferredLabelShape ,
+    periodo:PeriodLocalizedLabelShape ,
+    periodo:PeriodNoteShape ,
+    periodo:PeriodEditorialNoteShape ,
+    periodo:PeriodAuthorityShape ,
+    periodo:PeriodSourceShape ,
+    periodo:PeriodSourceIsPartOfShape ,
+    periodo:PeriodSourceLocatorShape ,
+    periodo:PeriodStartShape ,
+    periodo:PeriodStopShape ,
+    periodo:PeriodSpatialCoverageDescriptionShape ,
+    periodo:PeriodSpatialCoverageShape ,
+    periodo:PeriodSameAsShape ,
+    periodo:PeriodBroaderShape ,
+    periodo:PeriodNarrowerShape ,
+    periodo:PeriodURLShape ,
+    periodo:PeriodLanguageShape
   .
 
-periodo:DefinitionPreferredLabelShape
+periodo:PeriodPreferredLabelShape
   rdf:type sh:PropertyShape ;
   sh:path skos:prefLabel ;
   sh:name "preferred label" ;
@@ -49,81 +49,81 @@ periodo:DefinitionPreferredLabelShape
   sh:datatype xsd:string ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
-  sh:message "Problem with definition preferred label" ;
+  sh:message "Problem with period preferred label" ;
   .
 
-periodo:DefinitionLocalizedLabelShape
+periodo:PeriodLocalizedLabelShape
   rdf:type sh:PropertyShape ;
   sh:path skos:altLabel ;
   sh:name "localized label" ;
   sh:description "Language-specific name for the period" ;
   sh:datatype rdf:langString ;
   sh:minCount 1 ;
-  sh:message "Problem with definition localized label" ;
+  sh:message "Problem with period localized label" ;
   .
 
-periodo:DefinitionNoteShape
+periodo:PeriodNoteShape
   rdf:type sh:PropertyShape ;
   sh:path skos:note ;
   sh:name "note" ;
-  sh:description "Notes about the definition taken from the source" ;
+  sh:description "Notes about the period taken from the source" ;
   sh:datatype xsd:string ;
   sh:maxCount 1 ;
-  sh:message "Problem with definition note" ;
+  sh:message "Problem with period note" ;
   .
 
-periodo:DefinitionEditorialNoteShape
+periodo:PeriodEditorialNoteShape
   rdf:type sh:PropertyShape ;
   sh:path skos:editorialNote ;
   sh:name "editorial note" ;
   sh:description "Administrative or editorial notes from PeriodO curators" ;
   sh:datatype xsd:string ;
   sh:maxCount 1 ;
-  sh:message "Problem with definition editorial note" ;
+  sh:message "Problem with period editorial note" ;
   .
 
-periodo:DefinitionCollectionShape
+periodo:PeriodAuthorityShape
   rdf:type sh:PropertyShape ;
   sh:path skos:inScheme ;
-  sh:name "collection" ;
-  sh:description "Collection to which this period definition belongs" ;
+  sh:name "authority" ;
+  sh:description "Authority to which this period belongs" ;
   sh:nodeKind sh:IRI ;
   sh:class skos:ConceptScheme ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
-  sh:message "Problem with definition link to collection" ;
+  sh:message "Problem with period link to authority" ;
   .
 
-periodo:DefinitionSourceShape
+periodo:PeriodSourceShape
   rdf:type sh:PropertyShape ;
   sh:path dcterms:source ;
   sh:name "source" ;
-  sh:description "Bibliographic information specific to this definition" ;
+  sh:description "Bibliographic information specific to this period" ;
   sh:nodeKind sh:BlankNode ;
   sh:node periodo:SourceShape ;
   sh:maxCount 1 ;
-  sh:message "Problem with definition source" ;
+  sh:message "Problem with period source" ;
   .
 
-periodo:DefinitionSourceIsPartOfShape
+periodo:PeriodSourceIsPartOfShape
   rdf:type sh:PropertyShape ;
   sh:path ( dcterms:source dcterms:isPartOf ) ;
   sh:name "source is part of" ;
   sh:nodeKind sh:IRI ;
   sh:maxCount 1 ;
-  sh:message "Problem with definition source (is part of)" ;
+  sh:message "Problem with period source (is part of)" ;
   .
 
-periodo:DefinitionSourceLocatorShape
+periodo:PeriodSourceLocatorShape
   rdf:type sh:PropertyShape ;
   sh:path ( dcterms:source bibo:locator ) ;
   sh:name "source locator" ;
   sh:datatype xsd:string ;
   sh:maxCount 1 ;
-  sh:message "Problem with definition source (locator)" ;
+  sh:message "Problem with period source (locator)" ;
   .
 
-periodo:DefinitionStartShape
+periodo:PeriodStartShape
   rdf:type sh:PropertyShape ;
   sh:path time:intervalStartedBy ;
   sh:name "start" ;
@@ -132,10 +132,10 @@ periodo:DefinitionStartShape
   sh:node periodo:IntervalShape ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
-  sh:message "Problem with definition start interval" ;
+  sh:message "Problem with period start interval" ;
   .
 
-periodo:DefinitionStopShape
+periodo:PeriodStopShape
   rdf:type sh:PropertyShape ;
   sh:path time:intervalFinishedBy ;
   sh:name "stop" ;
@@ -144,20 +144,20 @@ periodo:DefinitionStopShape
   sh:node periodo:IntervalShape ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
-  sh:message "Problem with definition stop interval" ;
+  sh:message "Problem with period stop interval" ;
   .
 
-periodo:DefinitionSpatialCoverageDescriptionShape
+periodo:PeriodSpatialCoverageDescriptionShape
   rdf:type sh:PropertyShape ;
   sh:path periodo:spatialCoverageDescription ;
   sh:name "spatial coverage description" ;
   sh:description "Spatial extent of the period as described in the source" ;
   sh:datatype xsd:string ;
   sh:maxCount 1 ;
-  sh:message "Problem with definition spatial coverage description" ;
+  sh:message "Problem with period spatial coverage description" ;
   .
 
-periodo:DefinitionSpatialCoverageShape
+periodo:PeriodSpatialCoverageShape
   rdf:type sh:PropertyShape ;
   sh:path dcterms:spatial ;
   sh:name "spatial coverage" ;
@@ -165,48 +165,48 @@ periodo:DefinitionSpatialCoverageShape
   sh:nodeKind sh:IRI ;
 # Temporarily disabled
 #    sh:minCount 1 ;
-  sh:message "Problem with definition spatial coverage" ;
+  sh:message "Problem with period spatial coverage" ;
   .
 
-periodo:DefinitionSameAsShape
+periodo:PeriodSameAsShape
   rdf:type sh:PropertyShape ;
   sh:path owl:sameAs ;
   sh:name "same as" ;
-  sh:description "Alternative URI for this definition" ;
+  sh:description "Alternative URI for this period" ;
   sh:nodeKind sh:IRI ;
-  sh:message "Problem with definition alternative URI (sameAs)" ;
+  sh:message "Problem with period alternative URI (sameAs)" ;
   .
 
-periodo:DefinitionBroaderShape
+periodo:PeriodBroaderShape
   rdf:type sh:PropertyShape ;
   sh:path skos:broader ;
-  sh:name "see broader definition" ;
-  sh:description "Another period definition that encompasses this one" ;
+  sh:name "see broader period" ;
+  sh:description "Another period period that encompasses this one" ;
   sh:nodeKind sh:IRI ;
   sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
-  sh:message "Problem with broader" ;
+  sh:message "Problem with period broader" ;
   .
 
-periodo:DefinitionNarrowerShape
+periodo:PeriodNarrowerShape
   rdf:type sh:PropertyShape ;
   sh:path skos:narrower ;
-  sh:name "see narrower definition" ;
-  sh:description "Another period definition encompassed by this one" ;
+  sh:name "see narrower period" ;
+  sh:description "Another period period encompassed by this one" ;
   sh:nodeKind sh:IRI ;
   sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
-  sh:message "Problem with narrower" ;
+  sh:message "Problem with period narrower" ;
   .
 
-periodo:DefinitionURLShape
+periodo:PeriodURLShape
   rdf:type sh:PropertyShape ;
   sh:path foaf:page ;
   sh:name "url" ;
-  sh:description "Web resource with information about this definition" ;
+  sh:description "Web resource with information about this period" ;
   sh:nodeKind sh:IRI ;
-  sh:message "Problem with definition URL" ;
+  sh:message "Problem with period URL" ;
   .
 
-periodo:DefinitionLanguageShape
+periodo:PeriodLanguageShape
   rdf:type sh:PropertyShape ;
   sh:path dcterms:language ;
   sh:name "language" ;
@@ -214,5 +214,5 @@ periodo:DefinitionLanguageShape
   sh:datatype xsd:string ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
-  sh:message "Problem with definition language" ;
+  sh:message "Problem with period language" ;
   .
