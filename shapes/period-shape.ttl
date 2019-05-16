@@ -8,6 +8,7 @@
 @prefix lvont: <http://lexvo.org/ontology#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
@@ -37,6 +38,7 @@ periodo:PeriodShape
     periodo:PeriodSpatialCoverageDescriptionShape ,
     periodo:PeriodSpatialCoverageShape ,
     periodo:PeriodSameAsShape ,
+    periodo:PeriodDerivedFromShape ,
     periodo:PeriodBroaderShape ,
     periodo:PeriodNarrowerShape ,
     periodo:PeriodURLShape ,
@@ -208,6 +210,17 @@ periodo:PeriodSameAsShape
   sh:description "Alternative URI for this period" ;
   sh:nodeKind sh:IRI ;
   sh:message "Problem with period alternative URI (sameAs)" ;
+  .
+
+periodo:PeriodDerivedFromShape
+  rdf:type sh:PropertyShape ;
+  sh:path prov:wasDerivedFrom ;
+  sh:name "was derived from" ;
+  sh:description "Another period period from which this one was derived" ;
+  sh:nodeKind sh:IRI ;
+  sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
+  sh:maxCount 1 ;
+  sh:message "Problem with derived from" ;
   .
 
 periodo:PeriodBroaderShape
