@@ -57,6 +57,12 @@ WHERE {
         Literal(utils.isoformat(created_at), datatype=XSD.dateTime))
 
     add_to_description(
+        DCTERMS.provenance,
+        URIRef(utils.absolute_url(data['@context']['@base'], 'history')
+               + '#changes')
+    )
+
+    add_to_description(
         VOID.triples, Literal(len(dataset_g), datatype=XSD.integer))
 
     for row in contributors:

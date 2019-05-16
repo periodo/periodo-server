@@ -12,7 +12,7 @@
 periodo:DatasetShape
   rdf:type sh:NodeShape ;
   rdfs:label "PeriodO dataset shape" ;
-  sh:targetNode <p0d/#periodCollections> ;
+  sh:targetNode <p0d/#authorities> ;
   sh:closed "true"^^xsd:boolean ;
   sh:property
     periodo:DatasetTypeShape ,
@@ -37,7 +37,7 @@ periodo:DatasetMemberShape
   rdf:type sh:PropertyShape ;
   sh:path rdfs:member ;
   sh:name "member" ;
-  sh:description "A period collection in this dataset" ;
+  sh:description "A period authority in this dataset" ;
   sh:nodeKind sh:IRI ;
   sh:class skos:ConceptScheme ;
   sh:message "Problem with dataset member" ;
