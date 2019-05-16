@@ -37,6 +37,8 @@ periodo:PeriodShape
     periodo:PeriodSpatialCoverageDescriptionShape ,
     periodo:PeriodSpatialCoverageShape ,
     periodo:PeriodSameAsShape ,
+    periodo:PeriodBroaderShape ,
+    periodo:PeriodNarrowerShape ,
     periodo:PeriodURLShape ,
     periodo:PeriodLanguageTagShape ,
     periodo:PeriodLanguageShape ,
@@ -177,6 +179,26 @@ periodo:PeriodSameAsShape
   sh:description "Alternative URI for this period" ;
   sh:nodeKind sh:IRI ;
   sh:message "Problem with period alternative URI (sameAs)" ;
+  .
+
+periodo:PeriodBroaderShape
+  rdf:type sh:PropertyShape ;
+  sh:path skos:broader ;
+  sh:name "see broader period" ;
+  sh:description "Another period period that encompasses this one" ;
+  sh:nodeKind sh:IRI ;
+  sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
+  sh:message "Problem with period broader" ;
+  .
+
+periodo:PeriodNarrowerShape
+  rdf:type sh:PropertyShape ;
+  sh:path skos:narrower ;
+  sh:name "see narrower period" ;
+  sh:description "Another period period encompassed by this one" ;
+  sh:nodeKind sh:IRI ;
+  sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
+  sh:message "Problem with period narrower" ;
   .
 
 periodo:PeriodURLShape
