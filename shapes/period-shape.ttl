@@ -67,9 +67,11 @@ periodo:PeriodLocalizedLabelShape
   sh:languageIn (
     "ar"
     "bg"
+    "ca"
     "cmn-Hans"
     "cmn-Hant"
     "cmn-Latn"
+    "da"
     "de"
     "el"
     "en"
@@ -92,6 +94,8 @@ periodo:PeriodLocalizedLabelShape
     "sv"
     "tr"
     "uk"
+    "vi"
+    "zh-Latn"
     ) ;
   sh:minCount 1 ;
   sh:message "Problem with period localized label" ;
@@ -261,9 +265,11 @@ periodo:PeriodLanguageTagShape
   sh:in (
     "ar"
     "bg"
+    "ca"
     "cmn-Hans"
     "cmn-Hant"
     "cmn-Latn"
+    "da"
     "de"
     "el"
     "en"
@@ -286,6 +292,8 @@ periodo:PeriodLanguageTagShape
     "sv"
     "tr"
     "uk"
+    "vi"
+    "zh-Latn"
     ) ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
