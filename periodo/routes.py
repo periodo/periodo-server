@@ -150,7 +150,7 @@ def register():
 
 @app.route('/registered')
 def registered():
-    if not request.args['state'] == session.pop('state_token'):
+    if not request.args['state'] == session.pop('state_token', None):
         abort(403)
     data = {
         'client_id': app.config['ORCID_CLIENT_ID'],
