@@ -202,6 +202,7 @@ periodo:PeriodSpatialCoverageShape
   sh:name "spatial coverage" ;
   sh:description "Place (partially) within spatial extent of the period" ;
   sh:nodeKind sh:IRI ;
+  sh:pattern "^http://www.wikidata.org/entity/Q[0-9]+" ;
 # Temporarily disabled
 #    sh:minCount 1 ;
   sh:message "Problem with period spatial coverage" ;
