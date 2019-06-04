@@ -142,18 +142,24 @@ class TestGraphs(unittest.TestCase):
             self.assertEqual('version=1', graph_url_v1.query)
 
             res = client.get('/graphs/%s' % id)
+            data = json.loads(res.get_data(as_text=True))
+            self.assertEqual(len(data['graphs']), 1)
             self.assertEqual(
-                json.loads(res.get_data(as_text=True))[
-                    'features'][0]['names'][0]['toponym'],
+                data['graphs']
+                ['http://localhost.localdomain:5000/graphs/%s' % id]
+                ['features'][0]['names'][0]['toponym'],
                 'Minnesooooooota')
             self.assertEqual(
                 res.headers['Content-Disposition'],
                 'attachment; filename="periodo-graph-places-us-states.json"')
 
             res = client.get('/graphs/%s?version=0' % id)
+            data = json.loads(res.get_data(as_text=True))
+            self.assertEqual(len(data['graphs']), 1)
             self.assertEqual(
-                json.loads(res.get_data(as_text=True))[
-                    'features'][0]['names'][0]['toponym'],
+                data['graphs']
+                ['http://localhost.localdomain:5000/graphs/%s?version=0' % id]
+                ['features'][0]['names'][0]['toponym'],
                 'Minnesota')
             self.assertEqual(
                 res.headers['Content-Disposition'],
@@ -161,10 +167,18 @@ class TestGraphs(unittest.TestCase):
                 + 'filename="periodo-graph-places-us-states-v0.json"')
 
             res = client.get('/graphs/%s?version=1' % id)
+            data = json.loads(res.get_data(as_text=True))
+            self.assertEqual(len(data['graphs']), 1)
             self.assertEqual(
-                json.loads(res.get_data(as_text=True))[
-                    'features'][0]['names'][0]['toponym'],
+                data['graphs']
+                ['http://localhost.localdomain:5000/graphs/%s?version=1' % id]
+                ['features'][0]['names'][0]['toponym'],
                 'Minnesooooooota')
+            self.assertEqual(
+                data['graphs']
+                ['http://localhost.localdomain:5000/graphs/%s?version=1' % id]
+                ['wasRevisionOf'],
+                'http://localhost.localdomain:5000/graphs/%s?version=0' % id)
             self.assertEqual(
                 res.headers['Content-Disposition'],
                 'attachment; '

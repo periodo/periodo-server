@@ -651,25 +651,33 @@ class Bag(Resource):
             return cache.long_time(response)
 
 
+def external_graph_url(graph, version):
+    if version is None:
+        return url_for('graph', id=graph['id'], _external=True)
+    return url_for('graph', id=graph['id'], version=version, _external=True)
+
+
+def graph_container(id, graphs, version=None):
+    return {
+        '@context': {
+            '@version': 1.1,
+            'graphs': {
+                '@id': id,
+                '@container': ['@graph', '@id']
+            }},
+        'graphs': {
+            external_graph_url(graph, version): json.loads(graph['data'])
+            for graph in graphs
+        }
+    }
+
+
 def get_graphs(prefix=None):
         if prefix and prefix.endswith('/'):
             prefix = prefix[:-1]
         id = (url_for('graphs', _external=True)
               + ((prefix + '/') if prefix else ''))
-        data = {
-            '@context': {
-                '@version': 1.1,
-                'graphs': {
-                    '@id': id,
-                    '@container': ['@graph', '@id']
-                }},
-            'graphs': {}
-        }
-        graphs = database.get_graphs(prefix)
-        for graph in graphs:
-            graph_url = url_for('graph', id=graph['id'], _external=True)
-            data['graphs'][graph_url] = json.loads(graph['data'])
-        return data
+        return graph_container(id, database.get_graphs(prefix))
 
 
 @add_resources('graphs', suffixes=['json'], barepaths=['/graphs/'], html=False)
@@ -727,7 +735,7 @@ class Graph(Resource):
         headers = {}
         headers['Last-Modified'] = format_date_time(graph['created_at'])
 
-        data = json.loads(graph['data'])
+        data = graph_container(graph['id'], [graph], version)
         response = api.make_response(data, 200, headers, filename=filename)
         response.set_etag(graph_etag, weak=True)
 

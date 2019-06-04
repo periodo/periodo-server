@@ -2,7 +2,7 @@ import itertools
 import json
 import sqlite3
 from periodo import app, identifier
-from flask import g
+from flask import g, url_for
 from uuid import UUID
 
 
@@ -235,8 +235,8 @@ def create_or_update_graph(id, data):
     row = c.fetchone()
     version = 0 if row['max_version'] is None else row['max_version'] + 1
     if version > 0:
-        data['wasRevisionOf'] = identifier.prefix(
-            'graphs/{}?version={}'.format(id, row['max_version']))
+        data['wasRevisionOf'] = url_for(
+            'graph', id=id, version=row['max_version'], _external=True)
     c.execute('''
     INSERT INTO graph (
                id,
