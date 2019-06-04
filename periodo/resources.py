@@ -657,12 +657,12 @@ def external_graph_url(graph, version):
     return url_for('graph', id=graph['id'], version=version, _external=True)
 
 
-def graph_container(id, graphs, version=None):
+def graph_container(url, graphs, version=None):
     return {
         '@context': {
             '@version': 1.1,
             'graphs': {
-                '@id': id,
+                '@id': url,
                 '@container': ['@graph', '@id']
             }},
         'graphs': {
@@ -675,9 +675,9 @@ def graph_container(id, graphs, version=None):
 def get_graphs(prefix=None):
         if prefix and prefix.endswith('/'):
             prefix = prefix[:-1]
-        id = (url_for('graphs', _external=True)
-              + ((prefix + '/') if prefix else ''))
-        return graph_container(id, database.get_graphs(prefix))
+        url = (url_for('graphs', _external=True)
+               + ((prefix + '/') if prefix else ''))
+        return graph_container(url, database.get_graphs(prefix))
 
 
 @add_resources('graphs', suffixes=['json'], barepaths=['/graphs/'], html=False)
@@ -735,7 +735,8 @@ class Graph(Resource):
         headers = {}
         headers['Last-Modified'] = format_date_time(graph['created_at'])
 
-        data = graph_container(graph['id'], [graph], version)
+        data = graph_container(
+            external_graph_url(graph, version), [graph], version)
         response = api.make_response(data, 200, headers, filename=filename)
         response.set_etag(graph_etag, weak=True)
 
