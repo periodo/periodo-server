@@ -224,7 +224,6 @@ periodo:PeriodDerivedFromShape
   sh:description "Another period period from which this one was derived" ;
   sh:nodeKind sh:IRI ;
   sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
-  sh:maxCount 1 ;
   sh:message "Problem with derived from" ;
   .
 
@@ -235,17 +234,8 @@ periodo:PeriodBroaderShape
   sh:description "Another period period that encompasses this one" ;
   sh:nodeKind sh:IRI ;
   sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
+  sh:maxCount 1 ;
   sh:message "Problem with period broader" ;
-  .
-
-periodo:PeriodNarrowerShape
-  rdf:type sh:PropertyShape ;
-  sh:path skos:narrower ;
-  sh:name "see narrower period" ;
-  sh:description "Another period period encompassed by this one" ;
-  sh:nodeKind sh:IRI ;
-  sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
-  sh:message "Problem with period narrower" ;
   .
 
 periodo:PeriodURLShape
