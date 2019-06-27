@@ -193,7 +193,7 @@ def registered():
         """.format(
             json.dumps(credentials['name']),
             json.dumps(identity.b64token.decode()),
-            request.host_url
+            app.config['CLIENT_URL']
         ))
 
 
