@@ -187,7 +187,6 @@ def registered():
               {{ name: {}, token: {} }},
               "{}"
             )
-            window.close();
             </script>
         </head>
         <body>
