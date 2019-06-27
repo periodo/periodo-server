@@ -183,7 +183,7 @@ def registered():
         <!doctype html>
         <head>
             <script type="text/javascript">
-            parent.postMessage(
+            opener.postMessage(
               {{ name: {}, token: {} }},
               "{}"
             )
