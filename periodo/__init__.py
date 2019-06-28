@@ -80,11 +80,35 @@ def add_date_header(response):
     return response
 
 
+CORS_ALLOWED_HEADERS = [
+    'If-Modified-Since',
+    'Authorization',
+    'Content-Type',
+]
+
+CORS_ALLOWED_METHODS = [
+    'GET',
+    'POST',
+    'PATCH',
+    'HEAD',
+    'OPTIONS',
+]
+
+CORS_EXPOSED_HEADERS = [
+    'Last-Modified',
+    'Location',
+]
+
+
 @app.after_request
 def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'If-Modified-Since')
-    response.headers.add('Access-Control-Expose-Headers', 'Last-Modified')
+    response.headers.add('Access-Control-Allow-Headers',
+                         ', '.join(CORS_ALLOWED_HEADERS))
+    response.headers.add('Access-Control-Expose-Headers',
+                         ', '.join(CORS_EXPOSED_HEADERS))
+    response.headers.add('Access-Control-Allow-Methods',
+                         ', '.join(CORS_ALLOWED_METHODS))
     return response
 
 
