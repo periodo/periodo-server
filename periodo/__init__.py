@@ -97,6 +97,7 @@ CORS_ALLOWED_METHODS = [
 CORS_EXPOSED_HEADERS = [
     'Last-Modified',
     'Location',
+    'Link',
 ]
 
 
