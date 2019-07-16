@@ -98,6 +98,7 @@ CORS_EXPOSED_HEADERS = [
     'Last-Modified',
     'Location',
     'Link',
+    'X-Total-Count',
 ]
 
 

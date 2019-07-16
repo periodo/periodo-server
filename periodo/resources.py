@@ -404,6 +404,13 @@ class PatchList(Resource):
         rows = database.query_db(query, params)
         data = [process_patch_row(row) for row in rows][:limit]
 
+        count_rows = database.query_db(
+            """
+            SELECT COUNT(*) AS count FROM patch_request
+            """)
+
+        count = count_rows[0]['count']
+
         link_headers = []
 
         if offset > 0:
@@ -431,8 +438,11 @@ class PatchList(Resource):
                 '<{}?{}>; rel="next"'.format(next_url, urlencode(next_params)))
 
         headers = {}
+
         if (link_headers):
             headers['Link'] = ', '.join(link_headers)
+
+        headers['X-Total-Count'] = count
 
         return marshal(data, patch_list_fields), 200, headers
 
