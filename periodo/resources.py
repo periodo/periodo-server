@@ -21,8 +21,12 @@ class W3CDTF(fields.Raw):
         return utils.isoformat(value)
 
 
-patch_list_fields = OrderedDict((
+patch_list_url_fields = OrderedDict((
     ('url', fields.Url('patchrequest', absolute=True)),
+    ('text', fields.Url('patch', absolute=True)),
+))
+
+patch_list_fields = OrderedDict((
     ('created_by', fields.String),
     ('created_at', W3CDTF),
     ('updated_by', fields.String),
@@ -30,7 +34,6 @@ patch_list_fields = OrderedDict((
     ('created_from', fields.String),
     ('applied_to', fields.String),
     ('identifier_map', fields.Raw),
-    ('text', fields.Url('patch', absolute=True)),
     ('open', fields.Boolean),
     ('merged', fields.Boolean)
 ))
@@ -444,7 +447,24 @@ class PatchList(Resource):
 
         headers['X-Total-Count'] = count
 
-        return marshal(data, patch_list_fields), 200, headers
+        marshaled_non_url = marshal(data, patch_list_fields)
+
+        # Separating out marshaling the URLs from everything else because
+        # it takes a very long time to do it otherwise. In reversing the URL,
+        # flask_restful passes the whole dataobject to werkzeug's url reversing
+        # function, requiring that every character of that object be URL
+        # escaped. This actually creates a huge amount of overhead for larger
+        # objects, like patch requests with lots of ID mappings. So, we marshal
+        # these fields differently, only passing the ID field (which is all
+        # that is needed to reverse the URL).
+        ids = [{'id': item['id']} for item in data]
+        marshaled = marshal(ids, patch_list_url_fields)
+
+        # Once that's done, merge everything into the URL fields
+        for i, d in enumerate(marshaled):
+            d.update(marshaled_non_url[i])
+
+        return marshaled, 200, headers
 
 
 @add_resources(
