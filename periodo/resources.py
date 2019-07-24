@@ -50,6 +50,8 @@ patch_fields.update((
     ('comments', fields.List(fields.Nested(comment_fields))),
 ))
 
+patch_url_fields = patch_list_url_fields.copy()
+
 patch_list_parser = reqparse.RequestParser()
 patch_list_parser.add_argument(
     'sort', location='args', type=str, choices=('created_at', 'updated_at'),
@@ -489,7 +491,12 @@ class PatchRequest(Resource):
         except auth.AuthenticationFailed:
             pass
 
-        return marshal(data, patch_fields), 200, headers
+        # See patch list field for details about this dance
+        marshaled_non_url = marshal(data, patch_fields)
+        marshaled = marshal({ 'id': data['id']}, patch_url_fields)
+        marshaled.update(marshaled_non_url)
+
+        return marshaled, 200, headers
 
 
 @add_resources(
