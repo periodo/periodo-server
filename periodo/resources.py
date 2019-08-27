@@ -316,7 +316,10 @@ class Dataset(Resource):
 class History(Resource):
     def get(self):
         response = api.make_response(
-            provenance.history('inline-context' in request.args),
+            provenance.history(
+                inline_context=('inline-context' in request.args),
+                include_entity_details=('full' in request.args)
+            ),
             200, filename='periodo-history'
         )
         return cache.medium_time(response, server_only=True)
@@ -493,7 +496,7 @@ class PatchRequest(Resource):
 
         # See patch list field for details about this dance
         marshaled_non_url = marshal(data, patch_fields)
-        marshaled = marshal({ 'id': data['id']}, patch_url_fields)
+        marshaled = marshal({'id': data['id']}, patch_url_fields)
         marshaled.update(marshaled_non_url)
 
         return marshaled, 200, headers
@@ -710,11 +713,11 @@ def graph_container(url, graphs, version=None):
 
 
 def get_graphs(prefix=None):
-        if prefix and prefix.endswith('/'):
-            prefix = prefix[:-1]
-        url = (url_for('graphs', _external=True)
-               + ((prefix + '/') if prefix else ''))
-        return graph_container(url, database.get_graphs(prefix))
+    if prefix and prefix.endswith('/'):
+        prefix = prefix[:-1]
+    url = (url_for('graphs', _external=True)
+           + ((prefix + '/') if prefix else ''))
+    return graph_container(url, database.get_graphs(prefix))
 
 
 @add_resources('graphs', suffixes=['json'], barepaths=['/graphs/'], html=False)

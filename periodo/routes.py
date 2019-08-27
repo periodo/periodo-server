@@ -80,7 +80,8 @@ def see_dataset():
 
 
 @app.route('/<string(length=%s):authority_id>'
-           % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1))
+           % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1),
+           endpoint='authority')
 def see_authority(authority_id):
     try:
         identifier.assert_valid(authority_id, strict=False)
@@ -101,7 +102,8 @@ def see_authority(authority_id):
 
 @app.route('/<string(length=%s):period_id>'
            % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1 +
-              identifier.PERIOD_SEQUENCE_LENGTH + 1))
+              identifier.PERIOD_SEQUENCE_LENGTH + 1),
+           endpoint='period')
 def see_period(period_id):
     try:
         identifier.assert_valid(period_id, strict=False)
