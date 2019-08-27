@@ -86,7 +86,7 @@ class TestProvenance(unittest.TestCase):
             self.assertEqual(
                 urlparse(res3.headers['Location']).path, '/h.jsonld')
 
-            res4 = client.get('/history.jsonld?inline-context')
+            res4 = client.get('/history.jsonld?inline-context&full')
             self.assertEqual(res4.status_code, http.client.OK)
             self.assertEqual(
                 res4.headers['Content-Type'], 'application/ld+json')
@@ -121,6 +121,18 @@ class TestProvenance(unittest.TestCase):
         self.assertIn(
             (HOST['d?version=1'],
              PROV.specializationOf, HOST['d']), g)
+        self.assertIn(
+            (HOST['h#change-1'],
+             PROV.generated, HOST['trgkv?version=1']), g)
+        self.assertIn(
+            (HOST['trgkv?version=1'],
+             PROV.specializationOf, HOST['trgkv']), g)
+        self.assertIn(
+            (HOST['h#change-1'],
+             PROV.generated, HOST['trgkvwbjd?version=1']), g)
+        self.assertIn(
+            (HOST['trgkvwbjd?version=1'],
+             PROV.specializationOf, HOST['trgkvwbjd']), g)
 
         # Change from first submitted patch
         self.assertIn(  # None means any
@@ -227,3 +239,20 @@ class TestProvenance(unittest.TestCase):
         self.assertIn(
             (HOST['d?version=2'],
              PROV.specializationOf, HOST['d']), g)
+        self.assertIn(
+            (HOST['h#change-2'],
+             PROV.generated, HOST['trgkv?version=2']), g)
+        self.assertIn(
+            (HOST['trgkv?version=2'],
+             PROV.specializationOf, HOST['trgkv']), g)
+        self.assertIn(
+            (HOST['trgkv?version=2'],
+             PROV.wasRevisionOf, HOST['trgkv?version=1']), g)
+
+        entities = 0
+        for _, _, version in g.triples(
+                (HOST['h#change-2'], PROV.generated, None)):
+            entity = g.value(subject=version, predicate=PROV.specializationOf)
+            self.assertEqual(str(entity) + '?version=2', str(version))
+            entities += 1
+        self.assertEqual(entities, 6)
