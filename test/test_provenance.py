@@ -84,16 +84,21 @@ class TestProvenance(unittest.TestCase):
             res3 = client.get('/h', headers={'Accept': 'application/ld+json'})
             self.assertEqual(res3.status_code, http.client.SEE_OTHER)
             self.assertEqual(
-                urlparse(res3.headers['Location']).path, '/h.jsonld')
+                urlparse(res3.headers['Location']).path, '/h.nt')
 
-            res4 = client.get('/history.jsonld?inline-context&full')
-            self.assertEqual(res4.status_code, http.client.OK)
+            res4 = client.get('/h', headers={'Accept': 'application/n-triples'})
+            self.assertEqual(res4.status_code, http.client.SEE_OTHER)
             self.assertEqual(
-                res4.headers['Content-Type'], 'application/ld+json')
-            jsonld = res4.get_data(as_text=True)
+                urlparse(res4.headers['Location']).path, '/h.nt')
+
+            res5 = client.get('/history.nt?full')
+            self.assertEqual(res5.status_code, http.client.OK)
+            self.assertEqual(
+                res5.headers['Content-Type'], 'application/n-triples')
+            nt = res5.get_data(as_text=True)
 
         g = ConjunctiveGraph()
-        g.parse(format='json-ld', data=jsonld)
+        g.parse(format='nt', data=nt)
 
         # Initial data load
         self.assertIn(  # None means any

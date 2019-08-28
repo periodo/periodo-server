@@ -312,12 +312,16 @@ class Dataset(Resource):
             return {'status': 400, 'message': str(e)}, 400
 
 
-@add_resources('history', shortname='h', barepaths=None, html=False)
+@add_resources(
+    'history',
+    shortname='h',
+    barepaths=None,
+    suffixes=('nt',),
+    html=False)
 class History(Resource):
     def get(self):
         response = api.make_response(
             provenance.history(
-                inline_context=('inline-context' in request.args),
                 include_entity_details=('full' in request.args)
             ),
             200, filename='periodo-history'
