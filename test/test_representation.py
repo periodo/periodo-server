@@ -3,7 +3,7 @@ import tempfile
 import unittest
 import http.client
 import json
-from rdflib import Graph, ConjunctiveGraph, URIRef
+from rdflib import Graph, URIRef
 from rdflib.plugins import sparql
 from rdflib.namespace import Namespace, RDF, DCTERMS
 from urllib.parse import urlparse
@@ -498,7 +498,7 @@ WHERE {
         res3 = self.client.get('/dataset.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
 
-    def test_h_turtle(self):
+    def test_h_nt(self):
         with self.client as client:
             res = client.patch(
                 '/d/',
@@ -512,97 +512,73 @@ WHERE {
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
 
-        res1 = self.client.get('/h.ttl')
+        res1 = self.client.get('/h.nt')
         self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
-        self.assertEqual(
-            res1.headers['Cache-Control'],
-            'public, max-age={}'.format(cache.SHORT_TIME))
-        self.assertEqual(
-            res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-history.ttl"')
-
-        g = Graph()
-        g.parse(data=res1.get_data(as_text=True), format='turtle')
-        self.assertIn((HOST['h#patch-1'],
-                       FOAF.page, HOST['patches/1/patch.jsonpatch']), g)
-        self.assertIn((HOST['d'],
-                       DCTERMS.provenance, HOST['h#changes']), g)
-
-        res3 = self.client.get('/h.ttl/')
-        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
-
-    def test_history_turtle(self):
-        with self.client as client:
-            res = client.patch(
-                '/d/',
-                data=self.patch,
-                content_type='application/json',
-                headers={'Authorization': 'Bearer '
-                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-            res = client.post(
-                urlparse(res.headers['Location']).path + 'merge',
-                buffered=True,
-                headers={'Authorization': 'Bearer '
-                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
-
-        res1 = self.client.get('/history.ttl')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
-        self.assertEqual(
-            res1.headers['Cache-Control'],
-            'public, max-age={}'.format(cache.SHORT_TIME))
-        self.assertEqual(
-            res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-history.ttl"')
-
-        g = Graph()
-        g.parse(data=res1.get_data(as_text=True), format='turtle')
-        self.assertIn((HOST['h#patch-1'],
-                       FOAF.page, HOST['patches/1/patch.jsonpatch']), g)
-        self.assertIn((HOST['d'],
-                       DCTERMS.provenance, HOST['h#changes']), g)
-
-        res3 = self.client.get('/history.ttl/')
-        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
-
-    def test_history_json(self):
-        with self.client as client:
-            res = client.patch(
-                '/d/',
-                data=self.patch,
-                content_type='application/json',
-                headers={'Authorization': 'Bearer '
-                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-            res = client.post(
-                urlparse(res.headers['Location']).path + 'merge',
-                buffered=True,
-                headers={'Authorization': 'Bearer '
-                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
-
-        res1 = self.client.get('/history.json?inline-context')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'application/json')
-        self.assertEqual(
-            res1.headers['Cache-Control'],
-            'public, max-age=0')
+        self.assertEqual(res1.headers['Content-Type'], 'application/n-triples')
         self.assertEqual(
             res1.headers['X-Accel-Expires'],
             '{}'.format(cache.MEDIUM_TIME))
         self.assertEqual(
+            res1.headers['Cache-Control'],
+            'public, max-age=0')
+        self.assertEqual(
             res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-history.json"')
-        self.assertIn('Date', res1.headers)
+            'attachment; filename="periodo-history.nt"')
 
-        g = ConjunctiveGraph()
-        g.parse(data=res1.get_data(as_text=True), format='json-ld')
+        g = Graph()
+        g.parse(data=res1.get_data(as_text=True), format='nt')
         self.assertIn((HOST['h#patch-1'],
                        FOAF.page, HOST['patches/1/patch.jsonpatch']), g)
         self.assertIn((HOST['d'],
                        DCTERMS.provenance, HOST['h#changes']), g)
 
-        res3 = self.client.get('/history.json/')
+        res3 = self.client.get('/h.nt/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+
+    def test_h_turtle(self):
+        res1 = self.client.get('/h.ttl')
+        self.assertEqual(res1.status_code, http.client.NOT_FOUND)
+
+    def test_history_nt(self):
+        with self.client as client:
+            res = client.patch(
+                '/d/',
+                data=self.patch,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            res = client.post(
+                urlparse(res.headers['Location']).path + 'merge',
+                buffered=True,
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+
+        res1 = self.client.get('/history.nt')
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'application/n-triples')
+        self.assertEqual(
+            res1.headers['X-Accel-Expires'],
+            '{}'.format(cache.MEDIUM_TIME))
+        self.assertEqual(
+            res1.headers['Cache-Control'],
+            'public, max-age=0')
+        self.assertEqual(
+            res1.headers['Content-Disposition'],
+            'attachment; filename="periodo-history.nt"')
+
+        g = Graph()
+        g.parse(data=res1.get_data(as_text=True), format='turtle')
+        self.assertIn((HOST['h#patch-1'],
+                       FOAF.page, HOST['patches/1/patch.jsonpatch']), g)
+        self.assertIn((HOST['d'],
+                       DCTERMS.provenance, HOST['h#changes']), g)
+
+        res3 = self.client.get('/history.nt/')
+        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+
+    def test_history_json(self):
+        res1 = self.client.get('/history.json')
+        self.assertEqual(res1.status_code, http.client.NOT_FOUND)
 
     def test_export(self):
         res1 = self.client.get('/export.sql')

@@ -17,6 +17,8 @@ def get_mimetype():
         return 'jsonld'
     if request.accept_mimetypes.best == 'text/turtle':
         return 'ttl'
+    if request.accept_mimetypes.best == 'application/n-triples':
+        return 'nt'
     return None
 
 
@@ -35,7 +37,7 @@ def see_history():
     if mimetype is None:
         url = build_client_url(page='backend-history')
     else:
-        url = url_for('history-%s' % mimetype,  **request.args)
+        url = url_for('history-nt',  **request.args)
     return redirect(url, code=303)
 
 

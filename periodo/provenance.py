@@ -62,11 +62,11 @@ def add_entity_details(g, row, change, uri_for):
         g.add((change, PROV.invalidated, entity_uri(uri_for, entity_id)))
 
 
-def history(inline_context=False, include_entity_details=False):
-    context = database.get_context()
+def history(include_entity_details=False):
+    base = database.get_context()['@base']
 
     def uri_for(endpoint, **kwargs):
-        return URIRef(absolute_url(context['@base'], endpoint, **kwargs))
+        return URIRef(absolute_url(base, endpoint, **kwargs))
 
     history_uri = uri_for('history')
     vocab_uri = uri_for('vocab')
@@ -144,18 +144,4 @@ def history(inline_context=False, include_entity_details=False):
 
     g.add((dataset_uri, DCTERMS.provenance, changes_uri))
 
-    def ordering(o):
-        if o['id'] == str(changes_uri):
-            # sort first
-            return ' '
-        return o['id']
-
-    jsonld = json.loads(
-        g.serialize(format='json-ld', context=context).decode('utf-8')
-    )
-    jsonld['history'] = sorted(jsonld['history'], key=ordering)
-
-    if inline_context:
-        jsonld['@context']['__inline'] = True
-
-    return jsonld
+    return g

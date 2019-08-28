@@ -1,6 +1,7 @@
 import json
 from urllib.parse import urlencode
 from flask import request, make_response, redirect, url_for
+from rdflib import Graph
 from periodo import api, cache, routes, utils
 
 
@@ -74,6 +75,23 @@ def output_json(data, code, headers={}, filename=None):
     if filename is not None:
         response.headers['Content-Disposition'] = (
             'attachment; filename="%s.json"' % filename)
+
+    return response
+
+
+@api.representation('application/n-triples')
+def output_nt(graph, code, headers={}, filename=None):
+    if not type(graph) == Graph:
+        return 'n-triples representation not available'
+
+    nt = '' if code != 200 else graph.serialize(format='nt')
+    response = make_response(nt, code)
+    response.content_type = 'application/n-triples'
+    response.headers.extend(headers)
+
+    if filename is not None:
+        response.headers['Content-Disposition'] = (
+            'attachment; filename="%s.nt"' % filename)
 
     return response
 

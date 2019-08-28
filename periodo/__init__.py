@@ -126,6 +126,7 @@ SUFFIXES = {
     '.json.html': 'application/json+html',
     '.jsonld.html': 'application/json+html',
     '.ttl.html': 'text/turtle+html',
+    '.nt': 'application/n-triples',
 }
 
 
