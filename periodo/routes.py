@@ -31,6 +31,11 @@ def build_client_url(page, **values):
     )
 
 
+@app.route('/h.ttl', endpoint='history-ttl')
+def legacy_history_endpoint_redirect():
+    return redirect(url_for('history-nt',  **request.args), code=301)
+
+
 @app.route('/h', endpoint='history')
 def see_history():
     mimetype = get_mimetype()

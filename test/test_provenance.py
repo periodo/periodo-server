@@ -81,6 +81,11 @@ class TestProvenance(unittest.TestCase):
                 headers={'Authorization': 'Bearer '
                          + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
 
+            res2 = client.get('/h', headers={'Accept': 'text/turtle'})
+            self.assertEqual(res2.status_code, http.client.SEE_OTHER)
+            self.assertEqual(
+                urlparse(res2.headers['Location']).path, '/h.nt')
+
             res3 = client.get('/h', headers={'Accept': 'application/ld+json'})
             self.assertEqual(res3.status_code, http.client.SEE_OTHER)
             self.assertEqual(

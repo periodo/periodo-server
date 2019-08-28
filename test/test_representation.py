@@ -537,7 +537,8 @@ WHERE {
 
     def test_h_turtle(self):
         res1 = self.client.get('/h.ttl')
-        self.assertEqual(res1.status_code, http.client.NOT_FOUND)
+        self.assertEqual(res1.status_code, http.client.MOVED_PERMANENTLY)
+        self.assertEqual(res1.headers['Location'], str(HOST['h.nt']))
 
     def test_history_nt(self):
         with self.client as client:
