@@ -1,6 +1,6 @@
 Flask-Principal==0.4.0
 Flask-RESTful==0.3.7
-Flask==1.0.2
+Flask==1.1.1
 Pygments==2.4.2
 Werkzeug==0.15.4
 jsonpatch==1.23
