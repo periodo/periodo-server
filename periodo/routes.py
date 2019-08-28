@@ -130,11 +130,14 @@ def generate_state_token():
                    for x in range(32))
 
 
-def build_redirect_uri(cli=False):
-    if cli:
+def build_redirect_uri(request_args):
+    if 'cli' in request_args:
         return url_for('registered', cli=True, _external=True)
     else:
-        return url_for('registered', _external=True)
+        kwargs = {}
+        if 'origin' in request_args:
+            kwargs['origin'] = request_args['origin']
+        return url_for('registered', _external=True, **kwargs)
 
 
 @app.route('/register')
@@ -143,7 +146,7 @@ def register():
     session['state_token'] = state_token
     params = {
         'client_id': app.config['ORCID_CLIENT_ID'],
-        'redirect_uri': build_redirect_uri(cli=('cli' in request.args)),
+        'redirect_uri': build_redirect_uri(request.args),
         'response_type': 'code',
         'scope': '/authenticate',
         'state': state_token,
@@ -161,7 +164,7 @@ def registered():
         'client_secret': app.config['ORCID_CLIENT_SECRET'],
         'code': request.args['code'],
         'grant_type': 'authorization_code',
-        'redirect_uri': build_redirect_uri(cli=('cli' in request.args)),
+        'redirect_uri': build_redirect_uri(request.args),
         'scope': '/authenticate',
     }
     response = requests.post(
@@ -197,7 +200,7 @@ def registered():
         """.format(
             json.dumps(credentials['name']),
             json.dumps(identity.b64token.decode()),
-            app.config['CLIENT_URL']
+            request.args.get('origin', app.config['CLIENT_URL'])
         ))
 
 
