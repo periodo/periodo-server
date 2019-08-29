@@ -1,6 +1,7 @@
 import os
 import json
 import rdflib
+import logging
 from uuid import UUID
 from flask import Flask, request
 from flask_principal import Principal
@@ -23,6 +24,9 @@ except ModuleNotFoundError as e:
 # Disable normalization of literals because rdflib handles gYears improperly:
 # https://github.com/RDFLib/rdflib/issues/806
 rdflib.NORMALIZE_LITERALS = False
+
+# Silence rdflib warnings
+logging.getLogger('rdflib.term').setLevel(logging.ERROR)
 
 
 class UUIDConverter(BaseConverter):
@@ -50,6 +54,7 @@ app.wsgi_app = RemoveTransferEncodingHeaderMiddleware(app.wsgi_app)
 app.config.update(
     DATABASE=os.environ.get('DATABASE', './db.sqlite'),
     CACHE=os.environ.get('CACHE', None),
+    RIOT=os.environ.get('RIOT', '/usr/local/bin/riot'),
     SERVER_NAME=os.environ.get('SERVER_NAME', 'localhost.localdomain:5000'),
     CLIENT_URL=os.environ.get('CLIENT_URL', 'https://client.perio.do'),
     CANONICAL=json.loads(os.environ.get('CANONICAL', 'false')),

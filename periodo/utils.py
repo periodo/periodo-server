@@ -1,8 +1,8 @@
 import json
 import re
+import subprocess
 from datetime import datetime
 from flask import url_for
-from rdflib import ConjunctiveGraph
 from pygments import highlight
 from pygments.lexers import TurtleLexer, JsonLexer
 from pygments.formatters import HtmlFormatter
@@ -21,9 +21,14 @@ def isoformat(value):
 
 
 def jsonld_to_turtle(jsonld):
-    g = ConjunctiveGraph()
-    g.parse(data=json.dumps(jsonld), format='json-ld')
-    return g.serialize(format='turtle')
+    result = subprocess.run(
+        [app.config['RIOT'], '--syntax=jsonld', '--output=ttl'],
+        input=json.dumps(jsonld),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        encoding='utf8'
+    )
+    return result.stdout
 
 
 def highlight_string(string, lexer):
