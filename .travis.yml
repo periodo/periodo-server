@@ -3,6 +3,6 @@ python:
   - "3.6"
   - "3.6-dev"
   - "3.7-dev"
-before_install:
+before_script:
 - cd /opt && curl http://mirrors.ibiblio.org/apache/jena/binaries/apache-jena-3.12.0.tar.gz | tar zx
 script: TESTING=1 python3 -m unittest discover
