@@ -24,7 +24,8 @@ def jsonld_to_turtle(jsonld):
     result = subprocess.run(
         [app.config['RIOT'], '--syntax=jsonld', '--output=ttl'],
         input=json.dumps(jsonld),
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
         encoding='utf8'
     )
     return result.stdout
