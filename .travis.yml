@@ -5,4 +5,4 @@ python:
   - "3.7-dev"
 before_script:
 - curl http://mirrors.ibiblio.org/apache/jena/binaries/apache-jena-3.12.0.tar.gz | tar -zx -C /opt
-script: TESTING=1 python3 -m unittest discover
+script: TESTING=1 RIOT=/opt/apache-jena-3.12.0/bin/riot python3 -m unittest discover
