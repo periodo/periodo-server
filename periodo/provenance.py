@@ -69,7 +69,7 @@ def history(include_entity_details=False):
         return URIRef(absolute_url(base, endpoint, **kwargs))
 
     history_uri = uri_for('history')
-    vocab_uri = uri_for('vocab')
+    vocab_uri = uri_for('vocabulary')
     dataset_uri = uri_for('abstract_dataset')
     changes_uri = history_uri + '#changes'
 

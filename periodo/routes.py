@@ -46,7 +46,6 @@ def see_history():
     return redirect(url, code=303)
 
 
-@app.route('/v', endpoint='vocab')
 @app.route('/v', endpoint='vocabulary')
 def vocab():
     if request.accept_mimetypes.best == 'text/turtle':
