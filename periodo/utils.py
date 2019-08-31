@@ -22,7 +22,7 @@ def isoformat(value):
 
 def jsonld_to_turtle(jsonld):
     result = subprocess.run(
-        [app.config['RIOT'], '--syntax=jsonld', '--output=ttl'],
+        [app.config['RIOT'], '--syntax=jsonld', '--formatted=ttl'],
         input=json.dumps(jsonld),
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
