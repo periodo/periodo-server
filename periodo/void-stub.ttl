@@ -19,7 +19,9 @@
 <p0d> a void:Dataset ;
    dcterms:title "PeriodO Period Gazetteer" ;
    dcterms:description "A gazetteer of scholarly assertions about the spatial and temporal extents of historical, art-historical, and archaeological periods."@en ;
-   dcterms:subject <http://dbpedia.org/resource/Periodization> ;
+   dcterms:subject
+      <http://www.wikidata.org/entity/Q816829> ,
+      <http://id.loc.gov/authorities/subjects/sh00006934> ;
    dcterms:license <http://creativecommons.org/publicdomain/zero/1.0/> ;
    dcterms:creator
       orcid:0000-0002-5486-159X ,

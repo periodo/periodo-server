@@ -11,7 +11,7 @@
       },
       "spatialCoverage": [
         {
-          "@id": "http://dbpedia.org/resource/Turkey",
+          "@id": "http://www.wikidata.org/entity/Q43",
           "label": "Turkey"
         }
       ],

@@ -129,7 +129,6 @@ WHERE {
         self.assertEqual(res.headers['Content-Type'], 'text/turtle')
         g = Graph()
         g.parse(format='turtle', data=res.get_data(as_text=True))
-        # http://dbpedia.org/void/Dataset
         q = sparql.prepareQuery('''
 SELECT ?triples
 WHERE {
@@ -141,9 +140,9 @@ WHERE {
   ?linkset void:triples ?triples .
 }
 ''', initNs={'void': VOID})
-        dbpedia = URIRef('http://dbpedia.org/void/Dataset')
+        wikidata = URIRef('http://www.wikidata.org/entity/Q2013')
         triples = next(iter(g.query(
-            q, initBindings={'dataset': dbpedia,
+            q, initBindings={'dataset': wikidata,
                              'predicate': DCTERMS.spatial})))['triples'].value
         self.assertEqual(triples, 3)
 
