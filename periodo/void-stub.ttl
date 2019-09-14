@@ -95,15 +95,15 @@ orcid:0000-0002-4871-039X a foaf:Person ;
    ] ;
    void:linkPredicate dcterms:isPartOf .
 
-<p0#spatial-links-to-dbpedia> a void:Linkset ;
+<p0#spatial-links-to-wikidata> a void:Linkset ;
    void:subset <p0d> ;
    void:subjectsTarget <p0d> ;
-   void:objectsTarget <http://dbpedia.org/void/Dataset> ;
+   void:objectsTarget <http://www.wikidata.org/entity/Q2013> ;
    void:linkPredicate dcterms:spatial .
 
-<http://dbpedia.org/void/Dataset> a void:Dataset ;
-   dcterms:description "DBpedia"@en ;
-   void:uriSpace "http://dbpedia.org/resource/" .
+<http://www.wikidata.org/entity/Q2013> a void:Dataset ;
+   dcterms:description "Wikidata"@en ;
+   void:uriSpace "http://www.wikidata.org/entity/" .
 
 <p0#sameas-links-to-english-heritage-periods-list> a void:Linkset ;
    void:subset <p0d> ;
