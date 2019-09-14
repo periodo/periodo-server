@@ -103,7 +103,7 @@
           },
           "spatialCoverage": [
             {
-              "id": "http://dbpedia.org/resource/Spain",
+              "id": "http://www.wikidata.org/entity/Q29",
               "label": "Spain"
             }
           ],
@@ -133,7 +133,7 @@
           "note": "chronological table on p. 4",
           "spatialCoverage": [
             {
-              "id": "http://dbpedia.org/resource/Turkey",
+              "id": "http://www.wikidata.org/entity/Q43",
               "label": "Turkey"
             }
           ],
@@ -162,7 +162,7 @@
           "note": "chronological table on p. 4; not dividing the archaic period by dynasties (all Mermnad, not usually used to refer to material) or using \"Orientalizing\" (since Lydia the source of much of what is called \"Orientalizing\" in Greece)",
           "spatialCoverage": [
             {
-              "@id": "http://dbpedia.org/resource/Turkey",
+              "@id": "http://www.wikidata.org/entity/Q43",
               "label": "Turkey"
             }
           ],

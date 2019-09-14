@@ -9,7 +9,7 @@
             "spatialCoverageDescription": "Roman Britain",
             "editorialNote": "May be an inference, not statement / assertion.",
             "spatialCoverage": [
-              {"id": "http://dbpedia.org/resource/United_Kingdom", "label": "United Kingdom"}
+              {"id": "http://www.wikidata.org/entity/Q145", "label": "United Kingdom"}
             ],
             "language": "eng-latn",
             "localizedLabels": {"eng-latn": ["Iron Age"]},

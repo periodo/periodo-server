@@ -19,7 +19,9 @@
 <p0d> a void:Dataset ;
    dcterms:title "PeriodO Period Gazetteer" ;
    dcterms:description "A gazetteer of scholarly assertions about the spatial and temporal extents of historical, art-historical, and archaeological periods."@en ;
-   dcterms:subject <http://dbpedia.org/resource/Periodization> ;
+   dcterms:subject
+      <http://www.wikidata.org/entity/Q816829> ,
+      <http://id.loc.gov/authorities/subjects/sh00006934> ;
    dcterms:license <http://creativecommons.org/publicdomain/zero/1.0/> ;
    dcterms:creator
       orcid:0000-0002-5486-159X ,
@@ -95,15 +97,15 @@ orcid:0000-0002-4871-039X a foaf:Person ;
    ] ;
    void:linkPredicate dcterms:isPartOf .
 
-<p0#spatial-links-to-dbpedia> a void:Linkset ;
+<p0#spatial-links-to-wikidata> a void:Linkset ;
    void:subset <p0d> ;
    void:subjectsTarget <p0d> ;
-   void:objectsTarget <http://dbpedia.org/void/Dataset> ;
+   void:objectsTarget <http://www.wikidata.org/entity/Q2013> ;
    void:linkPredicate dcterms:spatial .
 
-<http://dbpedia.org/void/Dataset> a void:Dataset ;
-   dcterms:description "DBpedia"@en ;
-   void:uriSpace "http://dbpedia.org/resource/" .
+<http://www.wikidata.org/entity/Q2013> a void:Dataset ;
+   dcterms:description "Wikidata"@en ;
+   void:uriSpace "http://www.wikidata.org/entity/" .
 
 <p0#sameas-links-to-english-heritage-periods-list> a void:Linkset ;
    void:subset <p0d> ;
