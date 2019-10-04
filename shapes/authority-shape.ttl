@@ -54,5 +54,5 @@ periodo:AuthoritySameAsShape
   sh:name "same as" ;
   sh:description "Alternative URI for this authority" ;
   sh:nodeKind sh:IRI ;
-  sh:message "Problem with authority alternative URI (sameAs" ;
+  sh:message "Problem with authority alternative URI (sameAs)" ;
   .
