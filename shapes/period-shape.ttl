@@ -40,7 +40,6 @@ periodo:PeriodShape
     periodo:PeriodSameAsShape ,
     periodo:PeriodDerivedFromShape ,
     periodo:PeriodBroaderShape ,
-    periodo:PeriodNarrowerShape ,
     periodo:PeriodURLShape ,
     periodo:PeriodLanguageTagShape ,
     periodo:PeriodLanguageShape ,
