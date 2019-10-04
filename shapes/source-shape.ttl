@@ -53,7 +53,7 @@ periodo:SourceIssuedShape
   rdf:type sh:PropertyShape ;
   sh:path dcterms:issued ;
   sh:name "issued" ;
-  sh:datatype xsd:gYear ;
+  sh:datatype xsd:string ;
   sh:maxCount 1 ;
   .
 
