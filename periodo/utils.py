@@ -26,7 +26,8 @@ def jsonld_to_turtle(jsonld):
         input=json.dumps(jsonld),
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
-        encoding='utf8'
+        encoding='utf8',
+        env={'JVM_ARGS': '-Xms0M -Xmx256M'}
     )
     return result.stdout
 
