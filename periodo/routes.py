@@ -97,7 +97,9 @@ def see_authority(authority_id):
     mimetype = get_mimetype()
     if mimetype is None:
         url = build_client_url(
-            page='authority-view', authorityID=authority_id)
+            page='authority-view',
+            authorityID=identifier.prefix(authority_id)
+        )
     else:
         url = url_for(
             'authority-%s' % mimetype, authority_id=authority_id,
@@ -121,7 +123,10 @@ def see_period(period_id):
         periodID = request.path[1:]
         authorityID = periodID[0:identifier.AUTHORITY_SEQUENCE_LENGTH + 1]
         url = build_client_url(
-            page='period-view', authorityID=authorityID, periodID=periodID)
+            page='period-view',
+            authorityID=identifier.prefix(authorityID),
+            periodID=identifier.prefix(periodID)
+        )
     else:
         url = url_for(
             'period-%s' % mimetype, period_id=period_id, **request.args)
