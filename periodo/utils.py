@@ -20,6 +20,10 @@ def isoformat(value):
     return datetime.utcfromtimestamp(value).isoformat() + '+00:00'
 
 
+class RDFTranslationError(Exception):
+    pass
+
+
 def jsonld_to_turtle(jsonld):
     result = subprocess.run(
         [app.config['RIOT'], '--syntax=jsonld', '--formatted=ttl'],
@@ -29,6 +33,8 @@ def jsonld_to_turtle(jsonld):
         encoding='utf8',
         env={'JVM_ARGS': '-Xms0M -Xmx256M'}
     )
+    if not result.returncode == 0:
+        raise RDFTranslationError()
     return result.stdout
 
 

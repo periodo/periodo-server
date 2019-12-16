@@ -101,7 +101,14 @@ def output_turtle(data, code, headers={}, filename=None):
     if request.path == '/':
         return routes.void()
 
-    ttl = '' if code != 200 else utils.jsonld_to_turtle(data)
+    if code == 200:
+        try:
+            ttl = utils.jsonld_to_turtle(data)
+        except utils.RDFTranslationError:
+            return make_response('RDF translation failed', 500)
+    else:
+        ttl = ''
+
     response = make_response(ttl, code)
     response.content_type = 'text/turtle'
     response.headers.extend(headers)
