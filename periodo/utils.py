@@ -33,8 +33,11 @@ def jsonld_to_turtle(jsonld):
         encoding='utf8',
         env={'JVM_ARGS': '-Xms0M -Xmx256M'}
     )
-    if not result.returncode == 0:
-        raise RDFTranslationError('return code: %s' % result.returncode)
+    # checking the return code is not reliable, because riot will return 1
+    # even if there are only warnings. So we look for the first character
+    # of TTL output, which should be '@'
+    if not (result.stdout.length > 0 and result.stdout[0] == '@'):
+        raise RDFTranslationError(result.stdout)
     return result.stdout
 
 

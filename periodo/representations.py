@@ -105,7 +105,7 @@ def output_turtle(data, code, headers={}, filename=None):
         try:
             ttl = utils.jsonld_to_turtle(data)
         except utils.RDFTranslationError as e:
-            return make_response('RDF translation failed: %s' % e, 500)
+            return make_response('RDF translation failed:\n%s' % e, 500)
     else:
         ttl = ''
 
