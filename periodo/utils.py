@@ -34,7 +34,7 @@ def jsonld_to_turtle(jsonld):
         env={'JVM_ARGS': '-Xms0M -Xmx256M'}
     )
     if not result.returncode == 0:
-        raise RDFTranslationError()
+        raise RDFTranslationError(result)
     return result.stdout
 
 
