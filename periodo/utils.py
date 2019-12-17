@@ -31,7 +31,7 @@ def jsonld_to_turtle(jsonld):
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         encoding='utf8',
-        env={'JVM_ARGS': '-Xms0M -Xmx128M'}
+        env={'JVM_ARGS': '-Xms0M -Xmx512M'}
     )
     # checking the return code is not reliable, because riot will return 1
     # even if there are only warnings. So we look for the first character
