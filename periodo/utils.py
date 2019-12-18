@@ -1,6 +1,7 @@
 import json
 import re
 import subprocess
+import tempfile
 from datetime import datetime
 from flask import url_for
 from pygments import highlight
@@ -20,25 +21,82 @@ def isoformat(value):
     return datetime.utcfromtimestamp(value).isoformat() + '+00:00'
 
 
+def run_subprocess(command_line, input=None):
+    app.logger.debug('Running subprocess:\n%s' % ' '.join(command_line))
+    process = subprocess.run(
+        command_line,
+        input=input,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        encoding='utf8',
+        env={'JVM_ARGS': '-Xms256M -Xmx512M'}
+    )
+    app.logger.debug('stdout:\n%s' % process.stdout)
+    app.logger.debug('stderr:\n%s' % process.stderr)
+    return (process.stdout, process.stderr)
+
+
+def triples_to_csv(data_path):
+    return run_subprocess(
+        [app.config['ARQ'],
+         '--data', data_path,
+         '--query', app.config['CSV_QUERY'],
+         '--results=CSV'],
+    )
+
+
+def jsonld_to(serialization, jsonld):
+    return run_subprocess(
+        [app.config['RIOT'],
+         '--syntax=jsonld',
+         '--formatted=%s' % serialization],
+        input=json.dumps(jsonld)
+    )
+
+
 class RDFTranslationError(Exception):
-    pass
+    def __init__(self, message='RDF translation failed; please contact us!'):
+        super().__init__(message)
+
+
+def looks_like(serialization, data):
+    # checking the return code is not reliable, because riot/arq will return 1
+    # even if there are only warnings. So we look at the first character of
+    # output as a hint
+    if len(data) == 0:
+        return False
+    if serialization == 'ttl':
+        return data[0] == '@'  # @prefix
+    if serialization == 'csv':
+        return data[0] == 'p'  # period
+    if serialization == 'nt':
+        return (data[0] == '<' or data[0] == '_')  # URI or blank node
+    return False
 
 
 def jsonld_to_turtle(jsonld):
-    result = subprocess.run(
-        [app.config['RIOT'], '--syntax=jsonld', '--formatted=ttl'],
-        input=json.dumps(jsonld),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        encoding='utf8',
-        env={'JVM_ARGS': '-Xms0M -Xmx256M'}
-    )
-    # checking the return code is not reliable, because riot will return 1
-    # even if there are only warnings. So we look for the first character
-    # of TTL output, which should be '@'
-    if not (len(result.stdout) > 0 and result.stdout[0] == '@'):
-        raise RDFTranslationError(result.stdout)
-    return result.stdout
+    turtle, errors = jsonld_to('ttl', jsonld)
+    if not looks_like('ttl', turtle):
+        app.logger.error('%s %s' % (turtle, errors))
+        raise RDFTranslationError()
+    return turtle
+
+
+def jsonld_to_csv(jsonld):
+    triples, errors = jsonld_to('nt', jsonld)
+    if not looks_like('nt', triples):
+        app.logger.error('%s %s' % (triples, errors))
+        raise RDFTranslationError()
+
+    with tempfile.NamedTemporaryFile(suffix='.nt', delete=False) as data:
+        data.write(triples.encode())
+        data.flush()
+
+        csv, errors = triples_to_csv(data.name)
+        if not looks_like('csv', csv):
+            app.logger.error('%s %s %s' % (data.name, csv, errors))
+            raise RDFTranslationError()
+        return csv
 
 
 def highlight_string(string, lexer):

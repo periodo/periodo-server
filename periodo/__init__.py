@@ -3,6 +3,7 @@ import json
 import rdflib
 import logging
 from uuid import UUID
+from logging.config import dictConfig
 from flask import Flask, request
 from flask_principal import Principal
 from flask_restful import Api
@@ -38,6 +39,24 @@ class UUIDConverter(BaseConverter):
         return str(uuid)
 
 
+# configure logging
+if not os.environ.get('TESTING', False):
+    dictConfig({
+        'version': 1,
+        'formatters': {'default': {
+            'format': '%(name)s: [%(levelname)s] %(message)s',
+        }},
+        'handlers': {'wsgi': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://flask.logging.wsgi_errors_stream',
+            'formatter': 'default'
+        }},
+        'root': {
+            'level': 'INFO',
+            'handlers': ['wsgi']
+        }
+    })
+
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 app.url_map.converters['uuid'] = UUIDConverter
@@ -55,28 +74,15 @@ app.config.update(
     DATABASE=os.environ.get('DATABASE', './db.sqlite'),
     CACHE=os.environ.get('CACHE', None),
     RIOT=os.environ.get('RIOT', '/usr/local/bin/riot'),
+    ARQ=os.environ.get('ARQ', '/usr/local/bin/arq'),
+    CSV_QUERY=os.environ.get('CSV_QUERY', './periods-as-csv.rq'),
     SERVER_NAME=os.environ.get('SERVER_NAME', 'localhost.localdomain:5000'),
     CLIENT_URL=os.environ.get('CLIENT_URL', 'https://client.perio.do'),
     CANONICAL=json.loads(os.environ.get('CANONICAL', 'false')),
     ORCID_CLIENT_ID=ORCID_CLIENT_ID,
     ORCID_CLIENT_SECRET=ORCID_CLIENT_SECRET
 )
-
-if not app.debug:
-    import platform
-    socket = None
-    if (platform.system() == 'Linux'):
-        socket = '/dev/log'
-    elif (platform.system() == 'Darwin'):
-        socket = '/var/run/syslog'
-    if socket:
-        import logging
-        from logging.handlers import SysLogHandler
-        handler = SysLogHandler(address=socket)
-        handler.setLevel(logging.INFO)
-        handler.setFormatter(
-            logging.Formatter('%(name)s: [%(levelname)s] %(message)s'))
-        app.logger.addHandler(handler)
+app.logger.info('finished app configuration')
 
 
 @app.after_request
@@ -132,6 +138,7 @@ SUFFIXES = {
     '.jsonld.html': 'application/json+html',
     '.ttl.html': 'text/turtle+html',
     '.nt': 'application/n-triples',
+    '.csv': 'text/csv',
 }
 
 
