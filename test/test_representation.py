@@ -3,6 +3,7 @@ import tempfile
 import unittest
 import http.client
 import json
+import csv
 from rdflib import Graph, URIRef
 from rdflib.plugins import sparql
 from rdflib.namespace import Namespace, RDF, DCTERMS
@@ -496,6 +497,51 @@ WHERE {
 
         res3 = self.client.get('/dataset.ttl/')
         self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+
+    def test_dataset_csv(self):
+        res1 = self.client.get('/dataset.csv')
+        data = res1.get_data(as_text=True)
+        if not res1.status_code == http.client.OK:
+            print(data)
+        self.assertEqual(res1.status_code, http.client.OK)
+        self.assertEqual(res1.headers['Content-Type'], 'text/csv')
+        self.assertEqual(
+            res1.headers['Cache-Control'],
+            'public, max-age={}'.format(cache.MEDIUM_TIME))
+        self.assertEqual(
+            res1.headers['Content-Disposition'],
+            'attachment; filename="periodo-dataset.csv"')
+
+        rows = csv.reader(data.splitlines())
+        self.assertEqual(
+            next(rows),
+            ['period',
+             'label',
+             'spatial_coverage',
+             'gazetteer_links',
+             'start',
+             'stop',
+             'authority',
+             'source',
+             'publication_year',
+             'derived_periods']
+        )
+        self.assertEqual(
+            next(rows),
+            ['http://n2t.net/ark:/99152/p0trgkvkhrv',
+             'Iron Age',
+             'Spain',
+             'http://www.wikidata.org/entity/Q29',
+             '-0799',
+             '-0549',
+             'http://n2t.net/ark:/99152/p0trgkv',
+             'The Corinthian, Attic, and Lakonian pottery from Sardis'
+             + ' | Schaeffer, Judith Snyder, 1937-'
+             + ' | Greenewalt, Crawford H. (Crawford Hallock), 1937-2012.'
+             + ' | Ramage, Nancy H., 1942-',
+             '1997',
+             '']
+        )
 
     def test_h_nt(self):
         with self.client as client:

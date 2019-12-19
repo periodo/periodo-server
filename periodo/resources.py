@@ -181,7 +181,7 @@ def add_resources(
         shortname=None,
         endpoint=None,
         barepaths=[],
-        suffixes=('json', 'jsonld', 'ttl'),
+        suffixes=('json', 'jsonld', 'ttl', 'csv'),
         html=True
 ):
     def decorator(cls):

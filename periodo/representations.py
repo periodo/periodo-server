@@ -120,6 +120,27 @@ def output_turtle(data, code, headers={}, filename=None):
     return cache.short_time(response)
 
 
+@api.representation('text/csv')
+def output_csv(data, code, headers={}, filename=None):
+    if code == 200:
+        try:
+            csv = utils.jsonld_to_csv(data)
+        except utils.RDFTranslationError as e:
+            return make_response(str(e))
+    else:
+        csv = ''
+
+    response = make_response(csv, code)
+    response.content_type = 'text/csv'
+    response.headers.extend(headers)
+
+    if filename is not None:
+        response.headers['Content-Disposition'] = (
+            'attachment; filename="%s.csv"' % filename)
+
+    return cache.medium_time(response)
+
+
 @api.representation('application/ld+json')
 def output_jsonld(data, code, headers={}, filename=None):
     response = output_json(data, code, headers, filename)
