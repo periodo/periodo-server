@@ -88,7 +88,7 @@ def jsonld_to_csv(jsonld):
         app.logger.error('%s %s' % (triples, errors))
         raise RDFTranslationError()
 
-    with tempfile.NamedTemporaryFile(suffix='.nt', delete=False) as data:
+    with tempfile.NamedTemporaryFile(suffix='.nt') as data:
         data.write(triples.encode())
         data.flush()
 
