@@ -29,7 +29,7 @@ def run_subprocess(command_line, input=None):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         encoding='utf8',
-        env={'JVM_ARGS': '-Xms256M -Xmx512M'}
+        env={'JVM_ARGS': '-Xms256M -Xmx768M'}
     )
     app.logger.debug('stdout:\n%s' % process.stdout)
     app.logger.debug('stderr:\n%s' % process.stderr)
