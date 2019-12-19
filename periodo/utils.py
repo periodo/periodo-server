@@ -74,10 +74,15 @@ def looks_like(serialization, data):
     return False
 
 
+def log_error(stdout, stderr):
+    app.logger.error('stdout:\n%s' % stdout)
+    app.logger.error('stderr:\n%s' % stderr)
+
+
 def jsonld_to_turtle(jsonld):
     turtle, errors = jsonld_to('ttl', jsonld)
     if not looks_like('ttl', turtle):
-        app.logger.error('%s %s' % (turtle, errors))
+        log_error(turtle, errors)
         raise RDFTranslationError()
     return turtle
 
@@ -85,7 +90,7 @@ def jsonld_to_turtle(jsonld):
 def jsonld_to_csv(jsonld):
     triples, errors = jsonld_to('nt', jsonld)
     if not looks_like('nt', triples):
-        app.logger.error('%s %s' % (triples, errors))
+        log_error(triples, errors)
         raise RDFTranslationError()
 
     with tempfile.NamedTemporaryFile(suffix='.nt') as data:
@@ -94,7 +99,7 @@ def jsonld_to_csv(jsonld):
 
         csv, errors = triples_to_csv(data.name)
         if not looks_like('csv', csv):
-            app.logger.error('%s %s %s' % (data.name, csv, errors))
+            log_error(csv, errors)
             raise RDFTranslationError()
         return csv
 
