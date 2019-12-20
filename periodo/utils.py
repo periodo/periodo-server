@@ -55,7 +55,7 @@ def jsonld_to(serialization, jsonld):
 
 
 class RDFTranslationError(Exception):
-    def __init__(self, message='RDF translation failed; please contact us!'):
+    def __init__(self, message='RDF translation failed; please contact us!\n'):
         super().__init__(message)
 
 
