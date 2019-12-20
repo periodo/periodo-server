@@ -31,8 +31,11 @@ def run_subprocess(command_line, input=None):
         encoding='utf8',
         env={'JVM_ARGS': '-Xms256M -Xmx512M'}
     )
-    app.logger.debug('stdout:\n%s' % process.stdout)
-    app.logger.debug('stderr:\n%s' % process.stderr)
+    app.logger.debug('stdout ------------------------------------------------')
+    app.logger.debug(process.stdout)
+    app.logger.debug('stderr ------------------------------------------------')
+    app.logger.debug(process.stderr)
+    app.logger.debug('end output --------------------------------------------')
     return (process.stdout, process.stderr)
 
 
@@ -93,7 +96,7 @@ def jsonld_to_csv(jsonld):
         log_error(triples, errors)
         raise RDFTranslationError()
 
-    with tempfile.NamedTemporaryFile(suffix='.nt') as data:
+    with tempfile.NamedTemporaryFile(suffix='.nt', delete=False) as data:
         data.write(triples.encode())
         data.flush()
 
