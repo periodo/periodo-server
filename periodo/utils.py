@@ -1,7 +1,8 @@
 import json
 import re
 import subprocess
-import tempfile
+import os
+from tempfile import NamedTemporaryFile
 from datetime import datetime
 from flask import url_for
 from pygments import highlight
@@ -21,41 +22,52 @@ def isoformat(value):
     return datetime.utcfromtimestamp(value).isoformat() + '+00:00'
 
 
-def run_subprocess(command_line, input=None):
+def read_file(filename):
+    with open(filename, encoding='utf8') as f:
+        return f.read()
+
+
+def run_subprocess(command_line, outfile_suffix):
     app.logger.debug('Running subprocess:\n%s' % ' '.join(command_line))
-    process = subprocess.run(
-        command_line,
-        input=input,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        encoding='utf8',
-        env={'JVM_ARGS': '-Xms256M -Xmx512M'}
-    )
-    app.logger.debug('stdout:\n%s' % process.stdout)
-    app.logger.debug('stderr:\n%s' % process.stderr)
-    return (process.stdout, process.stderr)
+    with NamedTemporaryFile(suffix=outfile_suffix, delete=False) as outfile:
+        with NamedTemporaryFile(suffix='.err', delete=False) as errfile:
+            subprocess.run(
+                command_line,
+                stdout=outfile,
+                stderr=errfile,
+                encoding='utf8',
+                env={'JVM_ARGS': '-Xms256M -Xmx512M'}
+            )
+            app.logger.debug('stdout: %s' % outfile.name)
+            app.logger.debug('stderr: %s' % errfile.name)
+            return (outfile.name, errfile.name)
 
 
-def triples_to_csv(data_path):
+def triples_to_csv(triples_file):
     return run_subprocess(
         [app.config['ARQ'],
-         '--data', data_path,
+         '--data', triples_file,
          '--query', app.config['CSV_QUERY'],
          '--results=CSV'],
+        '.csv'
     )
 
 
 def jsonld_to(serialization, jsonld):
-    return run_subprocess(
-        [app.config['RIOT'],
-         '--syntax=jsonld',
-         '--formatted=%s' % serialization],
-        input=json.dumps(jsonld)
-    )
+    with NamedTemporaryFile(suffix='.jsonld') as f:
+        f.write(json.dumps(jsonld).encode())
+        f.flush()
+        return run_subprocess(
+            [app.config['RIOT'],
+             '--syntax=jsonld',
+             '--formatted=%s' % serialization,
+             f.name],
+            '.' + serialization
+        )
 
 
 class RDFTranslationError(Exception):
-    def __init__(self, message='RDF translation failed; please contact us!'):
+    def __init__(self, message='RDF translation failed; please contact us!\n'):
         super().__init__(message)
 
 
@@ -74,29 +86,44 @@ def looks_like(serialization, data):
     return False
 
 
+def log_error(stdout, stderr):
+    app.logger.error('stdout:\n%s' % stdout)
+    app.logger.error('stderr:\n%s' % stderr)
+
+
 def jsonld_to_turtle(jsonld):
-    turtle, errors = jsonld_to('ttl', jsonld)
-    if not looks_like('ttl', turtle):
-        app.logger.error('%s %s' % (turtle, errors))
-        raise RDFTranslationError()
-    return turtle
+    turtle_file, errors_file = jsonld_to('ttl', jsonld)
+    try:
+        turtle = read_file(turtle_file)
+        if not looks_like('ttl', turtle):
+            log_error(turtle, read_file(errors_file))
+            raise RDFTranslationError()
+        return turtle
+    finally:
+        os.remove(turtle_file)
+        os.remove(errors_file)
 
 
 def jsonld_to_csv(jsonld):
-    triples, errors = jsonld_to('nt', jsonld)
-    if not looks_like('nt', triples):
-        app.logger.error('%s %s' % (triples, errors))
-        raise RDFTranslationError()
-
-    with tempfile.NamedTemporaryFile(suffix='.nt') as data:
-        data.write(triples.encode())
-        data.flush()
-
-        csv, errors = triples_to_csv(data.name)
-        if not looks_like('csv', csv):
-            app.logger.error('%s %s %s' % (data.name, csv, errors))
+    triples_file, errors_file_1 = jsonld_to('nt', jsonld)
+    try:
+        triples = read_file(triples_file)
+        if not looks_like('nt', triples):
+            log_error(triples, read_file(errors_file_1))
             raise RDFTranslationError()
-        return csv
+        csv_file, errors_file_2 = triples_to_csv(triples_file)
+        try:
+            csv = read_file(csv_file)
+            if not looks_like('csv', csv):
+                log_error(csv, read_file(errors_file_2))
+                raise RDFTranslationError()
+            return csv
+        finally:
+            os.remove(csv_file)
+            os.remove(errors_file_2)
+    finally:
+        os.remove(triples_file)
+        os.remove(errors_file_1)
 
 
 def highlight_string(string, lexer):

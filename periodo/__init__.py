@@ -52,7 +52,7 @@ if not os.environ.get('TESTING', False):
             'formatter': 'default'
         }},
         'root': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'handlers': ['wsgi']
         }
     })
