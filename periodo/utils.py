@@ -1,6 +1,7 @@
 import json
 import re
 import subprocess
+import os
 from tempfile import NamedTemporaryFile
 from datetime import datetime
 from flask import url_for
@@ -24,13 +25,6 @@ def isoformat(value):
 def read_file(filename):
     with open(filename, encoding='utf8') as f:
         return f.read()
-
-
-def write_tempfile(contents, suffix):
-    with NamedTemporaryFile(suffix=suffix, delete=False) as f:
-        f.write(contents.encode())
-        f.flush()
-        return f.name
 
 
 def run_subprocess(command_line, outfile_suffix):
@@ -60,13 +54,16 @@ def triples_to_csv(triples_file):
 
 
 def jsonld_to(serialization, jsonld):
-    return run_subprocess(
-        [app.config['RIOT'],
-         '--syntax=jsonld',
-         '--formatted=%s' % serialization,
-         write_tempfile(json.dumps(jsonld), '.jsonld')],
-        '.' + serialization
-    )
+    with NamedTemporaryFile(suffix='.jsonld') as f:
+        f.write(json.dumps(jsonld).encode())
+        f.flush()
+        return run_subprocess(
+            [app.config['RIOT'],
+             '--syntax=jsonld',
+             '--formatted=%s' % serialization,
+             f.name],
+            '.' + serialization
+        )
 
 
 class RDFTranslationError(Exception):
@@ -96,25 +93,37 @@ def log_error(stdout, stderr):
 
 def jsonld_to_turtle(jsonld):
     turtle_file, errors_file = jsonld_to('ttl', jsonld)
-    turtle = read_file(turtle_file)
-    if not looks_like('ttl', turtle):
-        log_error(turtle, read_file(errors_file))
-        raise RDFTranslationError()
-    return turtle
+    try:
+        turtle = read_file(turtle_file)
+        if not looks_like('ttl', turtle):
+            log_error(turtle, read_file(errors_file))
+            raise RDFTranslationError()
+        return turtle
+    finally:
+        os.remove(turtle_file)
+        os.remove(errors_file)
 
 
 def jsonld_to_csv(jsonld):
-    triples_file, errors_file = jsonld_to('nt', jsonld)
-    triples = read_file(triples_file)
-    if not looks_like('nt', triples):
-        log_error(triples, read_file(errors_file))
-        raise RDFTranslationError()
-    csv_file, errors_file = triples_to_csv(triples_file)
-    csv = read_file(csv_file)
-    if not looks_like('csv', csv):
-        log_error(csv, read_file(errors_file))
-        raise RDFTranslationError()
-    return csv
+    triples_file, errors_file_1 = jsonld_to('nt', jsonld)
+    try:
+        triples = read_file(triples_file)
+        if not looks_like('nt', triples):
+            log_error(triples, read_file(errors_file_1))
+            raise RDFTranslationError()
+        csv_file, errors_file_2 = triples_to_csv(triples_file)
+        try:
+            csv = read_file(csv_file)
+            if not looks_like('csv', csv):
+                log_error(csv, read_file(errors_file_2))
+                raise RDFTranslationError()
+            return csv
+        finally:
+            os.remove(csv_file)
+            os.remove(errors_file_2)
+    finally:
+        os.remove(triples_file)
+        os.remove(errors_file_1)
 
 
 def highlight_string(string, lexer):
