@@ -10,6 +10,7 @@ before_script: >-
   | tar -zx -C /opt
 script: >-
   TESTING=1
+  TMPDIR=/tmp
   RIOT=/opt/apache-jena-3.13.1/bin/riot
   ARQ=/opt/apache-jena-3.13.1/bin/arq
   python3 -m unittest discover
