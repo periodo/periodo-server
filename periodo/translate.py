@@ -9,13 +9,11 @@ from tempfile import NamedTemporaryFile
 class RDFTranslationError(Exception):
     def __init__(self, code=500):
         self.code = code
-        if code == '503':
-            super().__init__(
-                'The server is currently too busy to process this request.'
-                + ' Try again in a few minutes.')
-        else:
-            super().__init__(
-                'RDF translation failed; please contact us!')
+        super().__init__(
+            ('The server is currently too busy to process this request.'
+             + ' Try again in a few minutes.') if code == 503 else
+            ('RDF translation failed; please contact us!')
+        )
 
 
 def read_file(filename):
@@ -49,6 +47,7 @@ def run_subprocess(command_line, out_suffix):
             except FileNotFoundError:
                 pass
     except FileExistsError:
+        app.logger.debug('jvm is already running; returning 503')
         raise RDFTranslationError(code=503)
 
 
