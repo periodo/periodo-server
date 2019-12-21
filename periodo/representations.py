@@ -2,7 +2,7 @@ import json
 from urllib.parse import urlencode
 from flask import request, make_response, redirect, url_for
 from rdflib import Graph
-from periodo import api, cache, routes, utils
+from periodo import api, cache, routes, utils, translate, highlight
 
 
 def abbreviate_context(data):
@@ -41,6 +41,13 @@ def html_version(path):
         return path.replace('.jsonpatch', '.json.html')
     else:
         return (path[:-1] if path.endswith('/') else path) + '.json.html'
+
+
+def translation_failure(e):
+    response = make_response('%s\n' % e, e.code)
+    if (e.code == 503):
+        response.headers.add('Retry-After', 120)
+    return response
 
 
 @api.representation('text/html')
@@ -103,9 +110,9 @@ def output_turtle(data, code, headers={}, filename=None):
 
     if code == 200:
         try:
-            ttl = utils.jsonld_to_turtle(data)
-        except utils.RDFTranslationError as e:
-            return make_response(str(e), 500)
+            ttl = translate.jsonld_to_turtle(data)
+        except translate.RDFTranslationError as e:
+            return translation_failure(e)
     else:
         ttl = ''
 
@@ -124,9 +131,9 @@ def output_turtle(data, code, headers={}, filename=None):
 def output_csv(data, code, headers={}, filename=None):
     if code == 200:
         try:
-            csv = utils.jsonld_to_csv(data)
-        except utils.RDFTranslationError as e:
-            return make_response(str(e), 500)
+            csv = translate.jsonld_to_csv(data)
+        except translate.RDFTranslationError as e:
+            return translation_failure(e)
     else:
         csv = ''
 
@@ -151,8 +158,15 @@ def output_jsonld(data, code, headers={}, filename=None):
 
 @api.representation('text/turtle+html')
 def output_turtle_as_html(data, code, headers={}, filename=None):
-    ttl = utils.jsonld_to_turtle(data)
-    html = utils.highlight_ttl(ttl)
+    if code == 200:
+        try:
+            ttl = translate.jsonld_to_turtle(data)
+            html = highlight.as_turtle(ttl)
+        except translate.RDFTranslationError as e:
+            return translation_failure(e)
+    else:
+        html = ''
+
     response = make_response(html, code)
     response.content_type = 'text/html'
     response.headers.extend(headers)
@@ -163,7 +177,7 @@ def output_turtle_as_html(data, code, headers={}, filename=None):
 @api.representation('application/json+html')
 def output_json_as_html(data, code, headers={}, filename=None):
     json = abbreviate_context(data)
-    html = utils.highlight_json(json)
+    html = highlight.as_json(json)
     response = make_response(html, code)
     response.content_type = 'text/html'
     response.headers.extend(headers)

@@ -5,7 +5,7 @@ import string
 from flask import (
     request, make_response, redirect, url_for, session, abort,
     Response, stream_with_context)
-from periodo import app, database, identifier, auth, utils
+from periodo import app, database, identifier, auth, highlight
 from urllib.parse import urlencode
 from werkzeug.http import http_date
 
@@ -73,7 +73,7 @@ def void():
 @app.route('/.wellknown/void.ttl.html')
 def void_as_html():
     ttl = database.get_dataset()['description']
-    return make_response(utils.highlight_ttl(ttl), 200, {
+    return make_response(highlight.as_turtle(ttl), 200, {
         'Content-Type': 'text/html',
         'Link': '</>; rel="alternate"; type="text/html"',
     })
