@@ -152,8 +152,11 @@ class ResourceError(Exception):
 
 
 INDEX = {
+    'client':
+    'PeriodO client (browse and edit periods)',
+
     'dataset':
-    'the PeriodO dataset',
+    'PeriodO dataset',
 
     'description':
     'description of the PeriodO dataset',
@@ -218,7 +221,8 @@ def add_resources(
 def describe_endpoint(endpoint, description):
     return {
         'description': description,
-        'url': url_for(endpoint, _external=True)
+        'url': (url_for(endpoint, _external=True)
+                if not endpoint == 'client' else app.config['CLIENT_URL'])
     }
 
 
