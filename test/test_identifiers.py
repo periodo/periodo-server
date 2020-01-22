@@ -108,6 +108,7 @@ class TestIdentifiers(unittest.TestCase):
                 key,
                 periods[key]['id'])
             identifier.check(key)
+
             # check that skolem IDs in prop values get replaced too
             prop = 'broader' if 'broader' in periods[key] else 'narrower'
             self.assertRegex(
@@ -115,6 +116,14 @@ class TestIdentifiers(unittest.TestCase):
                 r'^%s[%s]{4}$' % (authority_id, identifier.XDIGITS))
             identifier.check(periods[key][prop])
             self.assertTrue(periods[key][prop] in id_map.values())
+
+            # check that skolem IDs in prop value arrays get replaced too
+            for period_id in periods[key].get('derivedFrom', []):
+                self.assertRegex(
+                    period_id,
+                    r'^%s[%s]{4}$' % ('p0trgkv', identifier.XDIGITS))
+                identifier.check(period_id)
+                self.assertTrue(period_id in id_map.values())
 
     def test_replace_skolem_ids_when_replacing_periods(self):
         with open(filepath('test-data.json')) as f:
