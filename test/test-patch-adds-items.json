@@ -67,6 +67,9 @@
         "https://perio.do/.well-known/genid/d3f3f7b88bb711e8bf5b720004e3fb90": {
           "id": "https://perio.do/.well-known/genid/d3f3f7b88bb711e8bf5b720004e3fb90",
           "broader": "https://perio.do/.well-known/genid/8d3df296ba8665cf4045d34a2d983c97",
+          "derivedFrom": [
+            "https://perio.do/.well-known/genid/53f38e07f928ecdb849c1a98bbc24917"
+          ],
           "label": "Iron Age A",
           "language": "eng-latn",
           "localizedLabels": {

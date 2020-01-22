@@ -215,6 +215,8 @@ def replace_skolem_ids(patch_or_obj, dataset, removed_entity_keys):
         for k, v in d.items():
             if isinstance(v, dict):
                 d[k] = replace_skolem_values(v)
+            elif isinstance(v, list):
+                d[k] = [id_map[i] if is_skolem_uri(i) else i for i in v]
             elif is_skolem_uri(v):
                 d[k] = id_map[v]
         return d
