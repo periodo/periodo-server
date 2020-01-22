@@ -79,8 +79,11 @@ def parse_json(request):
 def attach_to_dataset(o):
     if len(o) > 0:
         if app.config['CANONICAL']:
+            path = request.full_path[1:]
+            if path.endswith('?'):
+                path = path[:-1]
             o['primaryTopicOf'] = {
-                'id': identifier.prefix(request.full_path[1:]),
+                'id': identifier.prefix(path),
                 'inDataset': {
                     'id': identifier.prefix('d'),
                     'changes': identifier.prefix('h#changes')
