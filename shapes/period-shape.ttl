@@ -223,7 +223,7 @@ periodo:PeriodDerivedFromShape
   rdf:type sh:PropertyShape ;
   sh:path prov:wasDerivedFrom ;
   sh:name "was derived from" ;
-  sh:description "Another period period from which this one was derived" ;
+  sh:description "Another period from which this one was derived" ;
   sh:nodeKind sh:IRI ;
   sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
   sh:message "Problem with derived from" ;
@@ -233,7 +233,7 @@ periodo:PeriodBroaderShape
   rdf:type sh:PropertyShape ;
   sh:path skos:broader ;
   sh:name "see broader period" ;
-  sh:description "Another period period that encompasses this one" ;
+  sh:description "Another period that encompasses this one" ;
   sh:nodeKind sh:IRI ;
   sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
   sh:maxCount 1 ;
