@@ -39,6 +39,7 @@ periodo:DatasetMemberShape
   sh:name "member" ;
   sh:description "A period authority in this dataset" ;
   sh:nodeKind sh:IRI ;
+  sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{5}" ;
   sh:class skos:ConceptScheme ;
   sh:message "Problem with dataset member" ;
   .

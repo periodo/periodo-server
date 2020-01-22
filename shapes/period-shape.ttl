@@ -24,6 +24,7 @@ periodo:PeriodShape
   sh:ignoredProperties (
     rdf:type
     ) ;
+  sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{9}" ;
   sh:property
     periodo:PeriodPreferredLabelShape ,
     periodo:PeriodLocalizedLabelShape ,
@@ -127,6 +128,7 @@ periodo:PeriodAuthorityShape
   sh:name "authority" ;
   sh:description "Authority to which this period belongs" ;
   sh:nodeKind sh:IRI ;
+  sh:pattern "^http://n2t.net/ark:/99152/p0[a-z0-9]{5}" ;
   sh:class skos:ConceptScheme ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
