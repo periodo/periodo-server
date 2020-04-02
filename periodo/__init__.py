@@ -110,6 +110,7 @@ CORS_EXPOSED_HEADERS = [
     'Location',
     'Link',
     'X-Total-Count',
+    'X-PeriodO-Server-Version',
 ]
 
 
