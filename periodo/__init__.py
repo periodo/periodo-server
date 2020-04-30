@@ -145,10 +145,6 @@ SUFFIXES = {
 
 class PeriodOApi(Api):
     def handle_error(self, e):
-
-        # ensure we consume the request body on errors
-        request.get_data()
-
         response = periodo.auth.handle_auth_error(e)
         if response is None:
             return super().handle_error(e)
