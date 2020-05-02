@@ -10,8 +10,19 @@ from urllib.parse import urlencode
 from wsgiref.handlers import format_date_time
 
 PATCH_QUERY = """
-SELECT *
+SELECT patch_request.*, comment.message AS first_comment
 FROM patch_request
+LEFT JOIN (
+  SELECT patch_request_id, message
+  FROM patch_request_comment
+  WHERE id IN (
+    SELECT MIN(id)
+    FROM patch_request_comment
+    GROUP BY patch_request_id
+  )
+)
+AS comment
+ON comment.patch_request_id = patch_request.id
 """
 
 
@@ -35,7 +46,8 @@ patch_list_fields = OrderedDict((
     ('applied_to', fields.String),
     ('identifier_map', fields.Raw),
     ('open', fields.Boolean),
-    ('merged', fields.Boolean)
+    ('merged', fields.Boolean),
+    ('first_comment', fields.String),
 ))
 
 comment_fields = OrderedDict((
@@ -490,7 +502,8 @@ class PatchList(Resource):
     barepaths=['/patches/<int:id>/'])
 class PatchRequest(Resource):
     def get(self, id):
-        row = database.query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
+        row = database.query_db(
+            PATCH_QUERY + ' where patch_request.id = ?', (id,), one=True)
         if not row:
             abort(404)
         data = process_patch_row(row)
@@ -520,7 +533,8 @@ class PatchRequest(Resource):
     barepaths=['/patches/<int:id>/patch.jsonpatch'])
 class Patch(Resource):
     def get(self, id):
-        row = database.query_db(PATCH_QUERY + ' where id = ?', (id,), one=True)
+        row = database.query_db(
+            PATCH_QUERY + ' where patch_request.id = ?', (id,), one=True)
         if row['merged']:
             p = row['applied_patch']
         else:

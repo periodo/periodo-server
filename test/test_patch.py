@@ -208,8 +208,10 @@ class TestPatchMethods(unittest.TestCase):
             self.assertEqual('This is a comment', row['message'])
 
             res = client.get(patch_url)
-            comments = json.loads(res.get_data(as_text=True)).get('comments')
+            patch = json.loads(res.get_data(as_text=True))
+            comments = patch.get('comments')
             self.assertEqual(1, len(comments))
+            self.assertEqual('This is a comment', patch['first_comment'])
 
     def test_versioning(self):
         with open(filepath('test-patch-adds-items.json')) as f:
