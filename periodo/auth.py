@@ -6,7 +6,7 @@ from flask import request, make_response
 from flask_principal import (Permission, PermissionDenied,
                              ActionNeed, ItemNeed,
                              Identity, AnonymousIdentity)
-from periodo import database
+from periodo import database, app
 from werkzeug.exceptions import Unauthorized
 
 submit_patch_permission = Permission(ActionNeed('submit-patch'))
@@ -52,6 +52,8 @@ def load_identity_from_authorization_header():
         return UnauthenticatedIdentity()
     match = re.match(r'Bearer ([\w\-\.~\+/]+=*)$', auth, re.ASCII)
     if not match:
+        app.logger.debug(
+            'failed to load bearer token from authorization header')
         return UnauthenticatedIdentity(
             'invalid_token', 'The access token is malformed')
     return get_identity(match.group(1).encode())
@@ -66,10 +68,13 @@ def handle_auth_error(e):
             parts.append('error_description="{}"'.format(e.error_description))
         if e.error_uri:
             parts.append('error_uri="{}"'.format(e.error_uri))
+        app.logger.debug(
+            'authentication failed: ' + (', '.join(parts)))
         return make_response(e.error_description or '', 401,
                              {'WWW-Authenticate': ', '.join(parts)})
     if isinstance(e, PermissionDenied):
         description = 'The access token does not provide sufficient privileges'
+        app.logger.debug(description)
         return make_response(
             description, 403,
             {'WWW-Authenticate':
@@ -89,37 +94,41 @@ def add_user_or_update_credentials(credentials, extra_permissions=()):
         + extra_permissions
     )
     db = database.get_db()
-    cursor = db.cursor()
-    cursor.execute('''
-    INSERT OR IGNORE INTO user (
-    id,
-    name,
-    permissions,
-    b64token,
-    token_expires_at,
-    credentials)
-    VALUES (?, ?, ?, ?, strftime('%s','now') + ?, ?) ''',
-                   (orcid,
-                    credentials['name'],
-                    json.dumps(permissions),
-                    b64token,
-                    credentials['expires_in'],
-                    json.dumps(credentials)))
-    if not cursor.lastrowid:  # user with this id already in DB
+    db.set_trace_callback(app.logger.debug)
+    try:
+        cursor = db.cursor()
         cursor.execute('''
-        UPDATE user SET
-        name = ?,
-        b64token = ?,
-        token_expires_at = strftime('%s','now') + ?,
-        credentials = ?
-        WHERE id = ?''',
-                       (credentials['name'],
+        INSERT OR IGNORE INTO user (
+        id,
+        name,
+        permissions,
+        b64token,
+        token_expires_at,
+        credentials)
+        VALUES (?, ?, ?, ?, strftime('%s','now') + ?, ?) ''',
+                       (orcid,
+                        credentials['name'],
+                        json.dumps(permissions),
                         b64token,
                         credentials['expires_in'],
-                        json.dumps(credentials),
-                        orcid))
+                        json.dumps(credentials)))
+        if not cursor.lastrowid:  # user with this id already in DB
+            cursor.execute('''
+            UPDATE user SET
+            name = ?,
+            b64token = ?,
+            token_expires_at = strftime('%s','now') + ?,
+            credentials = ?
+            WHERE id = ?''',
+                           (credentials['name'],
+                            b64token,
+                            credentials['expires_in'],
+                            json.dumps(credentials),
+                            orcid))
 
-    return get_identity(b64token, cursor)
+        return get_identity(b64token, cursor)
+    finally:
+        db.set_trace_callback(None)
 
 
 def get_identity(b64token, cursor=None):
