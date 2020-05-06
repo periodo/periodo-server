@@ -10,7 +10,7 @@ SHAPE_FILES := $(shell find shapes -name *.ttl)
 all: setup vocab.html $(DB)
 
 $(PYTHON3):
-	python3 -m venv $(VENV_DIR)
+	python3.8 -m venv $(VENV_DIR)
 
 .PHONY: $(DB)
 $(DB):
