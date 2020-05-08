@@ -210,7 +210,8 @@ def registered():
 def export():
     def generate():
         for line in database.dump():
-            yield '%s\n' % line
+            if not line.startswith('INSERT INTO "user"'):
+                yield '%s\n' % line
     return Response(stream_with_context(generate()), status=200, headers={
         'Content-Type':
         'text/plain',
