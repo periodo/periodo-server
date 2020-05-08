@@ -8,6 +8,8 @@ from flask import (
 from periodo import app, database, identifier, auth, highlight
 from urllib.parse import urlencode
 from werkzeug.http import http_date
+from periodo.feed import generate_activity_feed
+from periodo.utils import build_client_url
 
 
 def get_mimetype():
@@ -20,15 +22,6 @@ def get_mimetype():
     if request.accept_mimetypes.best == 'application/n-triples':
         return 'nt'
     return None
-
-
-def build_client_url(page, **values):
-    return '%s/?%s' % (
-        app.config['CLIENT_URL'],
-        urlencode(dict(page=page,
-                       backendID='web-%s' % request.url_root,
-                       **values))
-    )
 
 
 @app.route('/h.ttl', endpoint='history-ttl')
@@ -223,4 +216,14 @@ def export():
         'text/plain',
         'Content-Disposition':
         'attachment; filename="periodo-export-{}.sql"'.format(http_date())
+    })
+
+
+@app.route('/feed.xml')
+def feed():
+    activity_feed = generate_activity_feed()
+    if activity_feed is None:
+        return abort(404)
+    return make_response(activity_feed, 200, {
+        'Content-Type': 'application/atom+xml',
     })
