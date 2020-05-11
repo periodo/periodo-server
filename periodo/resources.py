@@ -190,6 +190,9 @@ INDEX = {
 
     'vocabulary':
     'PeriodO RDF vocabulary',
+
+    'client-packages':
+    'PeriodO client installation packages',
 }
 
 
