@@ -14,6 +14,13 @@ accept_patch_permission = Permission(ActionNeed('accept-patch'))
 update_bag_permission = Permission(ActionNeed('create-bag'))
 update_graph_permission = Permission(ActionNeed('create-graph'))
 
+action_need_descriptions = {
+    'submit-patch': 'can submit proposed changes to the dataset',
+    'accept-patch': 'can accept and merge changes to the dataset',
+    'create-bag': 'can create and update bags of periods',
+    'create-graph': 'can create and update graphs of related triples',
+}
+
 ERROR_URIS = {
     'invalid_request': 'http://tools.ietf.org/html/rfc6750#section-6.2.1',
     'invalid_token': 'http://tools.ietf.org/html/rfc6750#section-6.2.2',
@@ -44,6 +51,18 @@ UpdatePatchNeed = partial(ItemNeed, type='patch_request', method='update')
 class UpdatePatchPermission(Permission):
     def __init__(self, patch_request_id):
         super().__init__(UpdatePatchNeed(value=patch_request_id))
+
+
+def describe(need):
+    classname = type(need).__name__
+    if classname == 'tuple' and len(need) == 2:
+        method, value = need
+        if method == 'action':
+            return action_need_descriptions[value]
+    elif classname == 'ItemNeed':
+        if need.method == 'update' and need.type == 'patch_request':
+            return 'can update change submission #%s' % need.value
+    return 'unknown permission'
 
 
 def load_identity_from_authorization_header():

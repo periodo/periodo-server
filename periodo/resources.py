@@ -820,3 +820,19 @@ class Graph(Resource):
             return None, 204
         else:
             abort(404)
+
+
+@add_resources('identity', suffixes=['json'], barepaths=['/identity'])
+class Identity(Resource):
+    def get(self):
+        if (g.identity.id is None):
+            return {}, 200
+        user = database.query_db(
+            'SELECT name FROM user WHERE id = ?', (g.identity.id,), one=True)
+        return {
+            'id': g.identity.id,
+            'name': user['name'],
+            'permissions': [
+                auth.describe(need) for need in g.identity.provides
+            ]
+        }, 200
