@@ -54,7 +54,8 @@ endif
 
 .PHONY: setup
 setup: $(PYTHON3) requirements.txt
-	$(PIP3) install -q -r requirements.txt
+	$(PIP3) install wheel
+	$(PIP3) install -r requirements.txt
 
 .PHONY: clean
 clean:
