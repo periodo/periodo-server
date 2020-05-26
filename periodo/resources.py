@@ -824,8 +824,10 @@ class Graph(Resource):
 
 @add_resources('identity', suffixes=['json'], barepaths=['/identity'])
 class Identity(Resource):
+    # submit_patch is the minimal permission
+    @auth.submit_patch_permission.require()
     def get(self):
-        if (g.identity.id is None):
+        if (g.identity.id is None):  # shouldn't be possible but just in case
             return {}, 200
         user = database.query_db(
             'SELECT name FROM user WHERE id = ?', (g.identity.id,), one=True)
