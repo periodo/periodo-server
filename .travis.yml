@@ -5,11 +5,11 @@ python:
   - "3.8-dev"
 before_script: >-
   curl
-  http://mirrors.ibiblio.org/apache/jena/binaries/apache-jena-3.14.0.tar.gz
+  http://mirrors.ibiblio.org/apache/jena/binaries/apache-jena-3.15.0.tar.gz
   | tar -zx -C /opt
 script: >-
   TESTING=1
   TMPDIR=/tmp
-  RIOT=/opt/apache-jena-3.14.0/bin/riot
-  ARQ=/opt/apache-jena-3.14.0/bin/arq
+  RIOT=/opt/apache-jena-3.15.0/bin/riot
+  ARQ=/opt/apache-jena-3.15.0/bin/arq
   python3 -m unittest discover
