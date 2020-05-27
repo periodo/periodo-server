@@ -834,7 +834,5 @@ class Identity(Resource):
         return {
             'id': g.identity.id,
             'name': user['name'],
-            'permissions': [
-                auth.describe(need) for need in g.identity.provides
-            ]
+            'permissions': auth.describe(g.identity.provides),
         }, 200

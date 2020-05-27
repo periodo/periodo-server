@@ -53,16 +53,18 @@ class UpdatePatchPermission(Permission):
         super().__init__(UpdatePatchNeed(value=patch_request_id))
 
 
-def describe(need):
-    classname = type(need).__name__
-    if classname == 'tuple' and len(need) == 2:
-        method, value = need
-        if method == 'action':
-            return action_need_descriptions[value]
-    elif classname == 'ItemNeed':
-        if need.method == 'update' and need.type == 'patch_request':
-            return 'can update change submission #%s' % need.value
-    return 'unknown permission'
+def describe(needs):
+    description = set()
+    for need in needs:
+        classname = type(need).__name__
+        if classname == 'tuple' and len(need) == 2:
+            method, value = need
+            if method == 'action':
+                description.add(action_need_descriptions[value])
+        elif classname == 'ItemNeed':
+            if need.method == 'update' and need.type == 'patch_request':
+                description.add('can update submissions of proposed changes')
+    return list(description)
 
 
 def load_identity_from_authorization_header():
