@@ -185,6 +185,9 @@ INDEX = {
     'bags':
     'user-defined subsets of the PeriodO dataset',
 
+    'identifier-map':
+    'a map of skolem IRIs that have been replaced with persistent IRIs',
+
     'context':
     'PeriodO JSON-LD context',
 
@@ -637,6 +640,35 @@ class Bags(Resource):
             url_for('bag', uuid=uuid, _external=True)
             for uuid in database.get_bag_uuids()
         ]
+
+
+@add_resources('identifier-map', suffixes=['json'],
+               barepaths=['/identifier-map/'])
+class IdentifierMap(Resource):
+    def get(self):
+        map_rows = database.query_db(
+            """
+            SELECT identifier_map, merged_at FROM patch_request
+            WHERE merged = TRUE AND
+            LENGTH(identifier_map) > 2
+            ORDER BY merged_at
+            """)
+
+        identifier_map = {}
+        last_edited = None
+
+        for row in map_rows:
+            identifier_map.update(json.loads(row['identifier_map']))
+            last_edited = row['merged_at']
+
+        headers = {}
+        if last_edited is not None:
+            headers['Last-Modified'] = format_date_time(last_edited)
+
+        response = api.make_response({'identifier_map': identifier_map},
+                                     200, headers)
+
+        return cache.long_time(response, server_only=True)
 
 
 @add_resources('bags/<uuid:uuid>', endpoint='bag', suffixes=['json'])
