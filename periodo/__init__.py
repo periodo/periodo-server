@@ -2,6 +2,7 @@ import os
 import json
 import rdflib
 import logging
+import subprocess
 from uuid import UUID
 from logging.config import dictConfig
 from flask import Flask, request
@@ -70,11 +71,22 @@ principal = Principal(app, use_sessions=False)
 app.wsgi_app = RemoveTransferEncodingHeaderMiddleware(app.wsgi_app)
 
 
+def locate_bin(name, envvar):
+    try:
+        res = subprocess.check_output('which ' + name, shell=True)
+        return res.decode('utf-8').strip()
+    except Exception:
+        app.logger.error(
+            f'Could not find binary for `{name}`. Either include this binary' +
+            f' in your PATH, or set the environment variable {envvar}')
+        return '/usr/local/bin/' + name
+
+
 app.config.update(
     DATABASE=os.environ.get('DATABASE', './db.sqlite'),
     CACHE=os.environ.get('CACHE', None),
-    RIOT=os.environ.get('RIOT', '/usr/local/bin/riot'),
-    ARQ=os.environ.get('ARQ', '/usr/local/bin/arq'),
+    RIOT=os.environ.get('RIOT', locate_bin('riot', 'RIOT')),
+    ARQ=os.environ.get('ARQ', locate_bin('arq', 'ARQ')),
     CSV_QUERY=os.environ.get('CSV_QUERY', './periods-as-csv.rq'),
     SERVER_NAME=os.environ.get('SERVER_NAME', 'localhost.localdomain:5000'),
     CLIENT_URL=os.environ.get('CLIENT_URL', 'https://client.perio.do'),
