@@ -119,7 +119,8 @@
             },
             "label": "550 B.C."
           },
-          "type": "Period"
+          "type": "Period",
+          "broader": "https://perio.do/.well-known/genid/assigned/p0trgkv4kxb"
         },
         "https://perio.do/.well-known/genid/assigned/p0trgkv4kxb": {
           "id": "https://perio.do/.well-known/genid/assigned/p0trgkv4kxb",

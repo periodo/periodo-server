@@ -524,7 +524,9 @@ WHERE {
              'authority',
              'source',
              'publication_year',
-             'derived_periods']
+             'derived_periods',
+             'broader_periods',
+             'narrower_periods']
         )
         self.assertEqual(
             next(rows),
@@ -540,6 +542,8 @@ WHERE {
              + ' | Greenewalt, Crawford H. (Crawford Hallock), 1937-2012.'
              + ' | Ramage, Nancy H., 1942-',
              '1997',
+             '',
+             'http://n2t.net/ark:/99152/p0trgkv4kxb',
              '']
         )
 

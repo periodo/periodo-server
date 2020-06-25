@@ -17,6 +17,8 @@ SELECT
 (group_concat(distinct ?sources;separator=' | ') as ?source)
 (group_concat(distinct ?issued;separator='|') as ?publication_year)
 (group_concat(distinct ?derived;separator=' ') as ?derived_periods)
+(group_concat(distinct ?broader;separator=' ') as ?broader_periods)
+(group_concat(distinct ?narrower;separator=' ') as ?narrower_periods)
 
 WHERE {
   ?concept a skos:Concept ;
@@ -61,10 +63,13 @@ WHERE {
     .
   }
   OPTIONAL {
-    ?derived
-    prov:wasDerivedFrom
-    ?concept
-    .
+    ?derived prov:wasDerivedFrom ?concept .
+  }
+  OPTIONAL {
+    ?concept skos:broader ?broader .
+  }
+  OPTIONAL {
+    ?narrower skos:broader ?concept .
   }
 }
 GROUP BY ?concept
