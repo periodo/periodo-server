@@ -7,13 +7,15 @@ VOCAB_FILES := $(shell find vocab -name *.ttl)
 SHAPE_FILES := $(shell find shapes -name *.ttl)
 
 .PHONY: all
-all: setup vocab.html $(DB)
+all: vocab.html $(DB)
 
 $(PYTHON3):
 	python3.8 -m venv $(VENV_DIR)
+	$(PIP3) install --upgrade pip
+	$(PIP3) install -r requirements.txt
 
 .PHONY: $(DB)
-$(DB):
+$(DB): | $(PYTHON3)
 	DATABASE=$(DB) $(PYTHON3) -c\
 	 "from periodo.commands import init_db; init_db()";
 
@@ -24,7 +26,7 @@ vocab.html: vocab.ttl
 	highlight -i $< -o $@ -s zellner -l -a -T 'PeriodO vocabulary and shapes' --inline-css
 
 .PHONY: load_data
-load_data:
+load_data: | $(PYTHON3)
 ifeq ($(DATA),)
 	$(error No data file provided. Run `make load_data DATA=/path/to/data/file`)
 endif
@@ -45,24 +47,19 @@ endif
 	cat $< | gunzip | sqlite3 $(DB)
 
 .PHONY: set_permissions
-set_permissions:
+set_permissions: | $(PYTHON3)
 ifeq ($(ORCID),)
 	$(error No orcid provided. Run `make set_permissions ORCID=https://orcid.org/0000-1234 PERMISSIONS=perm1,perm2,perm3)
 endif
 	DATABASE=$(DB) $(PYTHON3) -c\
 	 "from periodo.commands import set_permissions; set_permissions('$(ORCID)','$(PERMISSIONS)'.split(','))"
 
-.PHONY: setup
-setup: $(PYTHON3) requirements.txt
-	$(PIP3) install wheel
-	$(PIP3) install -r requirements.txt
-
 .PHONY: clean
 clean:
 	rm -rf $(VENV_DIR)
 
 .PHONY: test
-test: setup
+test: | $(PYTHON3)
 	TESTING=1 $(PYTHON3) -m unittest discover
 
 .PHONY: run
