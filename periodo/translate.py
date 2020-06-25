@@ -3,7 +3,10 @@ import os
 import subprocess
 from pathlib import Path
 from periodo import app
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, gettempdir
+
+
+TMPDIR = gettempdir()
 
 
 class RDFTranslationError(Exception):
@@ -22,7 +25,7 @@ def read_file(filename):
 
 
 def run_subprocess(command_line, out_suffix):
-    sentinel = Path(os.environ['TMPDIR']) / 'running-jvm'
+    sentinel = Path(TMPDIR) / 'running-jvm'
     try:
         sentinel.touch(exist_ok=False)
         try:

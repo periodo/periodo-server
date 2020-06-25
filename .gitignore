@@ -11,5 +11,8 @@ periodo/static
 
 !bin/ttlcat
 
+# Automatically generated files
 periodo-client-*.tgz
 export.sql.gz
+vocab.html
+vocab.ttl
