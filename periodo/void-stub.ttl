@@ -61,7 +61,7 @@ orcid:0000-0001-5620-4764 a foaf:Person ;
 
 orcid:0000-0002-3617-9378 a foaf:Person ;
    rdfs:label "Patrick Golden" ;
-   foaf:mbox <mailto:ptgolden@berkeley.edu> .
+   foaf:mbox <mailto:ptgolden@email.unc.edu> .
 
 orcid:0000-0002-4871-039X a foaf:Person ;
    rdfs:label "Sarah A. Buchanan" ;
