@@ -72,6 +72,9 @@ app.wsgi_app = RemoveTransferEncodingHeaderMiddleware(app.wsgi_app)
 
 
 def locate_bin(name, envvar):
+    path = os.environ.get(envvar)
+    if path is not None:
+        return path
     try:
         res = subprocess.check_output('which ' + name, shell=True)
         return res.decode('utf-8').strip()
@@ -85,8 +88,8 @@ def locate_bin(name, envvar):
 app.config.update(
     DATABASE=os.environ.get('DATABASE', './db.sqlite'),
     CACHE=os.environ.get('CACHE', None),
-    RIOT=os.environ.get('RIOT', locate_bin('riot', 'RIOT')),
-    ARQ=os.environ.get('ARQ', locate_bin('arq', 'ARQ')),
+    RIOT=locate_bin('riot', 'RIOT'),
+    ARQ=locate_bin('arq', 'ARQ'),
     CSV_QUERY=os.environ.get('CSV_QUERY', './periods-as-csv.rq'),
     SERVER_NAME=os.environ.get('SERVER_NAME', 'localhost.localdomain:5000'),
     CLIENT_URL=os.environ.get('CLIENT_URL', 'https://client.perio.do'),
