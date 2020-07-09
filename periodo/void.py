@@ -4,14 +4,27 @@ from periodo import database, utils
 from rdflib import Graph, URIRef, Literal
 from rdflib.namespace import Namespace, RDF, DCTERMS, XSD, VOID
 
+SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
+OWL = Namespace('http://www.w3.org/2002/07/owl#')
 
-def count_entities(data, class_uri):
+SOURCE_URISPACES = [
+    'http://www.worldcat.org/oclc/',
+    'http://dx.doi.org/',
+]
+
+SAMEAS_URISPACES = [
+    'http://purl.org/heritagedata/schemes/eh_period',
+    'http://pleiades.stoa.org/vocabularies/time-periods/',
+]
+
+
+def count_entities(data, clazz):
     count = 0
-    if class_uri == 'http://www.w3.org/2004/02/skos/core#Concept':
+    if clazz == SKOS.Concept:
         for authority in data['authorities'].values():
             for period in authority['periods'].values():
                 count += 1
-    elif class_uri == 'http://www.w3.org/2004/02/skos/core#ConceptScheme':
+    elif clazz == SKOS.ConceptScheme:
         for authority in data['authorities'].values():
             count += 1
     return count
@@ -32,15 +45,11 @@ def resolve(predicate, source):
 def count_source_links(source, counts):
     source_id = id(source)
     source_partOf = resolve('partOf', source)
-    urispaces = [
-        'http://www.worldcat.org/oclc/',
-        'http://dx.doi.org/',
-    ]
-    for u in urispaces:
+    for u in SOURCE_URISPACES:
         if source_id.startswith(u):
-            counts[u]['http://purl.org/dc/terms/source'] += 1
+            counts[u][DCTERMS.source] += 1
         if source_partOf.startswith(u):
-            counts[u]['http://purl.org/dc/terms/isPartOf'] += 1
+            counts[u][DCTERMS.isPartOf] += 1
 
 
 def get_linkset_counts(data):
@@ -54,18 +63,14 @@ def get_linkset_counts(data):
             count_source_links(source, counts)
 
             period_sameAs = period.get('sameAs', '')
-            urispaces = [
-                'http://purl.org/heritagedata/schemes/eh_period',
-                'http://pleiades.stoa.org/vocabularies/time-periods/',
-            ]
-            for u in urispaces:
+            for u in SAMEAS_URISPACES:
                 if period_sameAs.startswith(u):
-                    counts[u]['http://www.w3.org/2002/07/owl#sameAs'] += 1
+                    counts[u][OWL.sameAs] += 1
 
             u = 'http://www.wikidata.org/entity/'
             for place in period.get('spatialCoverage', []):
                 if id(place).startswith(u):
-                    counts[u]['http://purl.org/dc/terms/spatial'] += 1
+                    counts[u][DCTERMS.spatial] += 1
     return counts
 
 
@@ -85,11 +90,11 @@ def describe_dataset(data, created_at):
     partitions = description_g.objects(
         subject=ns.d, predicate=VOID.classPartition)
     for part in partitions:
-        class_uri = str(description_g.value(
+        clazz = description_g.value(
             subject=part,
             predicate=VOID['class']
-        ))
-        entity_count = count_entities(data, class_uri)
+        )
+        entity_count = count_entities(data, clazz)
         description_g.add(
             (part, VOID.entities, Literal(entity_count, datatype=XSD.integer)))
 
@@ -98,11 +103,11 @@ def describe_dataset(data, created_at):
     for linkset in linksets:
         target = description_g.value(
             subject=linkset, predicate=VOID.objectsTarget)
-        uriSpace = description_g.value(
-            subject=target, predicate=VOID.uriSpace).value
+        uriSpace = str(description_g.value(
+            subject=target, predicate=VOID.uriSpace).value)
         predicate = description_g.value(
             subject=linkset, predicate=VOID.linkPredicate)
-        triples = counts[str(uriSpace)][str(predicate)]
+        triples = counts[uriSpace][predicate]
         description_g.add(
             (linkset, VOID.triples, Literal(triples, datatype=XSD.integer)))
 
