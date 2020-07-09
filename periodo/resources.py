@@ -541,6 +541,8 @@ class Patch(Resource):
     def get(self, id):
         row = database.query_db(
             PATCH_QUERY + ' where patch_request.id = ?', (id,), one=True)
+        if not row:
+            abort(404)
         if row['merged']:
             p = row['applied_patch']
         else:
