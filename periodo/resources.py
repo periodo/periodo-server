@@ -589,10 +589,10 @@ class PatchMerge(Resource):
             cache.purge_dataset()
             cache.purge_graphs()
             return None, 204
-        except patching.MergeError as e:
-            return {'message': e.message}, 404
         except patching.UnmergeablePatchError as e:
             return {'message': e.message}, 400
+        except patching.MergeError as e:
+            return {'message': e.message}, 404
 
 
 @api.resource('/patches/<int:id>/reject')
@@ -646,20 +646,7 @@ class Bags(Resource):
                barepaths=['/identifier-map/'])
 class IdentifierMap(Resource):
     def get(self):
-        map_rows = database.query_db(
-            """
-            SELECT identifier_map, merged_at FROM patch_request
-            WHERE merged = TRUE AND
-            LENGTH(identifier_map) > 2
-            ORDER BY merged_at
-            """)
-
-        identifier_map = {}
-        last_edited = None
-
-        for row in map_rows:
-            identifier_map.update(json.loads(row['identifier_map']))
-            last_edited = row['merged_at']
+        identifier_map, last_edited = database.get_identifier_map()
 
         headers = {}
         if last_edited is not None:

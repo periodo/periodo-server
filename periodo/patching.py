@@ -4,7 +4,8 @@ from functools import reduce
 from jsonpatch import JsonPatch, JsonPatchException
 from jsonpointer import JsonPointerException
 from periodo import database, void
-from periodo.identifier import replace_skolem_ids, IDENTIFIER_RE
+from periodo.identifier import (
+    replace_skolem_ids, IDENTIFIER_RE, IdentifierException)
 
 CHANGE_PATH_PATTERN = re.compile(r'''
 /authorities/
@@ -35,7 +36,7 @@ def from_text(patch_text):
         patch_text = patch_text.decode()
     try:
         patch = json.loads(patch_text)
-    except:
+    except:  # noqa: E722
         raise InvalidPatchError('Patch data could not be parsed as JSON.')
     patch = JsonPatch(patch)
     return patch
@@ -173,6 +174,7 @@ def merge(patch_id, user_id):
         raise MergeError('Closed patches cannot be merged.')
 
     dataset = database.get_dataset()
+    dataset_id_map = database.get_identifier_map()[0]
     mergeable = is_mergeable(row['original_patch'], dataset)
 
     if not mergeable:
@@ -180,9 +182,16 @@ def merge(patch_id, user_id):
 
     data = json.loads(dataset['data'])
     original_patch = from_text(row['original_patch'])
-    applied_patch, id_map = replace_skolem_ids(
-        original_patch, data, database.get_removed_entity_keys())
-    created_entities = set(id_map.values())
+    try:
+        applied_patch, patch_id_map = replace_skolem_ids(
+            original_patch,
+            data,
+            database.get_removed_entity_keys(),
+            dataset_id_map)
+    except IdentifierException as e:
+        raise UnmergeablePatchError(str(e))
+
+    created_entities = set(patch_id_map.values())
 
     # Should this be ordered?
     new_data = applied_patch.apply(data)
@@ -205,7 +214,7 @@ def merge(patch_id, user_id):
         (user_id,
          dataset['id'],
          json.dumps(sorted(created_entities)),
-         json.dumps(id_map),
+         json.dumps(patch_id_map),
          applied_patch.to_string(),
          row['id'])
     )

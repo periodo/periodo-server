@@ -80,7 +80,7 @@ def check(identifier, strict=True):
             return
 
     raise IdentifierException(
-        ('malformed identifier: {}' +
+        ('Malformed identifier: {}' +
          ' (check digit was {} but should have been {})').format(
              identifier, identifier[-1], check_digit))
 
@@ -120,9 +120,13 @@ def index_by_id(items):
     return {i['id']: i for i in items}
 
 
-def replace_skolem_ids(patch_or_obj, dataset, removed_entity_keys):
+def replace_skolem_ids(
+        patch_or_obj,
+        dataset,
+        removed_entity_keys,
+        dataset_id_map):
 
-    id_map = {}
+    patch_id_map = {}
 
     existing_ids = set([unprefix(key) for key in removed_entity_keys])
     if (len(dataset) > 0):
@@ -144,12 +148,18 @@ def replace_skolem_ids(patch_or_obj, dataset, removed_entity_keys):
         if match:  # patch for initial load, keep assigned IDs
             permanent_id = match.group('id')
             if permanent_id in existing_ids:
-                raise Exception('ID collision on ' + permanent_id)
+                raise IdentifierException(
+                    'ID collision on ' + permanent_id)
         elif SKOLEM_URI.match(skolem_uri):
+            existing_id = dataset_id_map.get(skolem_uri, None)
+            if existing_id is not None:
+                raise IdentifierException(
+                    'Skolem ID is already mapped to ' + existing_id)
             permanent_id = unused_identifier(id_generator, *args)
         else:
-            raise Exception('non-skolem ID for new entity: ' + skolem_uri)
-        id_map[skolem_uri] = permanent_id
+            raise IdentifierException(
+                'Non-skolem ID for new entity: ' + skolem_uri)
+        patch_id_map[skolem_uri] = permanent_id
         existing_ids.add(permanent_id)
         return permanent_id
 
@@ -216,9 +226,9 @@ def replace_skolem_ids(patch_or_obj, dataset, removed_entity_keys):
             if isinstance(v, dict):
                 d[k] = replace_skolem_values(v)
             elif isinstance(v, list):
-                d[k] = [id_map[i] if is_skolem_uri(i) else i for i in v]
+                d[k] = [patch_id_map[i] if is_skolem_uri(i) else i for i in v]
             elif is_skolem_uri(v):
-                d[k] = id_map[v]
+                d[k] = patch_id_map[v]
         return d
 
     if hasattr(patch_or_obj, 'patch'):
@@ -230,7 +240,7 @@ def replace_skolem_ids(patch_or_obj, dataset, removed_entity_keys):
             [assign_authority_ids(c)
              for c in patch_or_obj['authorities'].values()]))
 
-    return result, id_map
+    return result, patch_id_map
 
 
 class IdentifierException(Exception):
