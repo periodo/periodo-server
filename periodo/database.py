@@ -136,6 +136,25 @@ ORDER BY id ASC
     return patches
 
 
+def get_identifier_map():
+    map_rows = query_db(
+        """
+        SELECT identifier_map, merged_at FROM patch_request
+        WHERE merged = TRUE AND
+        LENGTH(identifier_map) > 2
+        ORDER BY merged_at
+        """)
+
+    identifier_map = {}
+    last_edited = None
+
+    for row in map_rows:
+        identifier_map.update(json.loads(row['identifier_map']))
+        last_edited = row['merged_at']
+
+    return identifier_map, last_edited
+
+
 def get_bag_uuids():
     return [UUID(row['uuid']) for row in query_db('SELECT uuid FROM bag')]
 

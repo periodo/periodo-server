@@ -150,6 +150,20 @@ class TestPatchMethods(unittest.TestCase):
             self.assertEqual(4, len(created_entities))
             for entity_id in created_entities:
                 self.assertRegex(entity_id, identifier.IDENTIFIER_RE)
+            # re-submit the patch and try to merge it again
+            res = client.patch(
+                '/d/',
+                data=patch,
+                content_type='application/json',
+                headers={'Authorization': 'Bearer '
+                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+            patch_url = urlparse(res.headers['Location']).path
+            res = client.post(
+                patch_url + 'merge',
+                buffered=True,
+                headers={'Authorization': 'Bearer '
+                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+            self.assertEqual(res.status_code, http.client.BAD_REQUEST)
 
     def test_reject_patch(self):
         with open(filepath('test-patch-adds-items.json')) as f:
