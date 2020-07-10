@@ -65,12 +65,14 @@ periodo:PeriodLocalizedLabelShape
   sh:description "Language-specific name for the period" ;
   sh:datatype rdf:langString ;
   sh:languageIn (
+    "af"
     "ar"
     "bg"
     "ca"
     "cmn-Hans"
     "cmn-Hant"
     "cmn-Latn"
+    "cs"
     "da"
     "de"
     "el"
@@ -85,9 +87,11 @@ periodo:PeriodLocalizedLabelShape
     "mi-Latn"
     "mk"
     "nl"
+    "no"
     "ota-Arab"
     "pt"
     "ro"
+    "ru"
     "scn"
     "sl"
     "sq"
@@ -256,9 +260,11 @@ periodo:PeriodLanguageTagShape
   sh:description "Language tag of the preferred label for this period" ;
   sh:datatype xsd:string ;
   sh:in (
+    "af"
     "ar"
     "bg"
     "ca"
+    "cs"
     "cmn-Hans"
     "cmn-Hant"
     "cmn-Latn"
@@ -276,9 +282,11 @@ periodo:PeriodLanguageTagShape
     "mi-Latn"
     "mk"
     "nl"
+    "no"
     "ota-Arab"
     "pt"
     "ro"
+    "ru"
     "scn"
     "sl"
     "sq"
