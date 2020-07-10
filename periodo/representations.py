@@ -168,7 +168,7 @@ def output_turtle_as_html(data, code, headers={}, filename=None):
         html = ''
 
     response = make_response(html, code)
-    response.content_type = 'text/html'
+    response.content_type = 'text/html; charset=utf-8'
     response.headers.extend(headers)
 
     return cache.short_time(response)
@@ -179,7 +179,7 @@ def output_json_as_html(data, code, headers={}, filename=None):
     json = abbreviate_context(data)
     html = highlight.as_json(json)
     response = make_response(html, code)
-    response.content_type = 'text/html'
+    response.content_type = 'text/html; charset=utf-8'
     response.headers.extend(headers)
 
     return cache.short_time(response)
