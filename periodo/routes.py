@@ -72,7 +72,7 @@ def void():
 def void_as_html():
     ttl = database.get_dataset()['description']
     return make_response(highlight.as_turtle(ttl), 200, {
-        'Content-Type': 'text/html',
+        'Content-Type': 'text/html; charset=utf-8',
         'Link': '</>; rel="alternate"; type="text/html"',
     })
 

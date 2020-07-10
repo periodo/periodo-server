@@ -7,7 +7,11 @@ from pygments.formatters import HtmlFormatter
 
 def as_string(s, lexer):
     return highlight(s, lexer, LinkifiedHtmlFormatter(
-        full=True, style='colorful', linenos='table', lineanchors='line'))
+        full=True,
+        style='colorful',
+        linenos='table',
+        lineanchors='line',
+        encoding='utf-8'))
 
 
 def as_turtle(s):

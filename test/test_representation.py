@@ -97,7 +97,8 @@ class TestRepresentationsAndRedirects(unittest.TestCase):
 
         res6 = self.client.get('/.well-known/void.ttl.html')
         self.assertEqual(res6.status_code, http.client.OK)
-        self.assertEqual(res6.headers['Content-Type'], 'text/html')
+        self.assertEqual(
+            res6.headers['Content-Type'], 'text/html; charset=utf-8')
 
         g = Graph()
         g.parse(format='turtle', data=res2.get_data(as_text=True))
@@ -334,7 +335,8 @@ WHERE {
 
         res5 = self.client.get('/trgkv.json.html')
         self.assertEqual(res5.status_code, http.client.OK)
-        self.assertEqual(res5.headers['Content-Type'], 'text/html')
+        self.assertEqual(
+            res5.headers['Content-Type'], 'text/html; charset=utf-8')
 
     def test_authority_turtle(self):
         res1 = self.client.get('/trgkv.ttl')
@@ -356,7 +358,8 @@ WHERE {
 
         res2 = self.client.get('/trgkv.ttl.html')
         self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(res2.headers['Content-Type'], 'text/html')
+        self.assertEqual(
+            res2.headers['Content-Type'], 'text/html; charset=utf-8')
         self.assertEqual(
             res2.headers['Cache-Control'],
             'public, max-age={}'.format(cache.SHORT_TIME))
@@ -425,7 +428,8 @@ WHERE {
                        SKOS.inScheme, PERIODO['p0trgkv']), g)
         res3 = self.client.get('/trgkvwbjd.json.html')
         self.assertEqual(res3.status_code, http.client.OK)
-        self.assertEqual(res3.headers['Content-Type'], 'text/html')
+        self.assertEqual(
+            res3.headers['Content-Type'], 'text/html; charset=utf-8')
 
     def test_period_turtle(self):
         res1 = self.client.get('/trgkvwbjd.ttl')
@@ -449,7 +453,8 @@ WHERE {
                        SKOS.inScheme, PERIODO['p0trgkv']), g)
         res2 = self.client.get('/trgkvwbjd.ttl.html')
         self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(res2.headers['Content-Type'], 'text/html')
+        self.assertEqual(
+            res2.headers['Content-Type'], 'text/html; charset=utf-8')
         self.assertEqual(
             res2.headers['Cache-Control'],
             'public, max-age={}'.format(cache.SHORT_TIME))
