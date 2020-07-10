@@ -170,7 +170,7 @@ periodo:PeriodStartShape
   sh:name "start" ;
   sh:description "Start interval for the period" ;
   sh:nodeKind sh:BlankNode ;
-  sh:node periodo:IntervalShape ;
+  sh:node periodo:StartIntervalShape ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
   sh:message "Problem with period start interval" ;
@@ -182,7 +182,7 @@ periodo:PeriodStopShape
   sh:name "stop" ;
   sh:description "Stop interval for the period" ;
   sh:nodeKind sh:BlankNode ;
-  sh:node periodo:IntervalShape ;
+  sh:node periodo:StopIntervalShape ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
   sh:message "Problem with period stop interval" ;
