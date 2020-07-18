@@ -9,6 +9,7 @@
 @prefix time: <http://www.w3.org/2006/time#> .
 @prefix void: <http://rdfs.org/ns/void#> .
 @prefix wv: <http://vocab.org/waiver/terms/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
 
 
 <p0> a void:DatasetDescription ;
@@ -39,12 +40,14 @@
    void:exampleResource <p0fh3zc> , <p0fh3zcqs6h> , <p0fh3zcg927> ;
    void:uriSpace "http://n2t.net/ark:/99152/p0" ;
    void:vocabulary
+      <p0v> ,
       <http://www.w3.org/2004/02/skos/core#> ,
       <http://www.w3.org/2006/time#> ,
       <http://purl.org/dc/terms/> ;
    void:classPartition
       [ void:class skos:Concept ] ,
-      [ void:class skos:ConceptScheme ]
+      [ void:class skos:ConceptScheme ] ;
+   sh:shapesGraph <p0v>
    .
 
 orcid:0000-0002-5486-159X a foaf:Person ;
