@@ -45,6 +45,7 @@ periodo:AuthorityEditorialNoteShape
   sh:name "editorial note" ;
   sh:description "Administrative or editorial notes from PeriodO curators" ;
   sh:datatype xsd:string ;
+  sh:minCount 1 ;
   sh:maxCount 1 ;
   sh:message "Problem with authority editorial note" ;
   .
