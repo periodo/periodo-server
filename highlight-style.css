@@ -1,0 +1,50 @@
+body {
+    background-color: #fdfdfd;
+    color: #657b83;
+    font-family: 'Courier New', monospace;
+    font-size: 12pt;
+    margin: -2px 8px 8px;
+}
+pre {
+    font-family: 'Courier New', monospace;
+}
+tbody {
+    vertical-align: top;
+}
+a {
+    color: #0768b5;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+.highlighttable {
+    margin-left: 1.5em;
+}
+.linenos {
+    color: #736535;
+}
+.code {
+    padding-left: 4px;
+}
+.ge {
+    color: #586e75;
+}
+.k {
+    color: #586e75;
+}
+.nn {
+    color: #673ab7;
+}
+.nt {
+    color: #027369;
+}
+.nv {
+    color: #0768b5;
+}
+.s, .s2 {
+    color: #000000;
+}
+.s2 a {
+    color: #000000;
+}

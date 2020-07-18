@@ -6,12 +6,19 @@ from pygments.formatters import HtmlFormatter
 
 
 def as_string(s, lexer):
-    return highlight(s, lexer, LinkifiedHtmlFormatter(
-        full=True,
-        style='colorful',
+    table = highlight(s, lexer, LinkifiedHtmlFormatter(
         linenos='table',
-        lineanchors='line',
+        linespans='line',
         encoding='utf-8'))
+    return b'''
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title></title>
+<link rel="stylesheet" href="/highlight-style.css">
+</head>
+<body>''' + table + b'</body></html>'
 
 
 def as_turtle(s):

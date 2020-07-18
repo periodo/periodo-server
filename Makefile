@@ -23,7 +23,17 @@ vocab.ttl: $(VOCAB_FILES) $(SHAPE_FILES)
 	./bin/ttlcat $^ > $@
 
 vocab.html: vocab.ttl
-	highlight -i $< -o $@ -s zellner -l -a -T 'PeriodO vocabulary and shapes' --inline-css
+	highlight \
+	--input=$< \
+	--output=$@ \
+	--style=periodo.theme \
+	--line-numbers \
+	--anchors \
+	--anchor-prefix='replaceme' \
+	--doc-title='PeriodO vocabulary and shapes' \
+	--inline-css \
+	--font-size=12 \
+	--stdout | sed 's/replaceme_/line-/' > $@
 
 .PHONY: load_data
 load_data: | $(PYTHON3)
@@ -56,7 +66,7 @@ endif
 
 .PHONY: clean
 clean:
-	rm -rf $(VENV_DIR)
+	rm -rf $(VENV_DIR) vocab.html
 
 .PHONY: test
 test: | $(PYTHON3)
