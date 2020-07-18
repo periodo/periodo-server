@@ -25,7 +25,6 @@ vocab.ttl: $(VOCAB_FILES) $(SHAPE_FILES)
 vocab.html: vocab.ttl
 	highlight \
 	--input=$< \
-	--output=$@ \
 	--style=periodo.theme \
 	--line-numbers \
 	--anchors \
@@ -33,7 +32,7 @@ vocab.html: vocab.ttl
 	--doc-title='PeriodO vocabulary and shapes' \
 	--inline-css \
 	--font-size=12 \
-	--stdout | sed 's/replaceme_/line-/' > $@
+	| sed 's/replaceme_/line-/' > $@
 
 .PHONY: load_data
 load_data: | $(PYTHON3)
