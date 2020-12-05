@@ -10,7 +10,7 @@ SHAPE_FILES := $(shell find shapes -name *.ttl)
 all: vocab.html $(DB)
 
 $(PYTHON3):
-	python3.8 -m venv $(VENV_DIR)
+	python3 -m venv $(VENV_DIR)
 	$(PIP3) install --upgrade pip
 	$(PIP3) install wheel
 	$(PIP3) install -r requirements.txt
