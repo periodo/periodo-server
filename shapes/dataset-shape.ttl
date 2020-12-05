@@ -47,10 +47,10 @@ periodo:DatasetIsPrimaryTopicOfShape
   rdf:type sh:PropertyShape ;
   sh:path foaf:isPrimaryTopicOf ;
   sh:name "is primary topic of" ;
-  sh:description "Link to JSON representation of this dataset" ;
+  sh:description "Dataset document URI" ;
   sh:nodeKind sh:IRI ;
-  sh:hasValue <p0d.json> ;
+  sh:node periodo:DocumentShape ;
   sh:minCount 1 ;
   sh:maxCount 1 ;
-  sh:message "Problem with dataset link to JSON representation" ;
+  sh:message "Problem with dataset document URI" ;
   .

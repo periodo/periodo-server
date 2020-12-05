@@ -1,0 +1,47 @@
+@base <http://n2t.net/ark:/99152/> .
+
+@prefix periodo: <p0v#> .
+
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix void: <http://rdfs.org/ns/void#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+periodo:DocumentShape
+  rdf:type sh:NodeShape ;
+  rdfs:label "Dataset document shape" ;
+  sh:closed "true"^^xsd:boolean ;
+  sh:property
+    periodo:DocumentInDatasetShape
+  .
+
+periodo:DocumentInDatasetShape
+  rdf:type sh:PropertyShape ;
+  sh:path void:inDataset ;
+  sh:name "in dataset" ;
+  sh:nodeKind sh:IRI ;
+  sh:hasValue <p0d> ;
+  sh:node periodo:AbstractDatasetShape ;
+  sh:minCount 1 ;
+  sh:maxCount 1 ;
+  .
+
+periodo:AbstractDatasetShape
+  rdf:type sh:NodeShape ;
+  rdfs:label "Abstract dataset shape" ;
+  sh:closed "true"^^xsd:boolean ;
+  sh:property
+    periodo:AbstractDatasetProvenanceShape
+  .
+
+periodo:AbstractDatasetProvenanceShape
+  rdf:type sh:PropertyShape ;
+  sh:path dcterms:provenance ;
+  sh:name "provenance" ;
+  sh:nodeKind sh:IRI ;
+  sh:hasValue <p0h#changes> ;
+  sh:minCount 1 ;
+  sh:maxCount 1 ;
+  .
