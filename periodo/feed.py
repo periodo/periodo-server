@@ -138,8 +138,6 @@ def generate_activity_feed():
     if len(recent_activity) == 0:
         return None
 
-    print(recent_activity[0].keys())
-
     fg = FeedGenerator()
     fg.id(feed_url)
     fg.title('PeriodO changes')
