@@ -57,9 +57,10 @@ def output_html(data, code, headers={}, filename=None):
             url_for('dataset-json', version=request.args.get('version', None)),
             code=307)
     else:
-        response = redirect(
-            html_version(request.path) + urlencode(request.args),
-            code=303)
+        location = html_version(request.path)
+        if len(request.args) > 0:
+            location += f'?{urlencode(request.args)}'
+        response = redirect(location, code=303)
         response.headers.add(
             'Link', '<>; rel="alternate"; type="application/json"')
 
