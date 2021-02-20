@@ -2,6 +2,7 @@
 
 A web server for serving and accepting patches for [PeriodO](http://perio.do/) data.
 
+![run-tests workflow status](https://github.com/periodo/periodo-server/actions/workflows/run-tests.yml/badge.svg)
 
 # Setup
 
