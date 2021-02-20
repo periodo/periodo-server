@@ -1,102 +1,71 @@
-import os
-import tempfile
-import unittest
-import http.client
-from periodo import app, commands, database, auth
+import httpx
+import pytest
+from periodo import app, database
 
 
-class TestAuthentication(unittest.TestCase):
+def test_active_identity(active_identity):
+    assert active_identity.id is not None
+    assert active_identity.auth_type == 'bearer'
+    with app.app_context():
+        row = database.query_db(
+            'SELECT name, permissions, b64token FROM user WHERE id = ?',
+            (active_identity.id,),
+            one=True
+        )
+        assert row['name'] == active_identity.name
+        assert row['b64token'] == active_identity.b64token
+        assert row['permissions'] == (
+            '[["action", "submit-patch"], ["action", "create-bag"]]'
+        )
 
-    def setUp(self):
-        self.db_fd, app.config['DATABASE'] = tempfile.mkstemp()
-        app.config['TESTING'] = True
-        self.client = app.test_client()
-        commands.init_db()
-        with app.app_context():
-            self.identity = auth.add_user_or_update_credentials(
-                {'name': 'Testy Testerson',
-                 'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
-                 'expires_in': 631138518,
-                 'orcid': '1234-5678-9101-112X'})
-            self.expired_identity = auth.add_user_or_update_credentials({
-                'name': 'Eric Expired',
-                'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
-                'expires_in': -3600,
-                'orcid': '1211-1098-7654-321X',
-            })
-            database.commit()
 
-    def tearDown(self):
-        os.close(self.db_fd)
-        os.unlink(app.config['DATABASE'])
+def test_expired_identity(expired_identity):
+    assert expired_identity.id is None
+    assert expired_identity.auth_type is None
 
-    def test_add_user(self):
-        self.assertEqual(
-            self.identity.id, 'https://orcid.org/1234-5678-9101-112X')
-        self.assertEqual(
-            self.identity.auth_type, 'bearer')
-        with app.app_context():
-            row = database.query_db(
-                'SELECT name, permissions, b64token FROM user WHERE id = ?',
-                (self.identity.id,), one=True)
-            self.assertEqual(row['name'], 'Testy Testerson')
-            self.assertEqual(
-                row['permissions'],
-                '[["action", "submit-patch"], ["action", "create-bag"]]')
-            self.assertEqual(
-                row['b64token'],
-                b'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4')
 
-    def test_add_expired_user(self):
-        self.assertIsNone(self.expired_identity.id)
-        self.assertIsNone(self.expired_identity.auth_type)
+def test_no_auth(client):
+    res = client.patch('/d/')
+    assert res.status_code == httpx.codes.UNAUTHORIZED
+    assert res.headers['WWW-Authenticate'] == 'Bearer realm="PeriodO"'
 
-    def test_no_credentials(self):
-        res = self.client.patch('/d/')
-        self.assertEqual(res.status_code, http.client.UNAUTHORIZED)
-        self.assertEqual(
-            res.headers['WWW-Authenticate'],
-            'Bearer realm="PeriodO"')
 
-    def test_unsupported_auth_method(self):
-        res = self.client.patch(
-            '/d/',
-            headers={'Authorization': 'Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ=='})
-        self.assertEqual(res.status_code, http.client.UNAUTHORIZED)
-        self.assertEqual(
-            res.headers['WWW-Authenticate'],
-            'Bearer realm="PeriodO"')
+def test_unsupported_auth_method(client):
+    res = client.patch(
+        '/d/',
+        headers={'Authorization': 'Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ=='}
+    )
+    assert res.status_code == httpx.codes.UNAUTHORIZED
+    assert res.headers['WWW-Authenticate'] == 'Bearer realm="PeriodO"'
 
-    def test_malformed_token(self):
-        res = self.client.patch(
-            '/d/',
-            headers={'Authorization': 'Bearer =!@#$%^&*()_+'})
-        self.assertEqual(res.status_code, http.client.UNAUTHORIZED)
-        self.assertEqual(
-            res.headers['WWW-Authenticate'],
-            'Bearer realm="PeriodO", error="invalid_token", '
-            + 'error_description="The access token is malformed", '
-            + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.2"')
 
-    def test_token_not_in_database(self):
-        res = self.client.patch(
-            '/d/',
-            headers={'Authorization': 'Bearer mF_9.B5f-4.1JqM'})
-        self.assertEqual(res.status_code, http.client.UNAUTHORIZED)
-        self.assertEqual(
-            res.headers['WWW-Authenticate'],
-            'Bearer realm="PeriodO", error="invalid_token", '
-            + 'error_description="The access token is invalid", '
-            + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.2"')
+def test_malformed_bearer_token(client):
+    res = client.patch('/d/', headers={'Authorization': 'Bearer =!@#$%^&*()_+'})
+    assert res.status_code == httpx.codes.UNAUTHORIZED
+    assert res.headers['WWW-Authenticate'] == (
+        'Bearer realm="PeriodO", error="invalid_token", '
+        + 'error_description="The access token is malformed", '
+        + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.2"'
+    )
 
-    def test_expired_token(self):
-        res = self.client.patch(
-            '/d/',
-            headers={'Authorization': 'Bearer '
-                     + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
-        self.assertEqual(res.status_code, http.client.UNAUTHORIZED)
-        self.assertEqual(
-            res.headers['WWW-Authenticate'],
-            'Bearer realm="PeriodO", error="invalid_token", '
-            + 'error_description="The access token expired", '
-            + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.2"')
+
+@pytest.mark.client_auth_token('this-token-is-not-in-the-database')
+def test_token_not_in_database(client):
+    res = client.patch('/d/')
+    assert res.status_code == httpx.codes.UNAUTHORIZED
+    assert res.headers['WWW-Authenticate'] == (
+        'Bearer realm="PeriodO", error="invalid_token", '
+        + 'error_description="The access token is invalid", '
+        + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.2"'
+    )
+
+
+@pytest.mark.client_auth_token('this-is-an-expired-token')
+def test_expired_token(expired_identity, client):
+    res = client.patch('/d/')
+    assert res.status_code == httpx.codes.UNAUTHORIZED
+    assert res.headers['WWW-Authenticate'] == (
+        'Bearer realm="PeriodO", error="invalid_token", '
+        + 'error_description="The access token expired", '
+        + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.2"'
+    )

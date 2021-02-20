@@ -1,6 +1,7 @@
 VENV_DIR := venv
 PIP3 := $(VENV_DIR)/bin/pip3
 PYTHON3 := $(VENV_DIR)/bin/python3
+PYTEST := $(VENV_DIR)/bin/pytest
 DB := ./db.sqlite
 
 VOCAB_FILES := $(shell find vocab -name *.ttl)
@@ -70,7 +71,7 @@ clean:
 
 .PHONY: test
 test: | $(PYTHON3)
-	TESTING=1 $(PYTHON3) -m unittest discover
+	TESTING=1 $(PYTEST) test
 
 .PHONY: run
 run: test

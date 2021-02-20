@@ -1,16 +1,11 @@
-import os
-import tempfile
-import unittest
-import http.client
+import httpx
 import json
 import csv
 from rdflib import Graph, URIRef
 from rdflib.plugins import sparql
-from rdflib.namespace import Namespace, RDF, DCTERMS
-from urllib.parse import urlparse
-from flask_principal import ActionNeed
-from .filepath import filepath
-from periodo import app, commands, database, auth, cache
+from rdflib.namespace import Namespace, DCTERMS, RDF
+from urllib.parse import urlparse, urlencode
+from periodo import DEV_SERVER_NAME, cache
 
 VOID = Namespace('http://rdfs.org/ns/void#')
 SKOS = Namespace('http://www.w3.org/2004/02/skos/core#')
@@ -19,623 +14,680 @@ FOAF = Namespace('http://xmlns.com/foaf/0.1/')
 HOST = Namespace('http://localhost.localdomain:5000/')
 
 
-class TestRepresentationsAndRedirects(unittest.TestCase):
+def queryForValue(graph, query, bindings, value):
+    return next(iter(graph.query(query, initBindings=bindings)))[value].value
 
-    def setUp(self):
-        self.db_fd, app.config['DATABASE'] = tempfile.mkstemp()
-        app.config['TESTING'] = True
-        self.client = app.test_client()
-        with open(filepath('test-patch-replace-values-1.json')) as f:
-            self.patch = f.read()
-        commands.init_db()
-        commands.load_data(filepath('test-data.json'))
-        with app.app_context():
-            self.user_identity = auth.add_user_or_update_credentials({
-                'name': 'Regular Gal',
-                'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
-                'expires_in': 631138518,
-                'orcid': '1234-5678-9101-112X',
-            })
-            self.admin_identity = auth.add_user_or_update_credentials({
-                'name': 'Super Admin',
-                'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
-                'expires_in': 3600,
-                'orcid': '1211-1098-7654-321X',
-            }, (ActionNeed('accept-patch'),))
-            database.commit()
 
-    def tearDown(self):
-        os.close(self.db_fd)
-        os.unlink(app.config['DATABASE'])
+def test_context(client):
+    res = client.get('/c')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/json'
+    assert res.headers['Cache-Control'] == 'public, max-age=0'
+    assert list(res.json().keys()) == ['@context']
 
-    def test_context(self):
-        res1 = self.client.get('/c', buffered=True)
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'application/json')
-        self.assertEqual(
-            list(json.loads(res1.get_data(as_text=True)).keys()), ['@context'])
+    res = client.get('/c', headers={'Accept': 'text/html'})
+    assert res.status_code == httpx.codes.OK
+    assert res.url == f'http://{DEV_SERVER_NAME}/c.json.html'
 
-    def test_vocab(self):
-        res1 = self.client.get('/v', buffered=True)
-        self.assertEqual(res1.status_code, http.client.SEE_OTHER)
-        self.assertEqual(
-            urlparse(res1.headers['Location']).path, '/v.ttl.html')
+    res = client.get(
+        '/c',
+        params={'version': 1},
+        headers={'Accept': 'text/html'}
+    )
+    assert res.status_code == httpx.codes.OK
+    assert res.url == f'http://{DEV_SERVER_NAME}/c.json.html?version=1'
 
-        res2 = self.client.get(
-            '/v', headers={'Accept': 'text/turtle'}, buffered=True)
-        self.assertEqual(res2.status_code, http.client.SEE_OTHER)
-        self.assertEqual(urlparse(res2.headers['Location']).path, '/v.ttl')
 
-    def test_dataset_description(self):
-        res1 = self.client.get(
-            '/', headers={'Accept': 'text/html'}, buffered=True)
-        self.assertEqual(res1.status_code, http.client.SEE_OTHER)
-        self.assertEqual(urlparse(res1.headers['Location']).path,
-                         '/index.json.html')
+def test_vocab(client):
+    res = client.get('/v', allow_redirects=False)
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/v.ttl.html'
 
-        res2 = self.client.get('/', headers={'Accept': 'text/turtle'})
-        self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(res2.headers['Content-Type'], 'text/turtle')
+    res = client.get(
+        '/v',
+        headers={'Accept': 'text/turtle'},
+        allow_redirects=False
+    )
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/v.ttl'
 
-        res3 = self.client.get('/.well-known/void')
-        self.assertEqual(res3.status_code, http.client.OK)
-        self.assertEqual(res3.headers['Content-Type'], 'text/turtle')
-        self.assertEqual(res3.get_data(as_text=True),
-                         res2.get_data(as_text=True))
 
-        res4 = self.client.get('/.wellknown/void')
-        self.assertEqual(res4.status_code, http.client.OK)
-        self.assertEqual(res4.headers['Content-Type'], 'text/turtle')
-        self.assertEqual(res4.get_data(as_text=True),
-                         res3.get_data(as_text=True))
+def test_dataset_description(client):
+    res = client.get(
+        '/',
+        headers={'Accept': 'text/html'},
+        allow_redirects=False
+    )
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/index.json.html'
 
-        res5 = self.client.get('/.well-known/void.ttl')
-        self.assertEqual(res5.status_code, http.client.OK)
-        self.assertEqual(res5.headers['Content-Type'], 'text/turtle')
-        self.assertEqual(res5.get_data(as_text=True),
-                         res4.get_data(as_text=True))
+    ttl = client.get('/', headers={'Accept': 'text/turtle'})
+    assert ttl.status_code == httpx.codes.OK
+    assert ttl.headers['Content-Type'] == 'text/turtle'
 
-        res6 = self.client.get('/.well-known/void.ttl.html')
-        self.assertEqual(res6.status_code, http.client.OK)
-        self.assertEqual(
-            res6.headers['Content-Type'], 'text/html; charset=utf-8')
+    for path in [
+            '/.well-known/void',
+            '/.wellknown/void',
+            '/.well-known/void.ttl',
+    ]:
+        res = client.get('/.well-known/void')
+        assert res.status_code == httpx.codes.OK
+        assert res.headers['Content-Type'] == 'text/turtle'
+        assert res.text == ttl.text
 
-        g = Graph()
-        g.parse(format='turtle', data=res2.get_data(as_text=True))
-        self.assertIn(
-            (PERIODO['p0d'], DCTERMS.provenance, HOST['h#changes']), g)
-        desc = g.value(predicate=RDF.type, object=VOID.DatasetDescription)
-        self.assertEqual(
-            desc.n3(), '<http://n2t.net/ark:/99152/p0>')
-        title = g.value(subject=desc, predicate=DCTERMS.title)
-        self.assertEqual(
-            title.n3(), '"Description of the PeriodO Period Gazetteer"@en')
-        q = sparql.prepareQuery('''
-SELECT ?count
-WHERE {
-  ?d void:classPartition ?p .
-  ?p void:class ?class .
-  ?p void:entities ?count .
-}
-''', initNs={'void': VOID, 'skos': SKOS})
-        concept_count = next(iter(g.query(
-            q, initBindings={'class': SKOS.Concept})))['count'].value
-        self.assertEqual(concept_count, 3)
-        scheme_count = next(iter(g.query(
-            q, initBindings={'class': SKOS.ConceptScheme})))['count'].value
-        self.assertEqual(scheme_count, 1)
+    res = client.get('/.well-known/void.ttl.html')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'text/html; charset=utf-8'
 
-    def test_dataset_description_linksets(self):
-        res = self.client.get('/.well-known/void')
-        self.assertEqual(res.status_code, http.client.OK)
-        self.assertEqual(res.headers['Content-Type'], 'text/turtle')
-        g = Graph()
-        g.parse(format='turtle', data=res.get_data(as_text=True))
-        q = sparql.prepareQuery('''
-SELECT ?triples
-WHERE {
-  ?linkset a void:Linkset .
-  ?linkset void:subset <http://n2t.net/ark:/99152/p0d> .
-  ?linkset void:subjectsTarget <http://n2t.net/ark:/99152/p0d> .
-  ?linkset void:linkPredicate ?predicate .
-  ?linkset void:objectsTarget ?dataset .
-  ?linkset void:triples ?triples .
-}
-''', initNs={'void': VOID})
-        wikidata = URIRef('http://www.wikidata.org/entity/Q2013')
-        triples = next(iter(g.query(
-            q, initBindings={'dataset': wikidata,
-                             'predicate': DCTERMS.spatial})))['triples'].value
-        self.assertEqual(triples, 3)
+    res = client.get('/.well-known/void', headers={'Accept': 'text/html'})
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'text/html; charset=utf-8'
+    assert res.url == f'http://{DEV_SERVER_NAME}/.wellknown/void.ttl.html'
 
-        worldcat = URIRef('http://purl.oclc.org/dataset/WorldCat')
-        triples = next(iter(g.query(
-            q, initBindings={'dataset': worldcat,
-                             'predicate': DCTERMS.isPartOf})))['triples'].value
-        self.assertEqual(triples, 1)
+    g = Graph()
+    g.parse(format='turtle', data=ttl.text)
+    assert (PERIODO['p0d'], DCTERMS.provenance, HOST['h#changes']) in g
 
-    def test_add_contributors_to_dataset_description(self):
-        contribution = (URIRef('http://n2t.net/ark:/99152/p0d'),
-                        DCTERMS.contributor,
-                        URIRef('https://orcid.org/1234-5678-9101-112X'))
-        data = self.client.get(
-            '/', headers={'Accept': 'text/turtle'}).get_data(as_text=True)
-        g = Graph().parse(format='turtle', data=data)
-        self.assertNotIn(contribution, g)
-        with self.client as client:
-            res = client.patch(
-                '/d/',
-                data=self.patch,
-                content_type='application/json',
-                headers={'Authorization': 'Bearer '
-                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-            res = client.post(
-                urlparse(res.headers['Location']).path + 'merge',
-                buffered=True,
-                headers={'Authorization': 'Bearer '
-                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
-        data = self.client.get(
-            '/', headers={'Accept': 'text/turtle'}).get_data(as_text=True)
-        g = Graph().parse(format='turtle', data=data)
-        self.assertIn(contribution, g)
+    desc = g.value(predicate=RDF.type, object=VOID.DatasetDescription)
+    assert desc.n3() == '<http://n2t.net/ark:/99152/p0>'
+    title = g.value(subject=desc, predicate=DCTERMS.title)
+    assert title.n3() == '"Description of the PeriodO Period Gazetteer"@en'
 
-    def test_dataset(self):
-        res = self.client.get('/d')
-        self.assertEqual(res.status_code, http.client.SEE_OTHER)
-        self.assertEqual(urlparse(res.headers['Location']).path, '/d/')
+    q = sparql.prepareQuery(
+        '''
+        SELECT ?count
+        WHERE {
+            ?d void:classPartition ?p .
+            ?p void:class ?class .
+            ?p void:entities ?count .
+        }
+        ''',
+        initNs={'void': VOID, 'skos': SKOS}
+    )
+    concept_count = queryForValue(g, q, {'class': SKOS.Concept}, 'count')
+    assert concept_count == 3
 
-    def test_dataset_html_redirect(self):
-        res = self.client.get('/d/', headers={'Accept': 'text/html'})
-        self.assertEqual(res.status_code, http.client.TEMPORARY_REDIRECT)
-        self.assertEqual(urlparse(res.headers['Location']).path, '/d.json')
+    scheme_count = queryForValue(g, q, {'class': SKOS.ConceptScheme}, 'count')
+    assert scheme_count == 1
 
-    def test_dataset_data(self):
-        res1 = self.client.get('/d/')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'application/json')
-        self.assertEqual(
-            res1.headers['Cache-Control'], 'public, max-age=0')
 
-        context = json.loads(res1.get_data(as_text=True))['@context']
-        self.assertEqual(context, [
-            'http://localhost.localdomain:5000/c',
-            {'@base': 'http://n2t.net/ark:/99152/'}])
-        res2 = self.client.get('/d.json')
-        self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(res2.headers['Content-Type'], 'application/json')
-        self.assertEqual(
-            res2.headers['Content-Disposition'],
-            'attachment; filename="periodo-dataset.json"')
-        self.assertIn('Date', res2.headers)
-        res3 = self.client.get('/d.jsonld')
-        self.assertEqual(res3.status_code, http.client.OK)
-        self.assertEqual(res3.headers['Content-Type'], 'application/ld+json')
-        self.assertEqual(
-            res3.headers['Content-Disposition'],
-            'attachment; filename="periodo-dataset.json"')
-        res4 = self.client.get(
-            '/d/', headers={'Accept': 'application/ld+json'})
-        self.assertEqual(res4.status_code, http.client.OK)
-        self.assertEqual(res4.headers['Content-Type'], 'application/ld+json')
-        res5 = self.client.get(
-            '/d.json',
-            headers={'Accept': 'text/html,application/xhtml+xml,'
-                     + 'application/xml;q=0.9,image/webp,*/*;q=0.8'})
-        self.assertEqual(res5.status_code, http.client.OK)
-        self.assertEqual(res5.headers['Content-Type'], 'application/json')
-        res6 = self.client.get(
-            '/d.jsonld',
-            headers={'Accept': 'text/html,application/xhtml+xml,'
-                     + 'application/xml;q=0.9,image/webp,*/*;q=0.8'})
-        self.assertEqual(res6.status_code, http.client.OK)
-        self.assertEqual(res6.headers['Content-Type'], 'application/ld+json')
+def test_dataset_description_linksets(client):
+    res = client.get('/.well-known/void')
+    g = Graph()
+    g.parse(format='turtle', data=res.text)
+    q = sparql.prepareQuery(
+        '''
+        SELECT ?triples
+        WHERE {
+            ?linkset a void:Linkset .
+            ?linkset void:subset <http://n2t.net/ark:/99152/p0d> .
+            ?linkset void:subjectsTarget <http://n2t.net/ark:/99152/p0d> .
+            ?linkset void:linkPredicate ?predicate .
+            ?linkset void:objectsTarget ?dataset .
+            ?linkset void:triples ?triples .
+        }
+        ''',
+        initNs={'void': VOID}
+    )
+    wikidata = URIRef('http://www.wikidata.org/entity/Q2013')
+    triples = queryForValue(
+        g,
+        q,
+        {'dataset': wikidata, 'predicate': DCTERMS.spatial},
+        'triples'
+    )
+    assert triples == 3
 
-        jsonld = json.loads(res4.get_data(as_text=True))
+    worldcat = URIRef('http://purl.oclc.org/dataset/WorldCat')
+    triples = queryForValue(
+        g,
+        q,
+        {'dataset': worldcat, 'predicate': DCTERMS.isPartOf},
+        'triples'
+    )
+    assert triples == 1
 
-        res7 = self.client.get('/c', buffered=True)
-        self.assertEqual(
-            res7.headers['Cache-Control'], 'public, max-age=0')
-        context = json.loads(res7.get_data(as_text=True))
 
-        g = Graph().parse(
-            data=json.dumps({**jsonld, **context}), format='json-ld')
-        self.assertIn((PERIODO['p0d/#authorities'],
-                       FOAF.isPrimaryTopicOf, HOST['d/']), g)
-        self.assertIn((HOST['d/'],
-                       VOID.inDataset, HOST['d']), g)
-        self.assertIn((HOST['d'],
-                       DCTERMS.provenance, HOST['h#changes']), g)
+def test_add_contributors_to_dataset_description(
+        client,
+        submit_and_merge_patch
+):
+    contribution = (URIRef('http://n2t.net/ark:/99152/p0d'),
+                    DCTERMS.contributor,
+                    URIRef('https://orcid.org/1234-5678-9101-112X'))
 
-    def test_inline_context(self):
-        res1 = self.client.get('/d.json?inline-context')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'application/json')
-        self.assertEqual(
-            res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-dataset.json"')
-        context = json.loads(res1.get_data(as_text=True))['@context']
-        self.assertIs(type(context), dict)
-        self.assertIn('@base', context)
-        self.assertEqual(context['@base'], 'http://n2t.net/ark:/99152/')
+    data = client.get('/', headers={'Accept': 'text/turtle'}).text
+    g = Graph().parse(format='turtle', data=data)
+    assert contribution not in g
 
-    def test_if_none_match(self):
-        res1 = self.client.get('/d/')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.get_etag(), ('periodo-dataset-version-1', True))
-        res2 = self.client.get('/d/', buffered=True, headers={
-            'If-None-Match': 'W/"periodo-dataset-version-1"'})
-        self.assertEqual(res2.status_code, http.client.NOT_MODIFIED)
+    submit_and_merge_patch('test-patch-replace-values-1.json')
 
-    def test_authority(self):
-        res1 = self.client.get('/trgkv')
-        self.assertEqual(res1.status_code, http.client.SEE_OTHER)
-        self.assertEqual(urlparse(res1.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res1.headers['Location']).query, 'page=authority-view&backendID=web-http%3A%2F%2Flocalhost.localdomain%3A5000%2F&authorityID=p0trgkv') # noqa
+    data = client.get('/', headers={'Accept': 'text/turtle'}).text
+    g = Graph().parse(format='turtle', data=data)
+    assert contribution in g
 
-        res2 = self.client.get(
-            '/trgkv', headers={'Accept': 'application/json'})
-        self.assertEqual(res2.status_code, http.client.SEE_OTHER)
-        self.assertEqual(
-            urlparse(res2.headers['Location']).path, '/trgkv.json')
 
-        res3 = self.client.get(
-            '/trgkv', headers={'Accept': 'application/ld+json'})
-        self.assertEqual(res3.status_code, http.client.SEE_OTHER)
-        self.assertEqual(
-            urlparse(res3.headers['Location']).path, '/trgkv.jsonld')
+def test_dataset(client):
+    res = client.get('/d', allow_redirects=False)
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/d/'
 
-        res4 = self.client.get('/trgkv', headers={'Accept': 'text/html'})
-        self.assertEqual(res4.status_code, http.client.SEE_OTHER)
-        self.assertEqual(urlparse(res4.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res4.headers['Location']).query, 'page=authority-view&backendID=web-http%3A%2F%2Flocalhost.localdomain%3A5000%2F&authorityID=p0trgkv') # noqa
 
-        res5 = self.client.get('/trgkv/')
-        self.assertEqual(res5.status_code, http.client.NOT_FOUND)
+def test_dataset_html_redirect(client):
+    res = client.get(
+        '/d/',
+        headers={'Accept': 'text/html'},
+        allow_redirects=False
+    )
+    assert res.status_code == httpx.codes.TEMPORARY_REDIRECT
+    assert urlparse(res.headers['Location']).path == '/d.json'
 
-        res6 = self.client.get(
-            '/trgkv', headers={'Accept': 'text/turtle'})
-        self.assertEqual(res6.status_code, http.client.SEE_OTHER)
-        self.assertEqual(
-            urlparse(res6.headers['Location']).path, '/trgkv.ttl')
 
-    def test_authority_json(self):
-        res1 = self.client.get('/trgkv.json')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'application/json')
-        self.assertEqual(
-            res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-authority-trgkv.json"')
-        context = json.loads(res1.get_data(as_text=True))['@context']
-        self.assertEqual(context, [
-            'http://localhost.localdomain:5000/c',
-            {'@base': 'http://n2t.net/ark:/99152/'}])
+def test_dataset_data(client):
+    res = client.get('/d/')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/json'
+    assert res.headers['Cache-Control'] == 'public, max-age=0'
 
-        res2 = self.client.get('/trgkv.jsonld')
-        self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
-        self.assertEqual(
-            res2.headers['Content-Disposition'],
-            'attachment; filename="periodo-authority-trgkv.json"')
+    context = res.json()['@context']
+    assert context == [
+        'http://localhost.localdomain:5000/c',
+        {'@base': 'http://n2t.net/ark:/99152/'}
+    ]
+    res = client.get('/d.json')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/json'
+    assert (
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-dataset.json"'
+    )
+    assert 'Date' in res.headers
+    res = client.get('/d.jsonld')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/ld+json'
+    assert (
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-dataset.json"'
+    )
+    res = client.get('/d/', headers={'Accept': 'application/ld+json'})
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/ld+json'
+    res = client.get(
+        '/d.json',
+        headers={'Accept': 'text/html,application/xhtml+xml,'
+                 + 'application/xml;q=0.9,image/webp,*/*;q=0.8'}
+    )
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/json'
+    res = client.get(
+        '/d.jsonld',
+        headers={'Accept': 'text/html,application/xhtml+xml,'
+                 + 'application/xml;q=0.9,image/webp,*/*;q=0.8'}
+    )
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/ld+json'
 
-        jsonld = json.loads(res2.get_data(as_text=True))
-        context = json.loads(self.client.get('/c', buffered=True)
-                             .get_data(as_text=True))
-        g = Graph().parse(
-            data=json.dumps({**jsonld, **context}), format='json-ld')
-        self.assertIsNone(g.value(predicate=RDF.type, object=RDF.Bag))
-        self.assertIn((PERIODO['p0trgkv'],
-                       FOAF.isPrimaryTopicOf, HOST['trgkv.jsonld']), g)
-        self.assertIn((HOST['trgkv.jsonld'],
-                       VOID.inDataset, HOST['d']), g)
+    res = client.get('/d/', headers={'Accept': 'application/ld+json'})
+    jsonld = res.json()
 
-        res3 = self.client.get('/trgkv.json/')
-        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
-        res4 = self.client.get('/trgkv.jsonld/')
-        self.assertEqual(res4.status_code, http.client.NOT_FOUND)
+    res = client.get('/c')
+    context = res.json()
 
-        res5 = self.client.get('/trgkv.json.html')
-        self.assertEqual(res5.status_code, http.client.OK)
-        self.assertEqual(
-            res5.headers['Content-Type'], 'text/html; charset=utf-8')
+    g = Graph().parse(data=json.dumps({**jsonld, **context}), format='json-ld')
+    assert (PERIODO['p0d/#authorities'], FOAF.isPrimaryTopicOf, HOST['d/']) in g
+    assert (HOST['d/'], VOID.inDataset, HOST['d']) in g
+    assert (HOST['d'], DCTERMS.provenance, HOST['h#changes']) in g
 
-    def test_authority_turtle(self):
-        res1 = self.client.get('/trgkv.ttl')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
-        self.assertEqual(
-            res1.headers['Cache-Control'],
-            'public, max-age={}'.format(cache.SHORT_TIME))
-        self.assertEqual(
-            res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-authority-trgkv.ttl"')
 
-        g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
-        self.assertIsNone(g.value(predicate=RDF.type, object=RDF.Bag))
-        self.assertIn((PERIODO['p0trgkv'],
-                       FOAF.isPrimaryTopicOf, HOST['trgkv.ttl']), g)
-        self.assertIn((HOST['trgkv.ttl'],
-                       VOID.inDataset, HOST['d']), g)
+def test_inline_context(client):
+    res = client.get('/d.json?inline-context')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/json'
+    assert (
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-dataset.json"'
+    )
+    context = res.json()['@context']
+    assert type(context) is dict
+    assert '@base' in context
+    assert context['@base'] == 'http://n2t.net/ark:/99152/'
 
-        res2 = self.client.get('/trgkv.ttl.html')
-        self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(
-            res2.headers['Content-Type'], 'text/html; charset=utf-8')
-        self.assertEqual(
-            res2.headers['Cache-Control'],
-            'public, max-age={}'.format(cache.SHORT_TIME))
-        self.assertIn('Date', res2.headers)
 
-        res3 = self.client.get('/trgkv.ttl/')
-        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+def test_if_none_match(client):
+    res = client.get('/d/')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Etag'] == 'W/"periodo-dataset-version-1"'
+    res = client.get(
+        '/d/',
+        headers={'If-None-Match': 'W/"periodo-dataset-version-1"'}
+    )
+    assert res.status_code == httpx.codes.NOT_MODIFIED
 
-    def test_period(self):
-        res1 = self.client.get('/trgkvwbjd')
-        self.assertEqual(res1.status_code, http.client.SEE_OTHER)
-        self.assertEqual(urlparse(res1.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res1.headers['Location']).query, 'page=period-view&backendID=web-http%3A%2F%2Flocalhost.localdomain%3A5000%2F&authorityID=p0trgkv&periodID=p0trgkvwbjd') # noqa
-        res2 = self.client.get(
-            '/trgkvwbjd', headers={'Accept': 'application/json'})
-        self.assertEqual(res2.status_code, http.client.SEE_OTHER)
-        self.assertEqual(
-            urlparse(res2.headers['Location']).path, '/trgkvwbjd.json')
-        res3 = self.client.get(
-            '/trgkvwbjd', headers={'Accept': 'application/ld+json'})
-        self.assertEqual(res3.status_code, http.client.SEE_OTHER)
-        self.assertEqual(
-            urlparse(res3.headers['Location']).path, '/trgkvwbjd.jsonld')
-        res4 = self.client.get(
-            '/trgkvwbjd', headers={'Accept': 'text/html'})
-        self.assertEqual(res4.status_code, http.client.SEE_OTHER)
-        self.assertEqual(urlparse(res4.headers['Location']).path, '/')
-        self.assertEqual(urlparse(res4.headers['Location']).query, 'page=period-view&backendID=web-http%3A%2F%2Flocalhost.localdomain%3A5000%2F&authorityID=p0trgkv&periodID=p0trgkvwbjd') # noqa
-        res5 = self.client.get(
-            '/trgkvwbjd', headers={'Accept': 'text/turtle'})
-        self.assertEqual(res5.status_code, http.client.SEE_OTHER)
-        self.assertEqual(
-            urlparse(res5.headers['Location']).path, '/trgkvwbjd.ttl')
 
-    def test_period_json(self):
-        res1 = self.client.get('/trgkvwbjd.json')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'application/json')
-        self.assertEqual(
-            res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-period-trgkvwbjd.json"')
-        context = json.loads(res1.get_data(as_text=True))['@context']
-        self.assertEqual(context, [
-            'http://localhost.localdomain:5000/c',
-            {'@base': 'http://n2t.net/ark:/99152/'}])
+def test_authority(client):
+    res = client.get('/trgkv', allow_redirects=False)
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/'
+    assert (
+        urlparse(res.headers['Location']).query
+        == urlencode({
+            'page': 'authority-view',
+            'backendID': f'web-http://{DEV_SERVER_NAME}/',
+            'authorityID': 'p0trgkv',
+        })
+    )
 
-        res2 = self.client.get('/trgkvwbjd.jsonld')
-        self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(res2.headers['Content-Type'], 'application/ld+json')
-        self.assertEqual(
-            res2.headers['Content-Disposition'],
-            'attachment; filename="periodo-period-trgkvwbjd.json"')
+    res = client.get(
+        '/trgkv',
+        headers={'Accept': 'application/json'},
+        allow_redirects=False
+    )
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/trgkv.json'
 
-        jsonld = json.loads(res1.get_data(as_text=True))
-        context = json.loads(self.client.get('/c', buffered=True)
-                             .get_data(as_text=True))
-        g = Graph().parse(
-            data=json.dumps({**jsonld, **context}), format='json-ld')
-        self.assertIsNone(
-            g.value(predicate=RDF.type, object=SKOS.ConceptScheme))
-        self.assertIn((PERIODO['p0trgkvwbjd'],
-                       FOAF.isPrimaryTopicOf, HOST['trgkvwbjd.json']), g)
-        self.assertIn((HOST['trgkvwbjd.json'],
-                       VOID.inDataset, HOST['d']), g)
-        self.assertIn((PERIODO['p0trgkvwbjd'],
-                       SKOS.inScheme, PERIODO['p0trgkv']), g)
-        res3 = self.client.get('/trgkvwbjd.json.html')
-        self.assertEqual(res3.status_code, http.client.OK)
-        self.assertEqual(
-            res3.headers['Content-Type'], 'text/html; charset=utf-8')
+    res = client.get(
+        '/trgkv',
+        headers={'Accept': 'application/ld+json'},
+        allow_redirects=False
+    )
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/trgkv.jsonld'
 
-    def test_period_turtle(self):
-        res1 = self.client.get('/trgkvwbjd.ttl')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
-        self.assertEqual(
-            res1.headers['Cache-Control'],
-            'public, max-age={}'.format(cache.SHORT_TIME))
-        self.assertEqual(
-            res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-period-trgkvwbjd.ttl"')
+    res = client.get(
+        '/trgkv',
+        headers={'Accept': 'text/html'},
+        allow_redirects=False
+    )
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/'
+    assert (
+        urlparse(res.headers['Location']).query
+        == urlencode({
+            'page': 'authority-view',
+            'backendID': f'web-http://{DEV_SERVER_NAME}/',
+            'authorityID': 'p0trgkv',
+        })
+    )
 
-        g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
-        self.assertIsNone(
-            g.value(predicate=RDF.type, object=SKOS.ConceptScheme))
-        self.assertIn((PERIODO['p0trgkvwbjd'],
-                       FOAF.isPrimaryTopicOf, HOST['trgkvwbjd.ttl']), g)
-        self.assertIn((HOST['trgkvwbjd.ttl'],
-                       VOID.inDataset, HOST['d']), g)
-        self.assertIn((PERIODO['p0trgkvwbjd'],
-                       SKOS.inScheme, PERIODO['p0trgkv']), g)
-        res2 = self.client.get('/trgkvwbjd.ttl.html')
-        self.assertEqual(res2.status_code, http.client.OK)
-        self.assertEqual(
-            res2.headers['Content-Type'], 'text/html; charset=utf-8')
-        self.assertEqual(
-            res2.headers['Cache-Control'],
-            'public, max-age={}'.format(cache.SHORT_TIME))
+    res = client.get('/trgkv/')
+    assert res.status_code == httpx.codes.NOT_FOUND
 
-    def test_d_turtle(self):
-        res1 = self.client.get('/d.ttl')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
-        self.assertEqual(
-            res1.headers['Cache-Control'],
-            'public, max-age={}'.format(cache.SHORT_TIME))
-        self.assertEqual(
-            res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-dataset.ttl"')
+    res = client.get(
+        '/trgkv',
+        headers={'Accept': 'text/turtle'},
+        allow_redirects=False
+    )
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/trgkv.ttl'
 
-        g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
-        self.assertIn((PERIODO['p0d/#authorities'],
-                       FOAF.isPrimaryTopicOf, HOST['d.ttl']), g)
-        self.assertIn((HOST['d.ttl'],
-                       VOID.inDataset, HOST['d']), g)
-        self.assertIn((HOST['d'],
-                       DCTERMS.provenance, HOST['h#changes']), g)
 
-        res3 = self.client.get('/d.ttl/')
-        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+def test_authority_json(client):
+    res = client.get('/trgkv.json')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/json'
+    assert(
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-authority-trgkv.json"'
+    )
+    context = res.json()['@context']
+    assert context == [
+        'http://localhost.localdomain:5000/c',
+        {'@base': 'http://n2t.net/ark:/99152/'}
+    ]
 
-    def test_dataset_turtle(self):
-        res1 = self.client.get('/dataset.ttl')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'text/turtle')
-        self.assertEqual(
-            res1.headers['Cache-Control'],
-            'public, max-age={}'.format(cache.SHORT_TIME))
-        self.assertEqual(
-            res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-dataset.ttl"')
+    res = client.get('/trgkv.jsonld')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/ld+json'
+    assert (
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-authority-trgkv.json"'
+    )
 
-        g = Graph().parse(data=res1.get_data(as_text=True), format='turtle')
-        self.assertIn((PERIODO['p0d/#authorities'],
-                       FOAF.isPrimaryTopicOf, HOST['dataset.ttl']), g)
-        self.assertIn((HOST['dataset.ttl'],
-                       VOID.inDataset, HOST['d']), g)
-        self.assertIn((HOST['d'],
-                       DCTERMS.provenance, HOST['h#changes']), g)
+    jsonld = res.json()
+    context = json.loads(client.get('/c').text)
+    g = Graph().parse(data=json.dumps({**jsonld, **context}), format='json-ld')
+    assert g.value(predicate=RDF.type, object=RDF.Bag) is None
+    assert (
+        (PERIODO['p0trgkv'], FOAF.isPrimaryTopicOf, HOST['trgkv.jsonld']) in g
+    )
+    assert (HOST['trgkv.jsonld'], VOID.inDataset, HOST['d']) in g
 
-        res3 = self.client.get('/dataset.ttl/')
-        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+    res = client.get('/trgkv.json/')
+    assert res.status_code == httpx.codes.NOT_FOUND
+    res = client.get('/trgkv.jsonld/')
+    assert res.status_code == httpx.codes.NOT_FOUND
 
-    def test_dataset_csv(self):
-        res1 = self.client.get('/dataset.csv')
-        data = res1.get_data(as_text=True)
-        if not res1.status_code == http.client.OK:
-            print(data)
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'text/csv')
-        self.assertEqual(
-            res1.headers['Cache-Control'],
-            'public, max-age={}'.format(cache.MEDIUM_TIME))
-        self.assertEqual(
-            res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-dataset.csv"')
+    res = client.get('/trgkv.json.html')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'text/html; charset=utf-8'
 
-        rows = csv.reader(data.splitlines())
-        self.assertEqual(
-            next(rows),
-            ['period',
-             'label',
-             'spatial_coverage',
-             'gazetteer_links',
-             'start',
-             'stop',
-             'authority',
-             'source',
-             'publication_year',
-             'derived_periods',
-             'broader_periods',
-             'narrower_periods']
+
+def test_authority_turtle(client):
+    res = client.get('/trgkv.ttl')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'text/turtle'
+    assert (
+        res.headers['Cache-Control']
+        == 'public, max-age={}'.format(cache.SHORT_TIME)
+    )
+    assert (
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-authority-trgkv.ttl"'
+    )
+
+    g = Graph().parse(data=res.text, format='turtle')
+    assert g.value(predicate=RDF.type, object=RDF.Bag) is None
+    assert (PERIODO['p0trgkv'], FOAF.isPrimaryTopicOf, HOST['trgkv.ttl']) in g
+    assert (HOST['trgkv.ttl'], VOID.inDataset, HOST['d']) in g
+
+    res = client.get('/trgkv.ttl.html')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'text/html; charset=utf-8'
+    assert (
+        res.headers['Cache-Control']
+        == 'public, max-age={}'.format(cache.SHORT_TIME)
+    )
+    assert 'Date' in res.headers
+
+    res = client.get('/trgkv.ttl/')
+    assert res.status_code == httpx.codes.NOT_FOUND
+
+
+def test_period(client):
+    res = client.get('/trgkvwbjd', allow_redirects=False)
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/'
+    assert (
+        urlparse(res.headers['Location']).query
+        == urlencode({
+            'page': 'period-view',
+            'backendID': f'web-http://{DEV_SERVER_NAME}/',
+            'authorityID': 'p0trgkv',
+            'periodID': 'p0trgkvwbjd'
+        })
+    )
+
+    res = client.get(
+        '/trgkvwbjd',
+        headers={'Accept': 'application/json'},
+        allow_redirects=False
+    )
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/trgkvwbjd.json'
+
+    res = client.get(
+        '/trgkvwbjd',
+        headers={'Accept': 'application/ld+json'},
+        allow_redirects=False
+    )
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/trgkvwbjd.jsonld'
+
+    res = client.get(
+        '/trgkvwbjd',
+        headers={'Accept': 'text/html'},
+        allow_redirects=False
+    )
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/'
+    assert (
+        urlparse(res.headers['Location']).query
+        == urlencode({
+            'page': 'period-view',
+            'backendID': f'web-http://{DEV_SERVER_NAME}/',
+            'authorityID': 'p0trgkv',
+            'periodID': 'p0trgkvwbjd'
+        })
+    )
+
+    res = client.get(
+        '/trgkvwbjd',
+        headers={'Accept': 'text/turtle'},
+        allow_redirects=False
+    )
+    assert res.status_code == httpx.codes.SEE_OTHER
+    assert urlparse(res.headers['Location']).path == '/trgkvwbjd.ttl'
+
+
+def test_period_json(client):
+    res = client.get('/trgkvwbjd.json')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/json'
+    assert(
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-period-trgkvwbjd.json"'
+    )
+    context = res.json()['@context']
+    assert context == [
+        'http://localhost.localdomain:5000/c',
+        {'@base': 'http://n2t.net/ark:/99152/'}
+    ]
+
+    res = client.get('/trgkvwbjd.jsonld')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/ld+json'
+    assert (
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-period-trgkvwbjd.json"'
+    )
+
+    jsonld = res.json()
+    context = json.loads(client.get('/c').text)
+    g = Graph().parse(data=json.dumps({**jsonld, **context}), format='json-ld')
+    assert g.value(predicate=RDF.type, object=SKOS.ConceptScheme) is None
+    assert (
+        (
+            PERIODO['p0trgkvwbjd'],
+            FOAF.isPrimaryTopicOf,
+            HOST['trgkvwbjd.jsonld']
         )
-        self.assertEqual(
-            next(rows),
-            ['http://n2t.net/ark:/99152/p0trgkvkhrv',
-             'Iron Age',
-             'Spain',
-             'http://www.wikidata.org/entity/Q29',
-             '-0799',
-             '-0549',
-             'http://n2t.net/ark:/99152/p0trgkv',
-             'The Corinthian, Attic, and Lakonian pottery from Sardis'
-             + ' | Schaeffer, Judith Snyder, 1937-'
-             + ' | Greenewalt, Crawford H. (Crawford Hallock), 1937-2012.'
-             + ' | Ramage, Nancy H., 1942-',
-             '1997',
-             '',
-             'http://n2t.net/ark:/99152/p0trgkv4kxb',
-             '']
+        in g
+    )
+    assert (HOST['trgkvwbjd.jsonld'], VOID.inDataset, HOST['d']) in g
+    assert (PERIODO['p0trgkvwbjd'], SKOS.inScheme, PERIODO['p0trgkv']) in g
+
+    res = client.get('/trgkvwbjd.json.html')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'text/html; charset=utf-8'
+
+
+def test_period_turtle(client):
+    res = client.get('/trgkvwbjd.ttl')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'text/turtle'
+    assert (
+        res.headers['Cache-Control']
+        == 'public, max-age={}'.format(cache.SHORT_TIME)
+    )
+    assert (
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-period-trgkvwbjd.ttl"'
+    )
+
+    g = Graph().parse(data=res.text, format='turtle')
+    assert g.value(predicate=RDF.type, object=SKOS.ConceptScheme) is None
+    assert (
+        (PERIODO['p0trgkvwbjd'], FOAF.isPrimaryTopicOf, HOST['trgkvwbjd.ttl'])
+        in g
+    )
+    assert (HOST['trgkvwbjd.ttl'], VOID.inDataset, HOST['d']) in g
+    assert (PERIODO['p0trgkvwbjd'], SKOS.inScheme, PERIODO['p0trgkv']) in g
+
+    res = client.get('/trgkvwbjd.ttl.html')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'text/html; charset=utf-8'
+    assert (
+        res.headers['Cache-Control']
+        == 'public, max-age={}'.format(cache.SHORT_TIME)
+    )
+
+
+def test_d_turtle(client):
+    res = client.get('/d.ttl')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'text/turtle'
+    assert (
+        res.headers['Cache-Control']
+        == 'public, max-age={}'.format(cache.SHORT_TIME)
+    )
+    assert (
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-dataset.ttl"'
+    )
+
+    g = Graph().parse(data=res.text, format='turtle')
+    assert (
+        (PERIODO['p0d/#authorities'], FOAF.isPrimaryTopicOf, HOST['d.ttl']) in g
+    )
+    assert (HOST['d.ttl'], VOID.inDataset, HOST['d']) in g
+    assert (HOST['d'], DCTERMS.provenance, HOST['h#changes']) in g
+
+    res = client.get('/d.ttl/')
+    assert res.status_code == httpx.codes.NOT_FOUND
+
+
+def test_dataset_turtle(client):
+    res = client.get('/dataset.ttl')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'text/turtle'
+    assert (
+        res.headers['Cache-Control']
+        == 'public, max-age={}'.format(cache.SHORT_TIME)
+    )
+    assert (
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-dataset.ttl"'
+    )
+
+    g = Graph().parse(data=res.text, format='turtle')
+    assert (
+        (
+            PERIODO['p0d/#authorities'],
+            FOAF.isPrimaryTopicOf,
+            HOST['dataset.ttl']
         )
+        in g
+    )
+    assert (HOST['dataset.ttl'], VOID.inDataset, HOST['d']) in g
+    assert (HOST['d'], DCTERMS.provenance, HOST['h#changes']) in g
 
-    def test_h_nt(self):
-        with self.client as client:
-            res = client.patch(
-                '/d/',
-                data=self.patch,
-                content_type='application/json',
-                headers={'Authorization': 'Bearer '
-                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-            res = client.post(
-                urlparse(res.headers['Location']).path + 'merge',
-                buffered=True,
-                headers={'Authorization': 'Bearer '
-                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+    res = client.get('/dataset.ttl/')
+    assert res.status_code == httpx.codes.NOT_FOUND
 
-        res1 = self.client.get('/h.nt')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'application/n-triples')
-        self.assertEqual(
-            res1.headers['X-Accel-Expires'],
-            '{}'.format(cache.MEDIUM_TIME))
-        self.assertEqual(
-            res1.headers['Cache-Control'],
-            'public, max-age=0')
-        self.assertEqual(
-            res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-history.nt"')
 
-        g = Graph()
-        g.parse(data=res1.get_data(as_text=True), format='nt')
-        self.assertIn((HOST['h#patch-1'],
-                       FOAF.page, HOST['patches/1/patch.jsonpatch']), g)
-        self.assertIn((HOST['d'],
-                       DCTERMS.provenance, HOST['h#changes']), g)
+def test_dataset_csv(client):
+    res = client.get('/dataset.csv')
+    data = res.text
+    if not res.status_code == httpx.codes.OK:
+        print(data)
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'text/csv'
+    assert (
+        res.headers['Cache-Control']
+        == 'public, max-age={}'.format(cache.MEDIUM_TIME)
+    )
+    assert (
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-dataset.csv"'
+    )
 
-        res3 = self.client.get('/h.nt/')
-        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+    rows = csv.reader(data.splitlines())
+    assert (
+        next(rows)
+        == ['period',
+            'label',
+            'spatial_coverage',
+            'gazetteer_links',
+            'start',
+            'stop',
+            'authority',
+            'source',
+            'publication_year',
+            'derived_periods',
+            'broader_periods',
+            'narrower_periods']
+    )
+    assert (
+        next(rows)
+        == ['http://n2t.net/ark:/99152/p0trgkvkhrv',
+            'Iron Age',
+            'Spain',
+            'http://www.wikidata.org/entity/Q29',
+            '-0799',
+            '-0549',
+            'http://n2t.net/ark:/99152/p0trgkv',
+            'The Corinthian, Attic, and Lakonian pottery from Sardis'
+            + ' | Schaeffer, Judith Snyder, 1937-'
+            + ' | Greenewalt, Crawford H. (Crawford Hallock), 1937-2012.'
+            + ' | Ramage, Nancy H., 1942-',
+            '1997',
+            '',
+            'http://n2t.net/ark:/99152/p0trgkv4kxb',
+            '']
+    )
 
-    def test_h_turtle(self):
-        res1 = self.client.get('/h.ttl')
-        self.assertEqual(res1.status_code, http.client.MOVED_PERMANENTLY)
-        self.assertEqual(res1.headers['Location'], str(HOST['h.nt']))
 
-    def test_history_nt(self):
-        with self.client as client:
-            res = client.patch(
-                '/d/',
-                data=self.patch,
-                content_type='application/json',
-                headers={'Authorization': 'Bearer '
-                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-            res = client.post(
-                urlparse(res.headers['Location']).path + 'merge',
-                buffered=True,
-                headers={'Authorization': 'Bearer '
-                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
+def test_h_nt(client, submit_and_merge_patch):
 
-        res1 = self.client.get('/history.nt')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'application/n-triples')
-        self.assertEqual(
-            res1.headers['X-Accel-Expires'],
-            '{}'.format(cache.MEDIUM_TIME))
-        self.assertEqual(
-            res1.headers['Cache-Control'],
-            'public, max-age=0')
-        self.assertEqual(
-            res1.headers['Content-Disposition'],
-            'attachment; filename="periodo-history.nt"')
+    submit_and_merge_patch('test-patch-replace-values-1.json')
 
-        g = Graph()
-        g.parse(data=res1.get_data(as_text=True), format='turtle')
-        self.assertIn((HOST['h#patch-1'],
-                       FOAF.page, HOST['patches/1/patch.jsonpatch']), g)
-        self.assertIn((HOST['d'],
-                       DCTERMS.provenance, HOST['h#changes']), g)
+    res = client.get('/h.nt')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/n-triples'
+    assert res.headers['X-Accel-Expires'] == f'{cache.MEDIUM_TIME}'
+    assert res.headers['Cache-Control'] == 'public, max-age=0'
+    assert (
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-history.nt"'
+    )
 
-        res3 = self.client.get('/history.nt/')
-        self.assertEqual(res3.status_code, http.client.NOT_FOUND)
+    g = Graph()
+    g.parse(data=res.text, format='nt')
+    assert (
+        (HOST['h#patch-1'], FOAF.page, HOST['patches/1/patch.jsonpatch']) in g
+    )
+    assert (HOST['d'], DCTERMS.provenance, HOST['h#changes']) in g
 
-    def test_history_json(self):
-        res1 = self.client.get('/history.json')
-        self.assertEqual(res1.status_code, http.client.NOT_FOUND)
+    res = client.get('/h.nt/')
+    assert res.status_code == httpx.codes.NOT_FOUND
 
-    def test_export(self):
-        res1 = self.client.get('/export.sql')
-        self.assertEqual(res1.status_code, http.client.OK)
-        self.assertEqual(res1.headers['Content-Type'], 'text/plain')
+
+def test_h_turtle(client):
+    res = client.get('/h.ttl', allow_redirects=False)
+    assert res.status_code == httpx.codes.MOVED_PERMANENTLY
+    assert res.headers['Location'] == str(HOST['h.nt'])
+
+
+def test_history_nt(client, submit_and_merge_patch):
+
+    submit_and_merge_patch('test-patch-replace-values-1.json')
+
+    res = client.get('/history.nt')
+    assert res.headers['Content-Type'] == 'application/n-triples'
+    assert res.headers['X-Accel-Expires'] == f'{cache.MEDIUM_TIME}'
+    assert res.headers['Cache-Control'] == 'public, max-age=0'
+    assert (
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-history.nt"'
+    )
+
+    g = Graph()
+    g.parse(data=res.text, format='turtle')
+    assert (
+        (HOST['h#patch-1'], FOAF.page, HOST['patches/1/patch.jsonpatch']) in g
+    )
+    assert (HOST['d'], DCTERMS.provenance, HOST['h#changes']) in g
+
+    res = client.get('/history.nt/')
+    assert res.status_code == httpx.codes.NOT_FOUND
+
+
+def test_history_json(client):
+    res = client.get('/history.json')
+    assert res.status_code == httpx.codes.NOT_FOUND
+
+
+def test_export(client):
+    res = client.get('/export.sql')
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'text/plain'
