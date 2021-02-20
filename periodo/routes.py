@@ -1,6 +1,6 @@
 import json
 import random
-import requests
+import httpx
 import string
 from flask import (
     request, make_response, redirect, url_for, session, abort,
@@ -26,7 +26,7 @@ def get_mimetype():
 
 @app.route('/h.ttl', endpoint='history-ttl')
 def legacy_history_endpoint_redirect():
-    return redirect(url_for('history-nt',  **request.args), code=301)
+    return redirect(url_for('history-nt', **request.args), code=301)
 
 
 @app.route('/h', endpoint='history')
@@ -35,7 +35,7 @@ def see_history():
     if mimetype is None:
         url = build_client_url(page='backend-history')
     else:
-        url = url_for('history-nt',  **request.args)
+        url = url_for('history-nt', **request.args)
     return redirect(url, code=303)
 
 
@@ -107,8 +107,8 @@ def see_authority(authority_id):
 
 
 @app.route('/<string(length=%s):period_id>'
-           % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1 +
-              identifier.PERIOD_SEQUENCE_LENGTH + 1),
+           % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1
+              + identifier.PERIOD_SEQUENCE_LENGTH + 1),
            endpoint='period')
 def see_period(period_id):
     try:
@@ -174,20 +174,16 @@ def registered():
         'redirect_uri': build_redirect_uri(request.args),
         'scope': '/authenticate',
     }
-    response = requests.post(
+    response = httpx.post(
         'https://orcid.org/oauth/token',
         headers={'Accept': 'application/json'},
-        allow_redirects=True, data=data)
+        data=data
+    )
     if not response.status_code == 200:
         app.logger.error('Response to request for ORCID credential was not OK')
         app.logger.error('Request: %s', data)
         app.logger.error('Response: %s', response.text)
-    credentials = response.json()
-    if 'name' not in credentials or len(credentials['name']) == 0:
-        # User has made their name private, so just use their ORCID as name
-        credentials['name'] = credentials['orcid']
-    identity = auth.add_user_or_update_credentials(credentials)
-    database.get_db().commit()
+    identity = auth.add_user_or_update_credentials(response.json())
     if 'cli' in request.args:
         return make_response(
             ('Your token is: {}'.format(identity.b64token.decode()),
@@ -205,7 +201,7 @@ def registered():
         </head>
         <body>
         """.format(
-            json.dumps(credentials['name']),
+            json.dumps(identity.name),
             json.dumps(identity.b64token.decode()),
             request.args.get('origin', app.config['CLIENT_URL'])
         ))

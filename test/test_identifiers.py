@@ -1,175 +1,169 @@
-import json
-import unittest
+import re
+import pytest
 from jsonpatch import JsonPatch
-from .filepath import filepath
 from periodo import identifier
 
 
-class TestIdentifiers(unittest.TestCase):
+def substitute(s):
+    chars = list(s)
+    chars[2] = identifier.XDIGITS[
+        (identifier.XDIGITS.index(chars[2]) + 1)
+        % len(identifier.XDIGITS)]
+    return ''.join(chars)
 
-    def test_assert_valid_loose(self):
-        # old style checksum
-        identifier.assert_valid('3wskd4mmt', strict=False)
-        # new style checksum
-        identifier.assert_valid('jrrjb8spw', strict=False)
 
-    def test_assert_valid_strict(self):
-        with self.assertRaises(identifier.IdentifierException):
-            # old style checksum
-            identifier.assert_valid('3wskd4mmt')
-        # new style checksum
-        identifier.assert_valid('jrrjb8spw')
-
-    def test_substitution_error(self):
-        def substitute(s):
-            chars = list(s)
-            chars[2] = identifier.XDIGITS[
-                (identifier.XDIGITS.index(chars[2]) + 1)
-                % len(identifier.XDIGITS)]
+def transpose(s):
+    chars = list(s)
+    for i in range(-3, -(len(s) + 1), -1):
+        if not chars[i] == chars[i + 1]:
+            chars[i], chars[i + 1] = chars[i + 1], chars[i]
             return ''.join(chars)
 
-        cid = identifier.for_authority()
-        identifier.check(cid)
-        cid2 = substitute(cid)
-        with self.assertRaises(identifier.IdentifierException):
-            identifier.check(cid2)
 
-        did = identifier.for_period(cid)
-        identifier.check(did)
-        did2 = substitute(did)
-        with self.assertRaises(identifier.IdentifierException):
-            identifier.check(did2)
+def check_authority_id(authority_id, id_map):
+    identifier.check(authority_id)
+    assert re.match(
+        r'^p0[%s]{5}$' % identifier.XDIGITS,
+        authority_id
+    )
+    assert authority_id in id_map.values()
 
-    def test_transposition_error(self):
-        def transpose(s):
-            chars = list(s)
-            for i in range(-3, -(len(s)+1), -1):
-                if not chars[i] == chars[i+1]:
-                    chars[i], chars[i+1] = chars[i+1], chars[i]
-                    return ''.join(chars)
 
-        cid = identifier.for_authority()
-        identifier.check(cid)
-        cid2 = transpose(cid)
-        with self.assertRaises(identifier.IdentifierException):
-            identifier.check(cid2)
+def check_period_id(period_id, authority_id, id_map):
+    identifier.check(period_id)
+    assert re.match(
+        r'^%s[%s]{4}$' % (authority_id, identifier.XDIGITS),
+        period_id
+    )
+    assert period_id in id_map.values()
 
-        did = identifier.for_period(cid)
-        identifier.check(did)
-        did2 = transpose(did)
-        with self.assertRaises(identifier.IdentifierException):
-            identifier.check(did2)
 
-    def test_id_has_wrong_shape(self):
-        with self.assertRaises(identifier.IdentifierException):
-            identifier.check('p06rw8')  # authority id too short
-        with self.assertRaises(identifier.IdentifierException):
-            identifier.check('p06rw87/669p')  # period id has slash
+def test_assert_valid_loose():
+    # old style checksum
+    identifier.assert_valid('3wskd4mmt', strict=False)
+    # new style checksum
+    identifier.assert_valid('jrrjb8spw', strict=False)
 
-    def test_generate_period_id(self):
-        cid = identifier.for_authority()
-        did = identifier.for_period(cid)
-        self.assertTrue(did.startswith(cid))
-        self.assertEqual(len(did), 11)
 
-    def test_replace_skolem_ids_when_adding_items(self):
-        with open(filepath('test-data.json')) as f:
-            data = json.load(f)
-        with open(filepath('test-patch-adds-items.json')) as f:
-            original_patch = JsonPatch(json.load(f))
-        applied_patch, id_map = identifier.replace_skolem_ids(
-            original_patch, data, [], {})
-        self.assertRegex(
-            applied_patch.patch[0]['path'],
-            r'^/authorities/p0trgkv/periods/p0trgkv[%s]{4}$'
-            % identifier.XDIGITS)
-        self.assertRegex(
-            applied_patch.patch[0]['value']['id'],
-            r'^p0trgkv[%s]{4}$' % identifier.XDIGITS)
-        identifier.check(applied_patch.patch[0]['value']['id'])
-        self.assertTrue(
-            applied_patch.patch[0]['value']['id'] in id_map.values())
+def test_assert_valid_strict():
+    with pytest.raises(identifier.IdentifierException):
+        # old style checksum
+        identifier.assert_valid('3wskd4mmt')
+    # new style checksum
+    identifier.assert_valid('jrrjb8spw')
 
-        self.assertRegex(
-            applied_patch.patch[1]['path'],
-            r'^/authorities/p0[%s]{5}$' % identifier.XDIGITS)
-        self.assertRegex(
-            applied_patch.patch[1]['value']['id'],
-            r'^p0[%s]{5}$' % identifier.XDIGITS)
-        authority_id = applied_patch.patch[1]['value']['id']
-        identifier.check(authority_id)
-        self.assertTrue(authority_id in id_map.values())
-        periods = applied_patch.patch[1]['value']['periods']
-        for key in periods.keys():
-            self.assertRegex(
-                key,
-                r'^%s[%s]{4}$' % (authority_id, identifier.XDIGITS))
-            self.assertEqual(
-                key,
-                periods[key]['id'])
-            identifier.check(key)
 
-            # check that skolem IDs in prop values get replaced too
-            prop = 'broader' if 'broader' in periods[key] else 'narrower'
-            self.assertRegex(
-                periods[key][prop],
-                r'^%s[%s]{4}$' % (authority_id, identifier.XDIGITS))
-            identifier.check(periods[key][prop])
-            self.assertTrue(periods[key][prop] in id_map.values())
+@pytest.mark.parametrize('alter', [substitute, transpose])
+def test_check_altered_identifier(alter):
+    aid = identifier.for_authority()
+    identifier.check(aid)
+    altered_aid = alter(aid)
+    with pytest.raises(identifier.IdentifierException):
+        identifier.check(altered_aid)
 
-            # check that skolem IDs in prop value arrays get replaced too
-            for period_id in periods[key].get('derivedFrom', []):
-                self.assertRegex(
-                    period_id,
-                    r'^%s[%s]{4}$' % ('p0trgkv', identifier.XDIGITS))
-                identifier.check(period_id)
-                self.assertTrue(period_id in id_map.values())
+    pid = identifier.for_period(aid)
+    identifier.check(pid)
+    altered_pid = alter(pid)
+    with pytest.raises(identifier.IdentifierException):
+        identifier.check(altered_pid)
 
-    def test_replace_skolem_ids_when_replacing_periods(self):
-        with open(filepath('test-data.json')) as f:
-            data = json.load(f)
-        with open(filepath('test-patch-replaces-periods.json')) as f:
-            original_patch = JsonPatch(json.load(f))
-        applied_patch, id_map = identifier.replace_skolem_ids(
-            original_patch, data, [], {})
-        self.assertEqual(
-            applied_patch.patch[0]['path'],
-            original_patch.patch[0]['path'])
-        period_id, period = list(
-            applied_patch.patch[0]['value'].items())[0]
-        self.assertTrue(period_id in id_map.values())
-        self.assertRegex(
-            period_id,
-            r'^p0trgkv[%s]{4}$' % identifier.XDIGITS)
-        self.assertEqual(period_id, period['id'])
-        identifier.check(period_id)
 
-    def test_replace_skolem_ids_when_replacing_authorities(self):
-        with open(filepath('test-data.json')) as f:
-            data = json.load(f)
-        with open(filepath('test-patch-replaces-authorities.json')) as f:
-            original_patch = JsonPatch(json.load(f))
-        applied_patch, id_map = identifier.replace_skolem_ids(
-            original_patch, data, [], {})
-        self.assertEqual(
-            applied_patch.patch[0]['path'],
-            original_patch.patch[0]['path'])
+def test_id_has_wrong_shape():
+    with pytest.raises(identifier.IdentifierException):
+        identifier.check('p06rw8')  # authority id too short
+    with pytest.raises(identifier.IdentifierException):
+        identifier.check('p06rw87/669p')  # period id has slash
 
-        authority_id, authority = list(
-            applied_patch.patch[0]['value'].items())[0]
-        self.assertTrue(authority_id in id_map.values())
-        self.assertRegex(
-            authority_id,
-            r'^p0[%s]{5}$' % identifier.XDIGITS)
-        self.assertEqual(authority_id, authority['id'])
-        identifier.check(authority_id)
 
-        period_id, period = list(
-            applied_patch.patch[0]['value'][authority_id]['periods']
-            .items())[0]
-        self.assertTrue(period_id in id_map.values())
-        self.assertRegex(
-            period_id,
-            r'^%s[%s]{4}$' % (authority_id, identifier.XDIGITS))
-        self.assertEqual(period_id, period['id'])
-        identifier.check(period_id)
+def test_generate_period_id():
+    aid = identifier.for_authority()
+    pid = identifier.for_period(aid)
+    assert pid.startswith(aid)
+    assert len(pid) == 11
+
+
+def test_replace_skolem_ids_when_adding_items(load_json):
+    data = load_json('test-data.json')
+    original_patch = JsonPatch(load_json('test-patch-adds-items.json'))
+    applied_patch, id_map = identifier.replace_skolem_ids(
+        original_patch,
+        data,
+        [],
+        {}
+    )
+    xd = identifier.XDIGITS
+
+    # check addition of new period
+    assert re.match(
+        r'^/authorities/p0trgkv/periods/p0trgkv[%s]{4}$' % xd,
+        applied_patch.patch[0]['path']
+    )
+    check_period_id(
+        applied_patch.patch[0]['value']['id'],
+        'p0trgkv',
+        id_map
+    )
+
+    # check addition of new authority
+    assert re.match(
+        r'^/authorities/p0[%s]{5}$' % xd,
+        applied_patch.patch[1]['path']
+    )
+    authority_id = applied_patch.patch[1]['value']['id']
+    check_authority_id(authority_id, id_map)
+
+    # check each period in new authority
+    periods = applied_patch.patch[1]['value']['periods']
+    for period_id in periods.keys():
+        check_period_id(period_id, authority_id, id_map)
+        assert period_id == periods[period_id]['id']
+
+        # check that skolem IDs in prop values get replaced
+        prop = 'broader' if 'broader' in periods[period_id] else 'narrower'
+        check_period_id(periods[period_id][prop], authority_id, id_map)
+
+        # check that skolem IDs in prop value arrays get replaced
+        for period_id in periods[period_id].get('derivedFrom', []):
+            check_period_id(period_id, 'p0trgkv', id_map)
+
+
+def test_replace_skolem_ids_when_replacing_periods(load_json):
+    data = load_json('test-data.json')
+    original_patch = JsonPatch(load_json('test-patch-replaces-periods.json'))
+    applied_patch, id_map = identifier.replace_skolem_ids(
+        original_patch,
+        data,
+        [],
+        {}
+    )
+    assert applied_patch.patch[0]['path'] == original_patch.patch[0]['path']
+
+    period_id, period = list(applied_patch.patch[0]['value'].items())[0]
+    assert period_id == period['id']
+    check_period_id(period_id, 'p0trgkv', id_map)
+
+
+def test_replace_skolem_ids_when_replacing_authorities(load_json):
+    data = load_json('test-data.json')
+    original_patch = JsonPatch(
+        load_json('test-patch-replaces-authorities.json')
+    )
+    applied_patch, id_map = identifier.replace_skolem_ids(
+        original_patch,
+        data,
+        [],
+        {}
+    )
+    assert applied_patch.patch[0]['path'] == original_patch.patch[0]['path']
+
+    authority_id, authority = list(
+        applied_patch.patch[0]['value'].items()
+    )[0]
+    assert authority_id == authority['id']
+    check_authority_id(authority_id, id_map)
+
+    period_id, period = list(
+        applied_patch.patch[0]['value'][authority_id]['periods'].items()
+    )[0]
+    assert period_id == period['id']
+    check_period_id(period_id, authority_id, id_map)

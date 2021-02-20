@@ -7,11 +7,11 @@ from periodo import api, cache, routes, utils, translate, highlight
 
 def abbreviate_context(data):
     # don't abbreviate...
-    if ((data is None or                     # empty responses,
-         '@context' not in data or           # non-LD responses,
-         '@base' not in data['@context'] or  # external LD graphs,
-         len(data) == 1 or                   # the context object itself,
-         type(data['@context']) is list)):   # or already-abbreviated contexts.
+    if ((data is None                          # empty responses,
+         or '@context' not in data             # non-LD responses,
+         or '@base' not in data['@context']    # external LD graphs,
+         or len(data) == 1                     # the context object itself,
+         or type(data['@context']) is list)):  # or already-abbreviated contexts
 
         return data
 
@@ -57,9 +57,10 @@ def output_html(data, code, headers={}, filename=None):
             url_for('dataset-json', version=request.args.get('version', None)),
             code=307)
     else:
-        response = redirect(
-            html_version(request.path) + urlencode(request.args),
-            code=303)
+        location = html_version(request.path)
+        if len(request.args) > 0:
+            location += f'?{urlencode(request.args)}'
+        response = redirect(location, code=303)
         response.headers.add(
             'Link', '<>; rel="alternate"; type="application/json"')
 
@@ -75,7 +76,10 @@ def output_html(data, code, headers={}, filename=None):
 
 @api.representation('application/json')
 def output_json(data, code, headers={}, filename=None):
-    response = make_response(json.dumps(abbreviate_context(data)) + '\n', code)
+    response = make_response(
+        json.dumps(abbreviate_context(data), ensure_ascii=False) + '\n',
+        code
+    )
     response.content_type = 'application/json'
     response.headers.extend(headers)
 

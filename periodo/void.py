@@ -75,12 +75,12 @@ def get_linkset_counts(data):
 
 
 def describe_dataset(data, created_at):
-    cursor = database.get_db().cursor()
-    contributors = cursor.execute('''
+    contributors = database.query_db('''
     SELECT DISTINCT created_by, updated_by
     FROM patch_request
     WHERE merged = 1
-    AND id > 1''').fetchall()
+    AND id > 1
+    ''')
 
     with open(os.path.join(os.path.dirname(__file__), 'void-stub.ttl')) as f:
         description_g = Graph().parse(file=f, format='turtle')

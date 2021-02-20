@@ -8,9 +8,7 @@ def as_uri(string):
 
 
 def make_nanopub(period_id, version):
-    cursor = database.get_db().cursor()
-
-    cursor.execute(
+    result = database.query_db(
         '''
         SELECT
             patch.id as patch_id,
@@ -28,13 +26,11 @@ def make_nanopub(period_id, version):
             patch.updated_entities LIKE ?
         ORDER BY patch.id ASC
         LIMIT ?, 1;
-        ''',
-        ('%"' + identifier.prefix(period_id) + '"%',
-         '%"' + identifier.prefix(period_id) + '"%',
-         version - 1)
-    )
-
-    result = cursor.fetchone()
+        ''', (
+            '%"' + identifier.prefix(period_id) + '"%',
+            '%"' + identifier.prefix(period_id) + '"%',
+            version - 1
+        ), one=True)
 
     if not result:
         raise PeriodNotFoundError(

@@ -66,7 +66,7 @@ def triples_to_csv(triples_file):
 
 def jsonld_to(serialization, jsonld):
     with NamedTemporaryFile(suffix='.jsonld') as f:
-        f.write(json.dumps(jsonld).encode())
+        f.write(json.dumps(jsonld, ensure_ascii=False).encode())
         f.flush()
         return run_subprocess(
             [app.config['RIOT'],

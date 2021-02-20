@@ -1,207 +1,195 @@
-import os
-import tempfile
-import unittest
-import http.client
+import httpx
+import json
+import pytest
 from urllib.parse import urlparse
-from flask_principal import ActionNeed
-from periodo import app, commands, auth, database
-from .filepath import filepath
+from periodo import app, database
 
 
-class TestAuthorization(unittest.TestCase):
+def test_unauthorized_identity(unauthorized_identity):
+    with app.app_context():
+        row = database.query_db(
+            'SELECT permissions FROM user WHERE id = ?',
+            (unauthorized_identity.id,),
+            one=True
+        )
+        assert json.loads(row['permissions']) == []
 
-    def setUp(self):
-        self.db_fd, app.config['DATABASE'] = tempfile.mkstemp()
-        app.config['TESTING'] = True
-        commands.init_db()
-        commands.load_data(filepath('test-data.json'))
-        self.client = app.test_client()
-        with open(filepath('test-patch-replace-values-1.json')) as f:
-            self.patch = f.read()
-        with app.app_context():
-            self.unauthorized_identity = auth.add_user_or_update_credentials({
-                'name': 'Dangerous Dan',
-                'access_token': 'f7e00c02-6f97-4636-8499-037446d95446',
-                'expires_in': 631138518,
-                'orcid': '0000-0000-0000-000X',
-            })
-            db = database.get_db()
-            curs = db.cursor()
-            curs.execute('UPDATE user SET permissions = ? WHERE name = ?',
-                         ('[]', 'Dangerous Dan'))
-            self.user_identity = auth.add_user_or_update_credentials({
-                'name': 'Regular Gal',
-                'access_token': '5005eb18-be6b-4ac0-b084-0443289b3378',
-                'expires_in': 631138518,
-                'orcid': '1234-5678-9101-112X',
-            })
-            self.admin_identity = auth.add_user_or_update_credentials({
-                'name': 'Super Admin',
-                'access_token': 'f7c64584-0750-4cb6-8c81-2932f5daabb8',
-                'expires_in': 3600,
-                'orcid': '1211-1098-7654-321X',
-            }, (ActionNeed('accept-patch'),))
-            db.commit()
 
-    def tearDown(self):
-        os.close(self.db_fd)
-        os.unlink(app.config['DATABASE'])
+def test_admin_identity(admin_identity):
+    with app.app_context():
+        row = database.query_db(
+            'SELECT permissions FROM user WHERE id = ?',
+            (admin_identity.id,),
+            one=True
+        )
+        assert json.loads(row['permissions']) == [
+            ["action", "submit-patch"],
+            ["action", "create-bag"],
+            ["action", "accept-patch"],
+            ["action", "create-graph"],
+        ]
 
-    def test_add_admin_user(self):
-        with app.app_context():
-            row = database.query_db(
-                'SELECT permissions FROM user WHERE id = ?',
-                (self.admin_identity.id,), one=True)
-            self.assertEqual(
-                row['permissions'],
-                '[["action", "submit-patch"], ["action", "create-bag"], '
-                + '["action", "accept-patch"]]')
 
-    def test_unauthorized_user(self):
-        res = self.client.patch(
-            '/d/',
-            headers={'Authorization': 'Bearer '
-                     + 'ZjdlMDBjMDItNmY5Ny00NjM2LTg0OTktMDM3NDQ2ZDk1NDQ2'})
-        self.assertEqual(res.status_code, http.client.FORBIDDEN)
-        self.assertEqual(
-            res.headers['WWW-Authenticate'],
-            'Bearer realm="PeriodO", error="insufficient_scope", '
-            + 'error_description='
-            + '"The access token does not provide sufficient privileges", '
-            + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"')
+@pytest.mark.client_auth_token('this-token-has-no-permissions')
+def test_unauthorized_identity_submit_patch(unauthorized_identity, client):
+    res = client.patch('/d/')
+    assert res.status_code == httpx.codes.FORBIDDEN
+    assert res.headers['WWW-Authenticate'] == (
+        'Bearer realm="PeriodO", error="insufficient_scope", '
+        + 'error_description='
+        + '"The access token does not provide sufficient privileges", '
+        + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"'
+    )
 
-    def test_authorized_user(self):
-        with self.client as client:
-            res = client.patch(
-                '/d/',
-                data=self.patch,
-                content_type='application/json',
-                headers={'Authorization': 'Bearer '
-                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-            self.assertEqual(res.status_code, http.client.ACCEPTED)
-            patch_id = int(res.headers['Location'].split('/')[-2])
-            creator = database.query_db(
-                'SELECT created_by FROM patch_request WHERE id = ?',
-                (patch_id,), one=True)['created_by']
-            self.assertEqual(creator, 'https://orcid.org/1234-5678-9101-112X')
 
-    def test_nonadmin_merge(self):
-        res = self.client.patch(
-            '/d/',
-            data=self.patch,
-            content_type='application/json',
-            headers={'Authorization': 'Bearer '
-                     + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
+@pytest.mark.client_auth_token('this-token-has-normal-permissions')
+def test_authorized_identity_submit_patch(active_identity, client, load_json):
+    res = client.patch(
+        '/d/',
+        json=load_json('test-patch-replace-values-1.json')
+    )
+    assert res.status_code == httpx.codes.ACCEPTED
+    patch_id = int(res.headers['Location'].split('/')[-2])
+    with app.app_context():
+        creator = database.query_db(
+            'SELECT created_by FROM patch_request WHERE id = ?',
+            (patch_id,), one=True)['created_by']
+        assert creator == active_identity.id
 
-        # Test that there's NO link header
-        patch_url = urlparse(res.headers['Location']).path
-        res = self.client.get(patch_url, headers={
-            'Authorization': 'Bearer '
-            + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-        self.assertEqual(res.headers.get('Link'), None)
 
-        res = self.client.post(
-            patch_url + 'merge',
-            headers={'Authorization': 'Bearer '
-                     + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-        self.assertEqual(res.status_code, http.client.FORBIDDEN)
-        self.assertEqual(
-            res.headers['WWW-Authenticate'],
-            'Bearer realm="PeriodO", error="insufficient_scope", '
-            + 'error_description='
-            + '"The access token does not provide sufficient privileges", '
-            + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"')
+@pytest.mark.client_auth_token('this-token-has-normal-permissions')
+def test_nonadmin_identity_merge_patch(active_identity, client, load_json):
+    # submit the patch
+    res = client.patch(
+        '/d/',
+        json=load_json('test-patch-replace-values-1.json')
+    )
 
-    def test_admin_merge(self):
-        with self.client as client:
-            res = client.patch(
-                '/d/',
-                data=self.patch,
-                content_type='application/json',
-                headers={'Authorization': 'Bearer '
-                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-            patch_id = int(res.headers['Location'].split('/')[-2])
+    # There should be NO link header
+    patch_url = urlparse(res.headers['Location']).path
+    res = client.get(patch_url)
+    assert 'Link' not in res.headers
 
-            # Test that there's a link header
-            patch_url = urlparse(res.headers['Location']).path
-            res = self.client.get(patch_url, headers={
-                'Authorization': 'Bearer '
-                + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
-            self.assertEqual(res.headers.get('Link'),
-                             '<{}>;rel="merge"'.format(patch_url + 'merge'))
+    # now try to merge the patch
+    res = client.post(patch_url + 'merge')
+    assert res.status_code == httpx.codes.FORBIDDEN
+    assert res.headers['WWW-Authenticate'] == (
+        'Bearer realm="PeriodO", error="insufficient_scope", '
+        + 'error_description='
+        + '"The access token does not provide sufficient privileges", '
+        + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"'
+    )
 
-            res = client.post(
-                patch_url + 'merge',
-                buffered=True,
-                headers={'Authorization': 'Bearer '
-                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
-            self.assertEqual(res.status_code, http.client.NO_CONTENT)
-            merger = database.query_db(
-                'SELECT merged_by FROM patch_request WHERE id = ?',
-                (patch_id,), one=True)['merged_by']
-            self.assertEqual(merger, 'https://orcid.org/1211-1098-7654-321X')
 
-    def test_noncreator_patch_update(self):
-        res = self.client.patch(
-            '/d/',
-            data=self.patch,
-            content_type='application/json',
-            headers={'Authorization': 'Bearer '
-                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-        res = self.client.put(
-            urlparse(res.headers['Location']).path + 'patch.jsonpatch',
-            data=self.patch,
-            content_type='application/json',
-            headers={'Authorization': 'Bearer '
-                     + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
-        self.assertEqual(res.status_code, http.client.FORBIDDEN)
-        self.assertEqual(
-            res.headers['WWW-Authenticate'],
-            'Bearer realm="PeriodO", error="insufficient_scope", '
-            + 'error_description='
-            + '"The access token does not provide sufficient privileges", '
-            + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"')
+@pytest.mark.client_auth_token('this-token-has-admin-permissions')
+def test_admin_identity_merge_patch(
+        admin_identity,
+        active_identity,
+        client,
+        load_json,
+        bearer_auth,
+):
+    # submit the patch as normal user
+    res = client.patch(
+        '/d/',
+        auth=bearer_auth('this-token-has-normal-permissions'),
+        json=load_json('test-patch-replace-values-1.json')
+    )
 
-    def test_creator_patch_update(self):
-        with self.client as client:
-            res = client.patch(
-                '/d/',
-                data=self.patch,
-                content_type='application/json',
-                headers={'Authorization': 'Bearer '
-                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-            res = client.put(
-                urlparse(res.headers['Location']).path + 'patch.jsonpatch',
-                data=self.patch,
-                content_type='application/json',
-                headers={'Authorization': 'Bearer '
-                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-            self.assertEqual(res.status_code, http.client.OK)
+    patch_id = int(res.headers['Location'].split('/')[-2])
 
-    def test_update_merged_patch(self):
-        with self.client as client:
-            res = client.patch(
-                '/d/',
-                data=self.patch,
-                content_type='application/json',
-                headers={'Authorization': 'Bearer '
-                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-            patch_path = urlparse(res.headers['Location']).path
-            res = client.post(
-                patch_path + 'merge',
-                buffered=True,
-                headers={'Authorization': 'Bearer '
-                         + 'ZjdjNjQ1ODQtMDc1MC00Y2I2LThjODEtMjkzMmY1ZGFhYmI4'})
-            res = client.put(
-                patch_path + 'patch.jsonpatch',
-                data=self.patch,
-                content_type='application/json',
-                headers={'Authorization': 'Bearer '
-                         + 'NTAwNWViMTgtYmU2Yi00YWMwLWIwODQtMDQ0MzI4OWIzMzc4'})
-        self.assertEqual(res.status_code, http.client.FORBIDDEN)
-        self.assertEqual(
-            res.headers['WWW-Authenticate'],
-            'Bearer realm="PeriodO", error="insufficient_scope", '
-            + 'error_description='
-            + '"The access token does not provide sufficient privileges", '
-            + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"')
+    # Admin should see a link header
+    patch_url = urlparse(res.headers['Location']).path
+    res = client.get(patch_url)
+    assert res.headers.get('Link') == f'<{patch_url + "merge"}>;rel="merge"'
+
+    # now merge the patch
+    res = client.post(patch_url + 'merge')
+    assert res.status_code, httpx.codes.NO_CONTENT
+    with app.app_context():
+        merger = database.query_db(
+            'SELECT merged_by FROM patch_request WHERE id = ?',
+            (patch_id,), one=True)['merged_by']
+        assert merger == admin_identity.id
+
+
+@pytest.mark.client_auth_token('this-token-has-admin-permissions')
+def test_noncreator_identity_update_patch(
+        admin_identity,
+        active_identity,
+        client,
+        load_json,
+        bearer_auth,
+):
+    # submit the patch as normal user
+    res = client.patch(
+        '/d/',
+        auth=bearer_auth('this-token-has-normal-permissions'),
+        json=load_json('test-patch-replace-values-1.json')
+    )
+
+    # now try to update the patch as a different user (admin)
+    patch_url = urlparse(res.headers['Location']).path
+    res = client.put(
+        patch_url + 'patch.jsonpatch',
+        json=load_json('test-patch-replace-values-2.json')
+    )
+    assert res.status_code == httpx.codes.FORBIDDEN
+    assert res.headers['WWW-Authenticate'] == (
+        'Bearer realm="PeriodO", error="insufficient_scope", '
+        + 'error_description='
+        + '"The access token does not provide sufficient privileges", '
+        + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"'
+    )
+
+
+@pytest.mark.client_auth_token('this-token-has-normal-permissions')
+def test_creator_identity_update_patch(active_identity, client, load_json):
+    # submit the patch
+    res = client.patch(
+        '/d/',
+        json=load_json('test-patch-replace-values-1.json')
+    )
+
+    # update the patch
+    patch_url = urlparse(res.headers['Location']).path
+    res = client.put(
+        patch_url + 'patch.jsonpatch',
+        json=load_json('test-patch-replace-values-2.json')
+    )
+    assert res.status_code == httpx.codes.OK
+
+
+@pytest.mark.client_auth_token('this-token-has-normal-permissions')
+def test_creator_identity_update_merged_patch(
+        admin_identity,
+        active_identity,
+        client,
+        load_json,
+        bearer_auth,
+):
+    # submit the patch
+    res = client.patch(
+        '/d/',
+        json=load_json('test-patch-replace-values-1.json')
+    )
+
+    # merge the patch (as admin)
+    patch_url = urlparse(res.headers['Location']).path
+    res = client.post(
+        patch_url + 'merge',
+        auth=bearer_auth('this-token-has-admin-permissions')
+    )
+
+    # now try to update the patch (as original creator)
+    res = client.put(
+        patch_url + 'patch.jsonpatch',
+        json=load_json('test-patch-replace-values-2.json')
+    )
+    assert res.status_code == httpx.codes.FORBIDDEN
+    assert res.headers['WWW-Authenticate'] == (
+        'Bearer realm="PeriodO", error="insufficient_scope", '
+        + 'error_description='
+        + '"The access token does not provide sufficient privileges", '
+        + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"'
+    )

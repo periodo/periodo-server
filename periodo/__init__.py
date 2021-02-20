@@ -12,6 +12,7 @@ from werkzeug.http import http_date
 from werkzeug.routing import BaseConverter
 from periodo.middleware import RemoveTransferEncodingHeaderMiddleware
 
+DEV_SERVER_NAME = 'localhost.localdomain:5000'
 
 # Allow running tests without access to periodo.secrets
 try:
@@ -80,8 +81,8 @@ def locate_bin(name, envvar):
         return res.decode('utf-8').strip()
     except Exception:
         app.logger.error(
-            f'Could not find binary for `{name}`. Either include this binary' +
-            f' in your PATH, or set the environment variable {envvar}')
+            f'Could not find binary for `{name}`. Either include this binary'
+            + f' in your PATH, or set the environment variable {envvar}')
         return '/usr/local/bin/' + name
 
 
@@ -91,7 +92,7 @@ app.config.update(
     RIOT=locate_bin('riot', 'RIOT'),
     ARQ=locate_bin('arq', 'ARQ'),
     CSV_QUERY=os.environ.get('CSV_QUERY', './periods-as-csv.rq'),
-    SERVER_NAME=os.environ.get('SERVER_NAME', 'localhost.localdomain:5000'),
+    SERVER_NAME=os.environ.get('SERVER_NAME', DEV_SERVER_NAME),
     CLIENT_URL=os.environ.get('CLIENT_URL', 'https://client.perio.do'),
     CANONICAL=json.loads(os.environ.get('CANONICAL', 'false')),
     ORCID_CLIENT_ID=ORCID_CLIENT_ID,
