@@ -26,7 +26,10 @@ def as_turtle(s):
 
 
 def as_json(s):
-    return as_string(json.dumps(s, indent=2, sort_keys=True), JsonLexer())
+    return as_string(
+        json.dumps(s, indent=2, sort_keys=True, ensure_ascii=False),
+        JsonLexer()
+    )
 
 
 # match URL values in Pygmented JSON or TTL HTML output

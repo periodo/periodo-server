@@ -76,7 +76,10 @@ def output_html(data, code, headers={}, filename=None):
 
 @api.representation('application/json')
 def output_json(data, code, headers={}, filename=None):
-    response = make_response(json.dumps(abbreviate_context(data)) + '\n', code)
+    response = make_response(
+        json.dumps(abbreviate_context(data), ensure_ascii=False) + '\n',
+        code
+    )
     response.content_type = 'application/json'
     response.headers.extend(headers)
 
