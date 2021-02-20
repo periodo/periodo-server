@@ -3,11 +3,11 @@ on: [push]
 jobs:
   run-tests:
     runs-on: ubuntu-20.04
+    env:
+      JENA: apache-jena-3.17.0
     strategy:
       matrix:
         python-version: [ '3.8', '3.9' ]
-    env:
-      JENA: apache-jena-3.17.0
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
