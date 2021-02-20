@@ -1,0 +1,17 @@
+name: run-tests
+on: [push]
+jobs:
+  run-tests:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: >-
+          curl
+          http://archive.apache.org/dist/jena/binaries/apache-jena-3.14.0.tar.gz
+          | tar -zx -C /opt
+      - run: >-
+          TESTING=1
+          TMPDIR=/tmp
+          RIOT=/opt/apache-jena-3.14.0/bin/riot
+          ARQ=/opt/apache-jena-3.14.0/bin/arq
+          make test
