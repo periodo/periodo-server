@@ -3,8 +3,6 @@ on: [push]
 jobs:
   run-tests:
     runs-on: ubuntu-20.04
-    env:
-      JENA: apache-jena-3.17.0
     strategy:
       matrix:
         python-version: [ '3.8', '3.9' ]
@@ -15,11 +13,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: >-
           curl
-          http://archive.apache.org/dist/jena/binaries/${{ JENA }}.tar.gz
+          http://archive.apache.org/dist/jena/binaries/apache-jena-3.17.0.tar.gz
           | tar -zx -C /opt
       - run: >-
           TESTING=1
           TMPDIR=/tmp
-          RIOT=/opt/${{ JENA }}/bin/riot
-          ARQ=/opt/${{ JENA }}/bin/arq
+          RIOT=/opt/apache-jena-3.17.0/bin/riot
+          ARQ=/opt/apache-jena-3.17.0/bin/arq
           make test
