@@ -3,8 +3,14 @@ on: [push]
 jobs:
   run-tests:
     runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        python-version: [ '3.8', '3.9' ]
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
       - run: >-
           curl
           http://archive.apache.org/dist/jena/binaries/apache-jena-3.14.0.tar.gz
