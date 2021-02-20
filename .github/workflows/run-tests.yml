@@ -6,6 +6,8 @@ jobs:
     strategy:
       matrix:
         python-version: [ '3.8', '3.9' ]
+    env:
+      JENA: apache-jena-3.17.0
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -13,11 +15,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: >-
           curl
-          http://archive.apache.org/dist/jena/binaries/apache-jena-3.14.0.tar.gz
+          http://archive.apache.org/dist/jena/binaries/${{ JENA }}.tar.gz
           | tar -zx -C /opt
       - run: >-
           TESTING=1
           TMPDIR=/tmp
-          RIOT=/opt/apache-jena-3.14.0/bin/riot
-          ARQ=/opt/apache-jena-3.14.0/bin/arq
+          RIOT=/opt/${{ JENA }}/bin/riot
+          ARQ=/opt/${{ JENA }}/bin/arq
           make test
