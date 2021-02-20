@@ -26,7 +26,7 @@ def get_mimetype():
 
 @app.route('/h.ttl', endpoint='history-ttl')
 def legacy_history_endpoint_redirect():
-    return redirect(url_for('history-nt',  **request.args), code=301)
+    return redirect(url_for('history-nt', **request.args), code=301)
 
 
 @app.route('/h', endpoint='history')
@@ -35,7 +35,7 @@ def see_history():
     if mimetype is None:
         url = build_client_url(page='backend-history')
     else:
-        url = url_for('history-nt',  **request.args)
+        url = url_for('history-nt', **request.args)
     return redirect(url, code=303)
 
 
@@ -107,8 +107,8 @@ def see_authority(authority_id):
 
 
 @app.route('/<string(length=%s):period_id>'
-           % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1 +
-              identifier.PERIOD_SEQUENCE_LENGTH + 1),
+           % (identifier.AUTHORITY_SEQUENCE_LENGTH + 1
+              + identifier.PERIOD_SEQUENCE_LENGTH + 1),
            endpoint='period')
 def see_period(period_id):
     try:

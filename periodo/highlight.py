@@ -34,9 +34,9 @@ def as_json(s):
 
 # match URL values in Pygmented JSON or TTL HTML output
 pattern = re.compile(
-    r'(<span class="(?:s2|nv)">&(?:quot|lt);)' +
-    r'(https?://[^&]+)' +
-    r'(&(?:quot|gt);</span>)'
+    r'(<span class="(?:s2|nv)">&(?:quot|lt);)'
+    + r'(https?://[^&]+)'
+    + r'(&(?:quot|gt);</span>)'
 )
 
 

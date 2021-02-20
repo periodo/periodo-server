@@ -81,8 +81,8 @@ def locate_bin(name, envvar):
         return res.decode('utf-8').strip()
     except Exception:
         app.logger.error(
-            f'Could not find binary for `{name}`. Either include this binary' +
-            f' in your PATH, or set the environment variable {envvar}')
+            f'Could not find binary for `{name}`. Either include this binary'
+            + f' in your PATH, or set the environment variable {envvar}')
         return '/usr/local/bin/' + name
 
 
