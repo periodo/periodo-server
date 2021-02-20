@@ -1,6 +1,6 @@
 import json
 import random
-import requests
+import httpx
 import string
 from flask import (
     request, make_response, redirect, url_for, session, abort,
@@ -174,10 +174,11 @@ def registered():
         'redirect_uri': build_redirect_uri(request.args),
         'scope': '/authenticate',
     }
-    response = requests.post(
+    response = httpx.post(
         'https://orcid.org/oauth/token',
         headers={'Accept': 'application/json'},
-        allow_redirects=True, data=data)
+        data=data
+    )
     if not response.status_code == 200:
         app.logger.error('Response to request for ORCID credential was not OK')
         app.logger.error('Request: %s', data)
