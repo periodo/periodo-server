@@ -30,7 +30,7 @@ class UnmergeablePatchError(MergeError):
     pass
 
 
-def from_text(patch_text):
+def _from_text(patch_text):
     patch_text = patch_text or ''
     if isinstance(patch_text, bytes):
         patch_text = patch_text.decode()
@@ -42,24 +42,24 @@ def from_text(patch_text):
     return patch
 
 
-def periods_of(authority, data):
+def _periods_of(authority, data):
     return set(data['authorities'][authority]['periods'].keys())
 
 
-def analyze_change_path(path):
+def _analyze_change_path(path):
     match = CHANGE_PATH_PATTERN.match(path)
     return match.groups() if match else [None, None]
 
 
-def analyze_change(change, data):
+def _analyze_change(change, data):
     o = {'updated': [], 'removed': []}
-    [authority, period] = analyze_change_path(change['path'])
+    [authority, period] = _analyze_change_path(change['path'])
     if change['op'] == 'remove':
         if period:
             o['removed'] = [period]
             o['updated'] = [authority]
         elif authority:
-            o['removed'] = set([authority]) | periods_of(authority, data)
+            o['removed'] = set([authority]) | _periods_of(authority, data)
     else:
         if period:
             o['updated'] = [period, authority]
@@ -68,13 +68,27 @@ def analyze_change(change, data):
     return o
 
 
-def affected_entities(patch, data):
+def _find_affected_entities(patch, data):
     def analyze(results, change):
-        o = analyze_change(change, data)
+        o = _analyze_change(change, data)
         results['updated'] |= set(o['updated'])
         results['removed'] |= set(o['removed'])
         return results
     return reduce(analyze, patch, {'updated': set(), 'removed': set()})
+
+
+def _add_new_version_of_dataset(cursor, data):
+    now = database.query_db(
+        "SELECT CAST(strftime('%s', 'now') AS INTEGER) AS now",
+        one=True
+    )['now']
+    cursor.execute(
+        'INSERT into DATASET (data, description, created_at) VALUES (?,?,?)', (
+            json.dumps(data, ensure_ascii=False),
+            void.describe_dataset(data, now),
+            now
+        ))
+    return cursor.lastrowid
 
 
 def validate(patch, dataset):
@@ -87,23 +101,50 @@ def validate(patch, dataset):
     except JsonPointerException:
         raise InvalidPatchError('Could not apply JSON patch to dataset.')
 
-    return affected_entities(patch, data)
+    return _find_affected_entities(patch, data)
 
 
 def create_request(patch, user_id):
     dataset = database.get_dataset()
     affected_entities = validate(patch, dataset)
-    cursor = database.get_db().cursor()
-    cursor.execute('''
-INSERT INTO patch_request
-(created_by, updated_by, created_from, updated_entities, removed_entities,
- original_patch)
-VALUES (?, ?, ?, ?, ?, ?)
-    ''', (user_id, user_id, dataset['id'],
-          json.dumps(sorted(affected_entities['updated'])),
-          json.dumps(sorted(affected_entities['removed'])),
-          patch.to_string()))
-    return cursor.lastrowid
+    with database.open_cursor(write=True) as cursor:
+        cursor.execute('''
+        INSERT INTO patch_request (
+            created_by,
+            updated_by,
+            created_from,
+            updated_entities,
+            removed_entities,
+            original_patch
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        ''', (
+            user_id,
+            user_id,
+            dataset['id'],
+            json.dumps(sorted(affected_entities['updated'])),
+            json.dumps(sorted(affected_entities['removed'])),
+            patch.to_string()
+        ))
+        return cursor.lastrowid
+
+
+def update_request(request_id, patch, user_id):
+    affected_entities = validate(patch, database.get_dataset())
+    with database.open_cursor(write=True) as cursor:
+        cursor.execute('''
+        UPDATE patch_request SET
+        original_patch = ?,
+        updated_entities = ?,
+        removed_entities = ?,
+        updated_by = ?
+        WHERE id = ?
+        ''', (
+            patch.to_string(),
+            json.dumps(sorted(affected_entities['updated'])),
+            json.dumps(sorted(affected_entities['removed'])),
+            user_id,
+            request_id
+        ))
 
 
 def add_comment(patch_id, user_id, message):
@@ -113,32 +154,19 @@ def add_comment(patch_id, user_id, message):
     if not row:
         raise MergeError('No patch with ID {}.'.format(patch_id))
 
-    db = database.get_db()
-    curs = db.cursor()
-    curs.execute(
-        '''
+    with database.open_cursor(write=True) as cursor:
+        cursor.execute('''
         INSERT INTO patch_request_comment
         (patch_request_id, author, message)
         VALUES (?, ?, ?)
-        ''',
-        (patch_id, user_id, message)
-    )
-
-
-def add_new_version_of_dataset(data):
-    now = database.query_db(
-        "SELECT CAST(strftime('%s', 'now') AS INTEGER) AS now", one=True
-    )['now']
-    cursor = database.get_db().cursor()
-    cursor.execute(
-        'INSERT into DATASET (data, description, created_at) VALUES (?,?,?)',
-        (json.dumps(data), void.describe_dataset(data, now), now))
-    return cursor.lastrowid
+        ''', (patch_id, user_id, message))
 
 
 def reject(patch_id, user_id):
     row = database.query_db(
-        'SELECT * FROM patch_request WHERE id = ?', (patch_id,), one=True)
+        'SELECT * FROM patch_request WHERE id = ?', (patch_id,),
+        one=True
+    )
 
     if not row:
         raise MergeError('No patch with ID {}.'.format(patch_id))
@@ -147,19 +175,15 @@ def reject(patch_id, user_id):
     if not row['open']:
         raise MergeError('Closed patches cannot be merged.')
 
-    db = database.get_db()
-    curs = db.cursor()
-    curs.execute(
-        '''
+    with database.open_cursor(write=True) as cursor:
+        cursor.execute('''
         UPDATE patch_request
         SET merged = 0,
             open = 0,
             merged_at = strftime('%s', 'now'),
             merged_by = ?
-        WHERE id = ?;
-        ''',
-        (user_id, row['id'],)
-    )
+        WHERE id = ?
+        ''', (user_id, row['id'],))
 
 
 def merge(patch_id, user_id):
@@ -181,7 +205,7 @@ def merge(patch_id, user_id):
         raise UnmergeablePatchError('Patch is not mergeable.')
 
     data = json.loads(dataset['data'])
-    original_patch = from_text(row['original_patch'])
+    original_patch = _from_text(row['original_patch'])
     try:
         applied_patch, patch_id_map = replace_skolem_ids(
             original_patch,
@@ -196,10 +220,8 @@ def merge(patch_id, user_id):
     # Should this be ordered?
     new_data = applied_patch.apply(data)
 
-    db = database.get_db()
-    curs = db.cursor()
-    curs.execute(
-        '''
+    with database.open_cursor(write=True) as cursor:
+        cursor.execute('''
         UPDATE patch_request
         SET merged = 1,
             open = 0,
@@ -210,28 +232,25 @@ def merge(patch_id, user_id):
             identifier_map = ?,
             applied_patch = ?
         WHERE id = ?;
-        ''',
-        (user_id,
-         dataset['id'],
-         json.dumps(sorted(created_entities)),
-         json.dumps(patch_id_map),
-         applied_patch.to_string(),
-         row['id'])
-    )
-    version_id = add_new_version_of_dataset(new_data)
-    curs.execute(
-        '''
+        ''', (
+            user_id,
+            dataset['id'],
+            json.dumps(sorted(created_entities)),
+            json.dumps(patch_id_map),
+            applied_patch.to_string(),
+            row['id']
+        ))
+        version_id = _add_new_version_of_dataset(cursor, new_data)
+        cursor.execute('''
         UPDATE patch_request
         SET resulted_in = ?
         WHERE id = ?;
-        ''',
-        (version_id, row['id'])
-    )
+        ''', (version_id, row['id']))
 
 
 def is_mergeable(patch_text, dataset=None):
     dataset = dataset or database.get_dataset()
-    patch = from_text(patch_text)
+    patch = _from_text(patch_text)
     mergeable = True
     try:
         patch.apply(json.loads(dataset['data']))

@@ -1,6 +1,7 @@
 import re
 import json
 from base64 import b64encode
+from collections import namedtuple
 from functools import partial
 from flask import request, make_response
 from flask_principal import (Permission, PermissionDenied,
@@ -20,6 +21,11 @@ action_need_descriptions = {
     'create-bag': 'can create and update bags of periods',
     'create-graph': 'can create and update graphs of related triples',
 }
+
+DEFAULT_PERMISSIONS = (
+    ActionNeed('submit-patch'),
+    ActionNeed('create-bag'),
+)
 
 ERROR_URIS = {
     'invalid_request': 'http://tools.ietf.org/html/rfc6750#section-6.2.1',
@@ -53,6 +59,40 @@ class UpdatePatchPermission(Permission):
         super().__init__(UpdatePatchNeed(value=patch_request_id))
 
 
+Credentials = namedtuple('Credentials', [
+    'orcid',
+    'name',
+    'access_token',
+    'expires_in',
+    'token_type',
+    'scope',
+    'refresh_token',
+    'permissions',
+], defaults=[
+    'bearer',
+    '/authenticate',
+    None,
+    DEFAULT_PERMISSIONS,
+])
+
+
+def _create_credentials(d):
+    if 'orcid' in d and len(d.get('name', '')) == 0:
+        # User has made their name private, so just use their ORCID as name
+        d['name'] = d['orcid']
+    return Credentials(**{
+        field: d[field] for field in Credentials._fields if field in d
+    })
+
+
+def _serialize_credentials(credentials):
+    if not type(credentials) == Credentials:
+        raise TypeError
+    return json.dumps({
+        k: v for k, v in credentials._asdict().items() if not k == 'permissions'
+    }, ensure_ascii=False)
+
+
 def describe(needs):
     description = set()
     for need in needs:
@@ -77,7 +117,7 @@ def load_identity_from_authorization_header():
             'failed to load bearer token from authorization header')
         return UnauthenticatedIdentity(
             'invalid_token', 'The access token is malformed')
-    return get_identity(match.group(1).encode())
+    return _get_identity(match.group(1).encode())
 
 
 def handle_auth_error(e):
@@ -106,33 +146,32 @@ def handle_auth_error(e):
     return None
 
 
-def add_user_or_update_credentials(credentials, extra_permissions=()):
-    orcid = 'https://orcid.org/{}'.format(credentials['orcid'])
-    b64token = b64encode(credentials['access_token'].encode())
-    permissions = (
-        (ActionNeed('submit-patch'),
-         ActionNeed('create-bag'))
-        + extra_permissions
-    )
-    db = database.get_db()
-    db.set_trace_callback(app.logger.debug)
-    try:
-        cursor = db.cursor()
+def add_user_or_update_credentials(credential_data):
+    credentials = _create_credentials(credential_data)
+
+    orcid = f'https://orcid.org/{credentials.orcid}'
+    b64token = b64encode(credentials.access_token.encode())
+    serialized_credentials = _serialize_credentials(credentials)
+
+    with database.open_cursor(write=True) as cursor:
         cursor.execute('''
         INSERT OR IGNORE INTO user (
-        id,
-        name,
-        permissions,
-        b64token,
-        token_expires_at,
-        credentials)
-        VALUES (?, ?, ?, ?, strftime('%s','now') + ?, ?) ''',
-                       (orcid,
-                        credentials['name'],
-                        json.dumps(permissions),
-                        b64token,
-                        credentials['expires_in'],
-                        json.dumps(credentials)))
+          id,
+          name,
+          permissions,
+          b64token,
+          token_expires_at,
+          credentials
+        )
+        VALUES (?, ?, ?, ?, strftime('%s','now') + ?, ?)
+        ''', (
+            orcid,
+            credentials.name,
+            json.dumps(credentials.permissions),
+            b64token,
+            credentials.expires_in,
+            serialized_credentials,
+        ))
         if not cursor.lastrowid:  # user with this id already in DB
             cursor.execute('''
             UPDATE user SET
@@ -140,30 +179,30 @@ def add_user_or_update_credentials(credentials, extra_permissions=()):
             b64token = ?,
             token_expires_at = strftime('%s','now') + ?,
             credentials = ?
-            WHERE id = ?''',
-                           (credentials['name'],
-                            b64token,
-                            credentials['expires_in'],
-                            json.dumps(credentials),
-                            orcid))
+            WHERE id = ?
+            ''', (
+                credentials.name,
+                b64token,
+                credentials.expires_in,
+                serialized_credentials,
+                orcid
+            ))
 
-        return get_identity(b64token, cursor)
-    finally:
-        db.set_trace_callback(None)
+    return _get_identity(b64token)
 
 
-def get_identity(b64token, cursor=None):
-    if cursor is None:
-        cursor = database.get_db().cursor()
-    rows = cursor.execute('''
+def _get_identity(b64token):
+    rows = database.query_db('''
     SELECT
     user.id AS user_id,
+    user.name AS user_name,
     user.permissions AS user_permissions,
     patch_request.id AS patch_request_id,
     strftime("%s","now") > token_expires_at AS token_expired
     FROM user LEFT JOIN patch_request
     ON user.id = patch_request.created_by AND patch_request.open = 1
-    WHERE user.b64token = ?''', (b64token,)).fetchall()
+    WHERE user.b64token = ?
+    ''', (b64token,))
     if not rows:
         return UnauthenticatedIdentity(
             'invalid_token', 'The access token is invalid')
@@ -172,6 +211,7 @@ def get_identity(b64token, cursor=None):
             'invalid_token', 'The access token expired')
     identity = Identity(rows[0]['user_id'], auth_type='bearer')
     identity.b64token = b64token
+    identity.name = rows[0]['user_name']
     for p in json.loads(rows[0]['user_permissions']):
         identity.provides.add(tuple(p))
     for r in rows:

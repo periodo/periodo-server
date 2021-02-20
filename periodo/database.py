@@ -1,6 +1,7 @@
 import itertools
 import json
 import sqlite3
+from contextlib import contextmanager
 from periodo import app, identifier
 from flask import g, url_for
 from uuid import UUID
@@ -11,7 +12,7 @@ class MissingKeyError(Exception):
         self.key = key
 
 
-def get_db():
+def _get_db_connection():
     db = getattr(g, '_database', None)
     if db is None:
         db = g._database = sqlite3.connect(app.config['DATABASE'])
@@ -19,12 +20,32 @@ def get_db():
     return db
 
 
+@contextmanager
+def open_cursor(write=False, trace=False):
+    db = _get_db_connection()
+    if trace:
+        db.set_trace_callback(app.logger.debug)
+    c = db.cursor()
+    try:
+        yield c
+    except:  # noqa: E722
+        if write:
+            db.rollback()
+        raise
+    else:
+        if write:
+            db.commit()
+    finally:
+        c.close()
+        if trace:
+            db.set_trace_callback(None)
+
+
 def query_db(query, args=(), one=False):
-    c = get_db().cursor()
-    c.execute(query, args)
-    rows = c.fetchall()
-    c.close()
-    return (rows[0] if rows else None) if one else rows
+    with open_cursor() as c:
+        c.execute(query, args)
+        rows = c.fetchall()
+        return (rows[0] if rows else None) if one else rows
 
 
 def get_dataset(version=None):
@@ -110,8 +131,7 @@ ORDER BY posted_at ASC''', (patch_request_id,))
 
 
 def get_merged_patches():
-    c = get_db().cursor()
-    patches = c.execute('''
+    return query_db('''
 SELECT
   patch_request.id AS id,
   created_at,
@@ -131,9 +151,7 @@ ON patch_request_comment.patch_request_id = patch_request.id
 WHERE merged = 1
 GROUP BY patch_request.id
 ORDER BY id ASC
-''').fetchall()
-    c.close()
-    return patches
+''')
 
 
 def get_identifier_map():
@@ -215,79 +233,80 @@ def get_graph(id, version=None):
 
 
 def create_or_update_bag(uuid, creator_id, data):
-    db = get_db()
-    c = get_db().cursor()
-    c.execute('''
-    SELECT MAX(version) AS max_version
-    FROM bag
-    WHERE uuid = ?''', (uuid.hex,))
-    row = c.fetchone()
-    version = 0 if row['max_version'] is None else row['max_version'] + 1
-    if version > 0:
-        data['wasRevisionOf'] = identifier.prefix('bags/{}?version={}'.format(
-            uuid, row['max_version']))
-    c.execute('''
-    INSERT INTO bag (
-               uuid,
-               version,
-               created_by,
-               data,
-               owners)
-    VALUES (?, ?, ?, ?, ?)''',
-              (uuid.hex,
-               version,
-               creator_id,
-               json.dumps(data),
-               json.dumps([creator_id])))
-    c.close()
-    db.commit()
-    return version
+    with open_cursor(write=True) as c:
+        c.execute('''
+        SELECT MAX(version) AS max_version
+        FROM bag
+        WHERE uuid = ?
+        ''', (uuid.hex,))
+        row = c.fetchone()
+        version = 0 if row['max_version'] is None else row['max_version'] + 1
+        if version > 0:
+            data['wasRevisionOf'] = identifier.prefix(
+                f"bags/{uuid}?version={row['max_version']}"
+            )
+        c.execute('''
+        INSERT INTO bag (
+        uuid,
+        version,
+        created_by,
+        data,
+        owners)
+        VALUES (?, ?, ?, ?, ?)
+        ''', (
+            uuid.hex,
+            version,
+            creator_id,
+            json.dumps(data, ensure_ascii=False),
+            json.dumps([creator_id])
+        ))
+        return version
 
 
 def create_or_update_graph(id, data):
-    db = get_db()
-    c = get_db().cursor()
-    c.execute('''
-    SELECT MAX(version) AS max_version
-    FROM graph
-    WHERE id = ?''', (id,))
-    row = c.fetchone()
-    version = 0 if row['max_version'] is None else row['max_version'] + 1
-    if version > 0:
-        data['wasRevisionOf'] = url_for(
-            'graph', id=id, version=row['max_version'], _external=True)
-    c.execute('''
-    INSERT INTO graph (
-               id,
-               version,
-               data)
-    VALUES (?, ?, ?)''',
-              (id,
-               version,
-               json.dumps(data)))
-    c.close()
-    db.commit()
-    return version
+    with open_cursor(write=True) as c:
+        c.execute('''
+        SELECT MAX(version) AS max_version
+        FROM graph
+        WHERE id = ?
+        ''', (id,))
+        row = c.fetchone()
+        version = 0 if row['max_version'] is None else row['max_version'] + 1
+        if version > 0:
+            data['wasRevisionOf'] = url_for(
+                'graph',
+                id=id,
+                version=row['max_version'],
+                _external=True
+            )
+        c.execute('''
+        INSERT INTO graph (
+        id,
+        version,
+        data)
+        VALUES (?, ?, ?)
+        ''', (
+            id,
+            version,
+            json.dumps(data, ensure_ascii=False)
+        ))
+        return version
 
 
 def delete_graph(id):
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('UPDATE graph SET deleted = 1 WHERE id = ?', (id,))
-    deletedRows = cursor.rowcount
-    cursor.close()
-    db.commit()
-    return (deletedRows > 0)
+    with open_cursor(write=True) as c:
+        c.execute('UPDATE graph SET deleted = 1 WHERE id = ?', (id,))
+        return (c.rowcount > 0)
 
 
 def find_version_of_last_update(entity_id, version):
-    cursor = get_db().cursor()
-    for row in cursor.execute('''
+    for row in query_db('''
     SELECT created_entities, updated_entities, resulted_in
     FROM patch_request
     WHERE merged = 1
     AND resulted_in <= ?
-    ORDER BY id DESC''', (version,)).fetchall():
+    ORDER BY id DESC
+    ''', (version,)):
         if entity_id in json.loads(row['created_entities']):
             return row['resulted_in']
         if entity_id in json.loads(row['updated_entities']):
@@ -298,15 +317,13 @@ def find_version_of_last_update(entity_id, version):
 def get_removed_entity_keys():
     return set(itertools.chain(
         *[json.loads(row['removed_entities']) for row in query_db('''
-SELECT removed_entities FROM patch_request WHERE merged = 1''')]))
-
-
-def commit():
-    get_db().commit()
+        SELECT removed_entities FROM patch_request WHERE merged = 1
+        ''')]
+    ))
 
 
 def dump():
-    return get_db().iterdump()
+    return _get_db_connection().iterdump()
 
 
 @app.teardown_appcontext

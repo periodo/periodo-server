@@ -327,7 +327,6 @@ class Dataset(Resource):
         try:
             patch_request_id = patching.create_request(
                 JsonPatch(parse_json(request)), g.identity.id)
-            database.commit()
             return None, 202, {
                 'Location': url_for('patchrequest', id=patch_request_id)
             }
@@ -555,29 +554,12 @@ class Patch(Resource):
             raise auth.PermissionDenied(permission)
         try:
             patch = JsonPatch(parse_json(request))
-            affected_entities = patching.validate(
-                patch, database.get_dataset())
+            patching.update_request(id, patch, g.identity.id)
         except ResourceError as e:
             return e.response()
         except patching.InvalidPatchError as e:
             if str(e) != 'Could not apply JSON patch to dataset.':
                 return {'status': 400, 'message': str(e)}, 400
-
-        db = database.get_db()
-        curs = db.cursor()
-        curs.execute('''
-UPDATE patch_request SET
-original_patch = ?,
-updated_entities = ?,
-removed_entities = ?,
-updated_by = ?
-WHERE id = ?
-        ''', (patch.to_string(),
-              json.dumps(sorted(affected_entities['updated'])),
-              json.dumps(sorted(affected_entities['removed'])),
-              g.identity.id, id)
-        )
-        db.commit()
 
 
 @api.resource('/patches/<int:id>/merge')
@@ -586,7 +568,6 @@ class PatchMerge(Resource):
     def post(self, id):
         try:
             patching.merge(id, g.identity.id)
-            database.commit()
             cache.purge_history()
             cache.purge_dataset()
             cache.purge_graphs()
@@ -603,7 +584,6 @@ class PatchReject(Resource):
     def post(self, id):
         try:
             patching.reject(id, g.identity.id)
-            database.commit()
             return None, 204
         except patching.MergeError as e:
             return {'message': e.message}, 404
@@ -624,10 +604,7 @@ class PatchMessages(Resource):
             return {'message': 'No message present in request data.'}, 400
 
         try:
-            patching.add_comment(id,
-                                 g.identity.id,
-                                 message)
-            database.commit()
+            patching.add_comment(id, g.identity.id, message)
             return None, 200, {
                 'Location': url_for('patchrequest', id=id)
             }

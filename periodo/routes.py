@@ -182,12 +182,7 @@ def registered():
         app.logger.error('Response to request for ORCID credential was not OK')
         app.logger.error('Request: %s', data)
         app.logger.error('Response: %s', response.text)
-    credentials = response.json()
-    if 'name' not in credentials or len(credentials['name']) == 0:
-        # User has made their name private, so just use their ORCID as name
-        credentials['name'] = credentials['orcid']
-    identity = auth.add_user_or_update_credentials(credentials)
-    database.get_db().commit()
+    identity = auth.add_user_or_update_credentials(response.json())
     if 'cli' in request.args:
         return make_response(
             ('Your token is: {}'.format(identity.b64token.decode()),
@@ -205,7 +200,7 @@ def registered():
         </head>
         <body>
         """.format(
-            json.dumps(credentials['name']),
+            json.dumps(identity.name),
             json.dumps(identity.b64token.decode()),
             request.args.get('origin', app.config['CLIENT_URL'])
         ))
