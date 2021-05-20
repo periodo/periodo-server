@@ -27,11 +27,18 @@ DEFAULT_PERMISSIONS = (
     ActionNeed('create-bag'),
 )
 
-ERROR_URIS = {
+ERROR_URIS: dict = {
     'invalid_request': 'http://tools.ietf.org/html/rfc6750#section-6.2.1',
     'invalid_token': 'http://tools.ietf.org/html/rfc6750#section-6.2.2',
     'insufficient_scope': 'http://tools.ietf.org/html/rfc6750#section-6.2.3',
 }
+
+
+class User:
+    def __init__(self, user_id, name, b64token):
+        self.id = user_id
+        self.name = name
+        self.b64token = b64token
 
 
 class AuthenticationFailed(Unauthorized):
@@ -47,7 +54,7 @@ class UnauthenticatedIdentity(AnonymousIdentity):
         self.exception = AuthenticationFailed(*args, **kwargs)
         super().__init__()
 
-    def can(self, permission):
+    def can(self, _):
         raise self.exception
 
 
@@ -188,14 +195,13 @@ def add_user_or_update_credentials(credential_data):
                 orcid
             ))
 
-    return _get_identity(b64token)
+    return User(orcid, credentials.name, b64token)
 
 
 def _get_identity(b64token):
-    rows = database.query_db('''
+    rows = database.query_db_for_all('''
     SELECT
     user.id AS user_id,
-    user.name AS user_name,
     user.permissions AS user_permissions,
     patch_request.id AS patch_request_id,
     strftime("%s","now") > token_expires_at AS token_expired
@@ -210,8 +216,6 @@ def _get_identity(b64token):
         return UnauthenticatedIdentity(
             'invalid_token', 'The access token expired')
     identity = Identity(rows[0]['user_id'], auth_type='bearer')
-    identity.b64token = b64token
-    identity.name = rows[0]['user_name']
     for p in json.loads(rows[0]['user_permissions']):
         identity.provides.add(tuple(p))
     for r in rows:

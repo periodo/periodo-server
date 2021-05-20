@@ -8,7 +8,7 @@ from string import Template
 
 
 def get_recent_activity():
-    return database.query_db('''
+    return database.query_db_for_all('''
 SELECT
   patch_request.id AS id,
   patch_request.open AS open,
@@ -115,7 +115,7 @@ def get_content(what, who, submitter, review_patch_url, comments):
         '<p>$who rejected a change initially proposed by $submitter:</p>',
         'commented on':
         '<p>$who commented on a change initially proposed by $submitter:</p>',
-    }.get(what)
+    }.get(what, '')
 
     content += '<p><a href="$review_patch_url">$review_patch_url</a></p>'
     content += '<div>'

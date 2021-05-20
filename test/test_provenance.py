@@ -17,12 +17,13 @@ W3CDTF = r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00.00$'
 
 @pytest.mark.client_auth_token('this-token-has-normal-permissions')
 def test_get_history(
-        active_identity,
-        admin_identity,
+        active_user,
+        admin_user,
         client,
         bearer_auth,
         load_json,
 ):
+    active_user, admin_user
     res = client.patch('/d/', json=load_json('test-patch-adds-items.json'),)
     patch_url = urlparse(res.headers['Location']).path
     client.post(patch_url + 'messages', json={"message": "Here is my patch"})

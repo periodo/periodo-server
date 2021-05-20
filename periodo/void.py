@@ -22,7 +22,7 @@ def count_entities(data, clazz):
     count = 0
     if clazz == SKOS.Concept:
         for authority in data['authorities'].values():
-            for period in authority['periods'].values():
+            for _ in authority['periods'].values():
                 count += 1
     elif clazz == SKOS.ConceptScheme:
         for authority in data['authorities'].values():
@@ -75,7 +75,7 @@ def get_linkset_counts(data):
 
 
 def describe_dataset(data, created_at):
-    contributors = database.query_db('''
+    contributors = database.query_db_for_all('''
     SELECT DISTINCT created_by, updated_by
     FROM patch_request
     WHERE merged = 1

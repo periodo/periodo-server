@@ -1,5 +1,4 @@
 VENV_DIR := venv
-PIP3 := $(VENV_DIR)/bin/pip3
 PYTHON3 := $(VENV_DIR)/bin/python3
 PYTEST := $(VENV_DIR)/bin/pytest
 DB := ./db.sqlite
@@ -12,9 +11,8 @@ all: vocab.html $(DB)
 
 $(PYTHON3):
 	python3 -m venv $(VENV_DIR)
-	$(PIP3) install --upgrade pip
-	$(PIP3) install wheel
-	$(PIP3) install -r requirements.txt
+	$(PYTHON3) -m pip install wheel
+	$(PYTHON3) -m pip install -r requirements.txt
 
 .PHONY: $(DB)
 $(DB): | $(PYTHON3)
@@ -71,7 +69,7 @@ clean:
 
 .PHONY: test
 test: | $(PYTHON3)
-	TESTING=1 $(PYTEST) test
+	TESTING=1 $(PYTEST) test -x
 
 .PHONY: run
 run: test

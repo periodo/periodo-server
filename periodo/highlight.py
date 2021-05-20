@@ -1,16 +1,17 @@
 import json
 import re
 from pygments import highlight
-from pygments.lexers import TurtleLexer, JsonLexer
-from pygments.formatters import HtmlFormatter
+from pygments.lexers.rdf import TurtleLexer
+from pygments.lexers.data import JsonLexer
+from pygments.formatters.html import HtmlFormatter
 
 
-def as_string(s, lexer):
+def as_bytes(s, lexer) -> bytes:
     table = highlight(s, lexer, LinkifiedHtmlFormatter(
         linenos='table',
-        linespans='line',
-        encoding='utf-8'))
-    return b'''
+        linespans='line'
+    ))
+    return f'''
 <!doctype html>
 <html lang="en">
 <head>
@@ -18,15 +19,15 @@ def as_string(s, lexer):
 <title></title>
 <link rel="stylesheet" href="/highlight-style.css">
 </head>
-<body>''' + table + b'</body></html>'
+<body>{table}</body></html>'''.encode('utf-8')
 
 
 def as_turtle(s):
-    return as_string(s, TurtleLexer())
+    return as_bytes(s, TurtleLexer())
 
 
 def as_json(s):
-    return as_string(
+    return as_bytes(
         json.dumps(s, indent=2, sort_keys=True, ensure_ascii=False),
         JsonLexer()
     )
@@ -49,5 +50,5 @@ class LinkifiedHtmlFormatter(HtmlFormatter):
             else:
                 yield i, t
 
-    def wrap(self, source, outfile):
+    def wrap(self, source, _):
         return self._wrap_div(self._wrap_pre(self._linkify(source)))

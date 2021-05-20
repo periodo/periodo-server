@@ -5,9 +5,8 @@ import logging
 import subprocess
 from uuid import UUID
 from logging.config import dictConfig
-from flask import Flask, request
-from flask_principal import Principal
-from flask_restful import Api
+from flask import Flask, make_response, g
+from flask_principal import Principal, identity_loaded
 from werkzeug.http import http_date
 from werkzeug.routing import BaseConverter
 from periodo.middleware import RemoveTransferEncodingHeaderMiddleware
@@ -144,44 +143,47 @@ def add_cors_headers(response):
 
 # end app setup ---------------------------------------------------------------
 
-import periodo.auth  # noqa: E402
+import periodo.auth      # noqa: E402
+import periodo.database  # noqa: E402
 
 
-SUFFIXES = {
-    '.json': 'application/json',
-    '.jsonld': 'application/ld+json',
-    '.ttl': 'text/turtle',
-    '.json.html': 'application/json+html',
-    '.jsonld.html': 'application/json+html',
-    '.ttl.html': 'text/turtle+html',
-    '.nt': 'application/n-triples',
-    '.csv': 'text/csv',
-}
+@app.errorhandler(periodo.auth.AuthenticationFailed)
+def handle_auth_failed_error(e):
+    parts = ['Bearer realm="PeriodO"']
+    if e.error:
+        parts.append('error="{}"'.format(e.error))
+    if e.error_description:
+        parts.append('error_description="{}"'.format(e.error_description))
+    if e.error_uri:
+        parts.append('error_uri="{}"'.format(e.error_uri))
+    app.logger.debug(
+        'authentication failed: ' + (', '.join(parts)))
+    return make_response(e.error_description or '', 401,
+                         {'WWW-Authenticate': ', '.join(parts)})
 
 
-class PeriodOApi(Api):
-    def handle_error(self, e):
-        response = periodo.auth.handle_auth_error(e)
-        if response is None:
-            return super().handle_error(e)
-        else:
-            return response
-
-    def make_response(self, data, *args, **kwargs):
-        # Override content negotation for content-type-specific URLs.
-        for suffix, content_type in SUFFIXES.items():
-            if request.path.endswith(suffix):
-                return self.representations[content_type](
-                    data, *args, **kwargs)
-        return super().make_response(data, *args, **kwargs)
-
-
-api = PeriodOApi(app)
+@app.errorhandler(periodo.auth.PermissionDenied)
+def handle_permission_denied_error(_):
+    description = 'The access token does not provide sufficient privileges'
+    app.logger.debug(description)
+    return make_response(
+        description, 403,
+        {'WWW-Authenticate':
+         'Bearer realm="PeriodO", error="insufficient_scope", '
+         + 'error_description='
+         + '"The access token does not provide sufficient privileges", '
+         + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"'})
 
 
 @principal.identity_loader
 def load_identity():
     return periodo.auth.load_identity_from_authorization_header()
+
+
+@identity_loaded.connect_via(app)
+def on_identity_loaded(_, identity):
+    if identity.id is not None:
+        g.user = periodo.database.get_user(identity.id)
 
 
 # end api setup ---------------------------------------------------------------

@@ -26,7 +26,7 @@ def get_mimetype():
 
 @app.route('/h.ttl', endpoint='history-ttl')
 def legacy_history_endpoint_redirect():
-    return redirect(url_for('history-nt', **request.args), code=301)
+    return redirect(url_for('history-short-nt', **request.args), code=301)
 
 
 @app.route('/h', endpoint='history')
@@ -35,7 +35,7 @@ def see_history():
     if mimetype is None:
         url = build_client_url(page='backend-history')
     else:
-        url = url_for('history-nt', **request.args)
+        url = url_for('history-short-nt', **request.args)
     return redirect(url, code=303)
 
 
@@ -80,7 +80,7 @@ def void_as_html():
 # URIs for abstract resources (no representations, just 303 See Other)
 @app.route('/d', endpoint='abstract_dataset')
 def see_dataset():
-    return redirect(url_for('dataset', **request.args), code=303)
+    return redirect(url_for('dataset-short', **request.args), code=303)
 
 
 @app.route('/<string(length=%s):authority_id>'
@@ -134,7 +134,7 @@ def see_period(period_id):
 
 def generate_state_token():
     return ''.join(random.choice(string.ascii_uppercase + string.digits)
-                   for x in range(32))
+                   for _ in range(32))
 
 
 def build_redirect_uri(request_args):
@@ -183,10 +183,10 @@ def registered():
         app.logger.error('Response to request for ORCID credential was not OK')
         app.logger.error('Request: %s', data)
         app.logger.error('Response: %s', response.text)
-    identity = auth.add_user_or_update_credentials(response.json())
+    user = auth.add_user_or_update_credentials(response.json())
     if 'cli' in request.args:
         return make_response(
-            ('Your token is: {}'.format(identity.b64token.decode()),
+            ('Your token is: {}'.format(user.b64token.decode()),
              {'Content-Type': 'text/plain'}))
     else:
         return make_response("""
@@ -201,8 +201,8 @@ def registered():
         </head>
         <body>
         """.format(
-            json.dumps(identity.name),
-            json.dumps(identity.b64token.decode()),
+            json.dumps(user.name),
+            json.dumps(user.b64token.decode()),
             request.args.get('origin', app.config['CLIENT_URL'])
         ))
 

@@ -30,8 +30,8 @@ ASSIGNED_SKOLEM_URI = re.compile(SKOLEM_BASE + r'assigned/(?P<id>.*)$')
 def for_period(authority_id):
     check(authority_id)
     return id_from_sequence(
-        authority_id[len(PREFIX):] +
-        random_sequence(PERIOD_SEQUENCE_LENGTH))
+        authority_id[len(PREFIX):]
+        + random_sequence(PERIOD_SEQUENCE_LENGTH))
 
 
 def for_authority():
@@ -80,13 +80,13 @@ def check(identifier, strict=True):
             return
 
     raise IdentifierException(
-        ('Malformed identifier: {}' +
-         ' (check digit was {} but should have been {})').format(
+        ('Malformed identifier: {}'
+         + ' (check digit was {} but should have been {})').format(
              identifier, identifier[-1], check_digit))
 
 
 def random_sequence(length):
-    return ''.join(random.choice(XDIGITS) for x in range(length))
+    return ''.join(random.choice(XDIGITS) for _ in range(length))
 
 
 def add_check_digit(sequence):
@@ -123,8 +123,8 @@ def index_by_id(items):
 def replace_skolem_ids(
         patch_or_obj,
         dataset,
-        removed_entity_keys,
-        dataset_id_map):
+        removed_entity_keys: set,
+        dataset_id_map: dict):
 
     patch_id_map = {}
 
@@ -135,7 +135,7 @@ def replace_skolem_ids(
              for cid, c in dataset['authorities'].items())))
 
     def unused_identifier(id_generator, *args):
-        for i in range(10):
+        for _ in range(10):
             new_id = id_generator(*args)
             if new_id not in existing_ids:
                 return new_id
@@ -253,5 +253,5 @@ if __name__ == "__main__":
     for filename in argv[1:]:
         with open(filename) as f:
             i = json.load(f)
-            o = replace_skolem_ids(i, i)
+            o = replace_skolem_ids(i, i, set(), {})
             print(json.dumps(o))

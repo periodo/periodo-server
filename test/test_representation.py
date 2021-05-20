@@ -70,7 +70,7 @@ def test_dataset_description(client):
             '/.wellknown/void',
             '/.well-known/void.ttl',
     ]:
-        res = client.get('/.well-known/void')
+        res = client.get(path)
         assert res.status_code == httpx.codes.OK
         assert res.headers['Content-Type'] == 'text/turtle'
         assert res.text == ttl.text
@@ -173,14 +173,19 @@ def test_dataset(client):
     assert urlparse(res.headers['Location']).path == '/d/'
 
 
-def test_dataset_html_redirect(client):
+def test_dataset_data_even_if_html_accepted(client):
     res = client.get(
         '/d/',
         headers={'Accept': 'text/html'},
         allow_redirects=False
     )
-    assert res.status_code == httpx.codes.TEMPORARY_REDIRECT
-    assert urlparse(res.headers['Location']).path == '/d.json'
+    assert res.status_code == httpx.codes.OK
+    assert res.headers['Content-Type'] == 'application/json'
+    assert res.headers['Cache-Control'] == 'public, max-age=0'
+    assert (
+        res.headers['Content-Disposition']
+        == 'attachment; filename="periodo-dataset.json"'
+    )
 
 
 def test_dataset_data(client):
@@ -207,7 +212,7 @@ def test_dataset_data(client):
     assert res.headers['Content-Type'] == 'application/ld+json'
     assert (
         res.headers['Content-Disposition']
-        == 'attachment; filename="periodo-dataset.json"'
+        == 'attachment; filename="periodo-dataset.jsonld"'
     )
     res = client.get('/d/', headers={'Accept': 'application/ld+json'})
     assert res.status_code == httpx.codes.OK
@@ -340,7 +345,7 @@ def test_authority_json(client):
     assert res.headers['Content-Type'] == 'application/ld+json'
     assert (
         res.headers['Content-Disposition']
-        == 'attachment; filename="periodo-authority-trgkv.json"'
+        == 'attachment; filename="periodo-authority-trgkv.jsonld"'
     )
 
     jsonld = res.json()
@@ -468,7 +473,7 @@ def test_period_json(client):
     assert res.headers['Content-Type'] == 'application/ld+json'
     assert (
         res.headers['Content-Disposition']
-        == 'attachment; filename="periodo-period-trgkvwbjd.json"'
+        == 'attachment; filename="periodo-period-trgkvwbjd.jsonld"'
     )
 
     jsonld = res.json()

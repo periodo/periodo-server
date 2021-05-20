@@ -5,7 +5,8 @@ from periodo import DEV_SERVER_NAME
 
 
 @pytest.mark.client_auth_token('this-token-has-admin-permissions')
-def test_put_graph(admin_identity, client, load_json):
+def test_put_graph(admin_user, client, load_json):
+    admin_user
     id = 'places/us-states'
     res = client.put(f'/graphs/{id}', json=load_json('test-graph.json'))
     assert res.status_code == httpx.codes.CREATED
@@ -25,7 +26,8 @@ def test_put_graph(admin_identity, client, load_json):
 
 
 @pytest.mark.client_auth_token('this-token-has-admin-permissions')
-def test_if_none_match(admin_identity, client, load_json):
+def test_if_none_match(admin_user, client, load_json):
+    admin_user
     id = 'places/us-states'
     res = client.put(f'/graphs/{id}', json=load_json('test-graph.json'))
     res = client.get(
@@ -37,18 +39,20 @@ def test_if_none_match(admin_identity, client, load_json):
 
 
 @pytest.mark.client_auth_token('this-token-has-normal-permissions')
-def test_put_graph_requires_permission(active_identity, client, load_json):
+def test_put_graph_requires_permission(active_user, client, load_json):
+    active_user
     id = 'places/us-states'
     res = client.put(f'/graphs/{id}', json=load_json('test-graph.json'))
     assert res.status_code == httpx.codes.FORBIDDEN
 
 
 def test_delete_graph_requires_auth(
-        admin_identity,
+        admin_user,
         client,
         load_json,
         bearer_auth
 ):
+    admin_user
     id = 'places/us-states'
     res = client.put(
         f'/graphs/{id}',
@@ -60,7 +64,8 @@ def test_delete_graph_requires_auth(
 
 
 @pytest.mark.client_auth_token('this-token-has-admin-permissions')
-def test_update_graph(admin_identity, client, load_json):
+def test_update_graph(admin_user, client, load_json):
+    admin_user
     id = 'places/us-states'
     res = client.put(f'/graphs/{id}', json=load_json('test-graph.json'))
     graph_url_v0 = urlparse(res.headers['Location'])
@@ -122,7 +127,8 @@ def test_update_graph(admin_identity, client, load_json):
 
 
 @pytest.mark.client_auth_token('this-token-has-admin-permissions')
-def test_delete_graph(admin_identity, client, load_json):
+def test_delete_graph(admin_user, client, load_json):
+    admin_user
     id = 'places/us-states'
     res = client.put(f'/graphs/{id}', json=load_json('test-graph.json'))
     res = client.delete(f'/graphs/{id}')
@@ -149,7 +155,8 @@ def test_delete_graph(admin_identity, client, load_json):
 
 
 @pytest.mark.client_auth_token('this-token-has-admin-permissions')
-def test_group_sibling_graphs(admin_identity, client, load_json):
+def test_group_sibling_graphs(admin_user, client, load_json):
+    admin_user
     graph_json = load_json('test-graph.json')
     res = client.put('/graphs/places/A', json=graph_json)
     res = client.put('/graphs/places/B', json=graph_json)

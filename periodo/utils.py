@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import request, url_for
 from periodo import app, identifier
 from urllib.parse import urlencode
@@ -11,8 +11,12 @@ def absolute_url(base, endpoint, **kwargs):
         return url_for(endpoint, _external=True, **kwargs)
 
 
-def isoformat(value):
-    return datetime.utcfromtimestamp(value).isoformat() + '+00:00'
+def isoformat(posix_timestamp):
+    return datetime.fromtimestamp(posix_timestamp, tz=timezone.utc).isoformat()
+
+
+def isoparse(iso_timestamp):
+    return datetime.fromisoformat(iso_timestamp).timestamp()
 
 
 def build_client_url(page, **values):

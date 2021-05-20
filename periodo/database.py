@@ -2,7 +2,7 @@ import itertools
 import json
 import sqlite3
 from contextlib import contextmanager
-from periodo import app, identifier
+from periodo import app, identifier, auth
 from flask import g, url_for
 from uuid import UUID
 
@@ -41,20 +41,31 @@ def open_cursor(write=False, trace=False):
             db.set_trace_callback(None)
 
 
-def query_db(query, args=(), one=False):
+def query_db_for_all(query, args=()) -> list[sqlite3.Row]:
     with open_cursor() as c:
         c.execute(query, args)
-        rows = c.fetchall()
-        return (rows[0] if rows else None) if one else rows
+        return c.fetchall()
 
 
-def get_dataset(version=None):
+def query_db_for_one(query, args=()) -> sqlite3.Row:
+    with open_cursor() as c:
+        c.execute(query, args)
+        return c.fetchone()
+
+
+def get_user(user_id):
+    row = query_db_for_one(
+        'SELECT id, name, b64token FROM user WHERE id = ?', (user_id,))
+    return auth.User(row['id'], row['name'], row['b64token'])
+
+
+def get_dataset(version=None) -> sqlite3.Row:
     if version is None:
-        return query_db(
-            'SELECT * FROM dataset ORDER BY id DESC LIMIT 1', one=True)
+        return query_db_for_one(
+            'SELECT * FROM dataset ORDER BY id DESC LIMIT 1')
     else:
-        return query_db(
-            'SELECT * FROM dataset WHERE dataset.id = ?', (version,), one=True)
+        return query_db_for_one(
+            'SELECT * FROM dataset WHERE dataset.id = ?', (version,))
 
 
 def get_context(version=None):
@@ -123,7 +134,7 @@ def get_periods_and_context(ids, version=None, raiseErrors=False):
 
 
 def get_patch_request_comments(patch_request_id):
-    return query_db('''
+    return query_db_for_all('''
 SELECT id, author, message, posted_at
 FROM patch_request_comment
 WHERE patch_request_id=?
@@ -131,7 +142,7 @@ ORDER BY posted_at ASC''', (patch_request_id,))
 
 
 def get_merged_patches():
-    return query_db('''
+    return query_db_for_all('''
 SELECT
   patch_request.id AS id,
   created_at,
@@ -155,7 +166,7 @@ ORDER BY id ASC
 
 
 def get_identifier_map():
-    map_rows = query_db(
+    map_rows = query_db_for_all(
         """
         SELECT identifier_map, merged_at FROM patch_request
         WHERE merged = TRUE AND
@@ -174,23 +185,25 @@ def get_identifier_map():
 
 
 def get_bag_uuids():
-    return [UUID(row['uuid']) for row in query_db('SELECT uuid FROM bag')]
+    return [
+        UUID(row['uuid']) for row in query_db_for_all('SELECT uuid FROM bag')
+    ]
 
 
 def get_bag(uuid, version=None):
     if version is None:
-        return query_db(
+        return query_db_for_one(
             'SELECT * FROM bag WHERE uuid = ? ORDER BY version DESC LIMIT 1',
-            (uuid.hex,), one=True)
+            (uuid.hex,))
     else:
-        return query_db(
+        return query_db_for_one(
             'SELECT * FROM bag WHERE uuid = ? AND version = ?',
-            (uuid.hex, version), one=True)
+            (uuid.hex, version))
 
 
 def get_graphs(prefix=None):
     if prefix is None:
-        return query_db('''
+        return query_db_for_all('''
 SELECT graph.id AS id, graph.data AS data
 FROM (
    SELECT id, MAX(version) AS maxversion
@@ -203,7 +216,7 @@ ON g.id = graph.id
 AND g.maxversion = graph.version
 ''')
     else:
-        return query_db('''
+        return query_db_for_all('''
 SELECT graph.id AS id, graph.data AS data
 FROM (
    SELECT id, MAX(version) AS maxversion
@@ -220,16 +233,16 @@ AND g.maxversion = graph.version
 
 def get_graph(id, version=None):
     if version is None:
-        return query_db('''
+        return query_db_for_one('''
         SELECT * FROM graph
         WHERE id = ? AND deleted = 0
         ORDER BY version DESC LIMIT 1
-        ''', (id,), one=True)
+        ''', (id,))
     else:
-        return query_db('''
+        return query_db_for_one('''
         SELECT * FROM graph
         WHERE id = ? AND version = ?
-        ''', (id, version), one=True)
+        ''', (id, version))
 
 
 def create_or_update_bag(uuid, creator_id, data):
@@ -300,7 +313,7 @@ def delete_graph(id):
 
 
 def find_version_of_last_update(entity_id, version):
-    for row in query_db('''
+    for row in query_db_for_all('''
     SELECT created_entities, updated_entities, resulted_in
     FROM patch_request
     WHERE merged = 1
@@ -316,7 +329,7 @@ def find_version_of_last_update(entity_id, version):
 
 def get_removed_entity_keys():
     return set(itertools.chain(
-        *[json.loads(row['removed_entities']) for row in query_db('''
+        *[json.loads(row['removed_entities']) for row in query_db_for_all('''
         SELECT removed_entities FROM patch_request WHERE merged = 1
         ''')]
     ))
@@ -327,7 +340,7 @@ def dump():
 
 
 @app.teardown_appcontext
-def close(exception):
+def close(_):
     db = getattr(g, '_database', None)
     if db is not None:
         db.close()

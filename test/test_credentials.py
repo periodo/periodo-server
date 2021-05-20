@@ -105,7 +105,7 @@ class TestSerializeCredentials:
             auth._serialize_credentials(Foo(bar=1))
 
     def test_permissions_not_serialized(self):
-        credentials = auth.Credentials(
+        credentials = auth.Credentials(  # type: ignore
             orcid='1234-5678-9101-112X',
             name='Testy Testerson',
             access_token='5005eb18-be6b-4ac0-b084-0443289b3378',

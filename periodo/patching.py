@@ -52,19 +52,19 @@ def _analyze_change_path(path):
 
 
 def _analyze_change(change, data):
-    o = {'updated': [], 'removed': []}
+    o = {'updated': set(), 'removed': set()}
     [authority, period] = _analyze_change_path(change['path'])
     if change['op'] == 'remove':
         if period:
-            o['removed'] = [period]
-            o['updated'] = [authority]
+            o['removed'] = set([period])
+            o['updated'] = set([authority])
         elif authority:
             o['removed'] = set([authority]) | _periods_of(authority, data)
     else:
         if period:
-            o['updated'] = [period, authority]
+            o['updated'] = set([period, authority])
         elif authority:
-            o['updated'] = [authority]
+            o['updated'] = set([authority])
     return o
 
 
@@ -78,9 +78,8 @@ def _find_affected_entities(patch, data):
 
 
 def _add_new_version_of_dataset(cursor, data):
-    now = database.query_db(
-        "SELECT CAST(strftime('%s', 'now') AS INTEGER) AS now",
-        one=True
+    now = database.query_db_for_one(
+        "SELECT CAST(strftime('%s', 'now') AS INTEGER) AS now"
     )['now']
     cursor.execute(
         'INSERT into DATASET (data, description, created_at) VALUES (?,?,?)', (
@@ -148,8 +147,8 @@ def update_request(request_id, patch, user_id):
 
 
 def add_comment(patch_id, user_id, message):
-    row = database.query_db(
-        'SELECT * FROM patch_request WHERE id = ?', (patch_id,), one=True)
+    row = database.query_db_for_one(
+        'SELECT * FROM patch_request WHERE id = ?', (patch_id,))
 
     if not row:
         raise MergeError('No patch with ID {}.'.format(patch_id))
@@ -163,9 +162,8 @@ def add_comment(patch_id, user_id, message):
 
 
 def reject(patch_id, user_id):
-    row = database.query_db(
-        'SELECT * FROM patch_request WHERE id = ?', (patch_id,),
-        one=True
+    row = database.query_db_for_one(
+        'SELECT * FROM patch_request WHERE id = ?', (patch_id,)
     )
 
     if not row:
@@ -187,8 +185,8 @@ def reject(patch_id, user_id):
 
 
 def merge(patch_id, user_id):
-    row = database.query_db(
-        'SELECT * FROM patch_request WHERE id = ?', (patch_id,), one=True)
+    row = database.query_db_for_one(
+        'SELECT * FROM patch_request WHERE id = ?', (patch_id,))
 
     if not row:
         raise MergeError('No patch with ID {}.'.format(patch_id))

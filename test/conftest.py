@@ -38,7 +38,8 @@ def init_db(shared_datadir):
 
 
 @pytest.fixture
-def active_identity(init_db):
+def active_user(init_db):
+    init_db
     with app.app_context():
         return auth.add_user_or_update_credentials({
             'name': 'Testy Testerson',
@@ -49,7 +50,8 @@ def active_identity(init_db):
 
 
 @pytest.fixture
-def expired_identity(init_db):
+def expired_user(init_db):
+    init_db
     with app.app_context():
         return auth.add_user_or_update_credentials({
             'name': 'Eric Expired',
@@ -60,7 +62,8 @@ def expired_identity(init_db):
 
 
 @pytest.fixture
-def unauthorized_identity(init_db):
+def unauthorized_user(init_db):
+    init_db
     with app.app_context():
         return auth.add_user_or_update_credentials({
             'name': 'Dangerous Dan',
@@ -72,7 +75,8 @@ def unauthorized_identity(init_db):
 
 
 @pytest.fixture
-def admin_identity(init_db):
+def admin_user(init_db):
+    init_db
     with app.app_context():
         return auth.add_user_or_update_credentials({
             'name': 'Super Admin',
@@ -95,6 +99,7 @@ def bearer_auth():
 
 @pytest.fixture
 def client(request, init_db):
+    init_db
     marker = request.node.get_closest_marker('client_auth_token')
     if marker is None:
         auth = None
@@ -110,12 +115,14 @@ def client(request, init_db):
 
 @pytest.fixture
 def submit_and_merge_patch(
-        active_identity,
-        admin_identity,
+        active_user,
+        admin_user,
         client,
         bearer_auth,
         load_json
 ):
+    active_user, admin_user
+
     def _submit_and_merge_patch(filename):
         res = client.patch(
             '/d/',

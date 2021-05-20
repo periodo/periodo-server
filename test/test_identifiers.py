@@ -88,7 +88,7 @@ def test_replace_skolem_ids_when_adding_items(load_json):
     applied_patch, id_map = identifier.replace_skolem_ids(
         original_patch,
         data,
-        [],
+        set(),
         {}
     )
     xd = identifier.XDIGITS
@@ -133,7 +133,7 @@ def test_replace_skolem_ids_when_replacing_periods(load_json):
     applied_patch, id_map = identifier.replace_skolem_ids(
         original_patch,
         data,
-        [],
+        set(),
         {}
     )
     assert applied_patch.patch[0]['path'] == original_patch.patch[0]['path']
@@ -151,7 +151,7 @@ def test_replace_skolem_ids_when_replacing_authorities(load_json):
     applied_patch, id_map = identifier.replace_skolem_ids(
         original_patch,
         data,
-        [],
+        set(),
         {}
     )
     assert applied_patch.patch[0]['path'] == original_patch.patch[0]['path']
