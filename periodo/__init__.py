@@ -5,22 +5,20 @@ import logging
 import subprocess
 from uuid import UUID
 from logging.config import dictConfig
-from flask import Flask, request
-from flask_principal import Principal
-from flask_restful import Api
+from flask import Flask, make_response, g
+from flask_principal import Principal, identity_loaded
 from werkzeug.http import http_date
 from werkzeug.routing import BaseConverter
 from periodo.middleware import RemoveTransferEncodingHeaderMiddleware
 
-DEV_SERVER_NAME = 'localhost.localdomain:5000'
+DEV_SERVER_NAME = "localhost.localdomain:5000"
 
 # Allow running tests without access to periodo.secrets
 try:
-    from periodo.secrets import (
-        SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET)
+    from periodo.secrets import SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET
 except ModuleNotFoundError as e:
-    if 'TESTING' in os.environ:
-        SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET = 'xxx', 'xxx', 'xxx'
+    if "TESTING" in os.environ:
+        SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET = "xxx", "xxx", "xxx"
     else:
         raise e
 
@@ -29,11 +27,10 @@ except ModuleNotFoundError as e:
 rdflib.NORMALIZE_LITERALS = False
 
 # Silence rdflib warnings
-logging.getLogger('rdflib.term').setLevel(logging.ERROR)
+logging.getLogger("rdflib.term").setLevel(logging.ERROR)
 
 
 class UUIDConverter(BaseConverter):
-
     def to_python(self, s):
         return UUID(s)
 
@@ -42,26 +39,29 @@ class UUIDConverter(BaseConverter):
 
 
 # configure logging
-if not os.environ.get('TESTING', False):
-    dictConfig({
-        'version': 1,
-        'formatters': {'default': {
-            'format': '%(name)s: [%(levelname)s] %(message)s',
-        }},
-        'handlers': {'wsgi': {
-            'class': 'logging.StreamHandler',
-            'stream': 'ext://flask.logging.wsgi_errors_stream',
-            'formatter': 'default'
-        }},
-        'root': {
-            'level': 'DEBUG',
-            'handlers': ['wsgi']
+if not os.environ.get("TESTING", False):
+    dictConfig(
+        {
+            "version": 1,
+            "formatters": {
+                "default": {
+                    "format": "%(name)s: [%(levelname)s] %(message)s",
+                }
+            },
+            "handlers": {
+                "wsgi": {
+                    "class": "logging.StreamHandler",
+                    "stream": "ext://flask.logging.wsgi_errors_stream",
+                    "formatter": "default",
+                }
+            },
+            "root": {"level": "DEBUG", "handlers": ["wsgi"]},
         }
-    })
+    )
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
-app.url_map.converters['uuid'] = UUIDConverter
+app.url_map.converters["uuid"] = UUIDConverter
 principal = Principal(app, use_sessions=False)
 
 # When receiving requests with the HTTP header 'Transfer-Encoding: chunked',
@@ -77,106 +77,110 @@ def locate_bin(name, envvar):
     if path is not None:
         return path
     try:
-        res = subprocess.check_output('which ' + name, shell=True)
-        return res.decode('utf-8').strip()
+        res = subprocess.check_output("which " + name, shell=True)
+        return res.decode("utf-8").strip()
     except Exception:
         app.logger.error(
-            f'Could not find binary for `{name}`. Either include this binary'
-            + f' in your PATH, or set the environment variable {envvar}')
-        return '/usr/local/bin/' + name
+            f"Could not find binary for `{name}`. Either include this binary"
+            + f" in your PATH, or set the environment variable {envvar}"
+        )
+        return "/usr/local/bin/" + name
 
 
 app.config.update(
-    DATABASE=os.environ.get('DATABASE', './db.sqlite'),
-    CACHE=os.environ.get('CACHE', None),
-    RIOT=locate_bin('riot', 'RIOT'),
-    ARQ=locate_bin('arq', 'ARQ'),
-    CSV_QUERY=os.environ.get('CSV_QUERY', './periods-as-csv.rq'),
-    SERVER_NAME=os.environ.get('SERVER_NAME', DEV_SERVER_NAME),
-    CLIENT_URL=os.environ.get('CLIENT_URL', 'https://client.perio.do'),
-    CANONICAL=json.loads(os.environ.get('CANONICAL', 'false')),
+    DATABASE=os.environ.get("DATABASE", "./db.sqlite"),
+    CACHE=os.environ.get("CACHE", None),
+    RIOT=locate_bin("riot", "RIOT"),
+    ARQ=locate_bin("arq", "ARQ"),
+    CSV_QUERY=os.environ.get("CSV_QUERY", "./periods-as-csv.rq"),
+    SERVER_NAME=os.environ.get("SERVER_NAME", DEV_SERVER_NAME),
+    CLIENT_URL=os.environ.get("CLIENT_URL", "https://client.perio.do"),
+    CANONICAL=json.loads(os.environ.get("CANONICAL", "false")),
     ORCID_CLIENT_ID=ORCID_CLIENT_ID,
-    ORCID_CLIENT_SECRET=ORCID_CLIENT_SECRET
+    ORCID_CLIENT_SECRET=ORCID_CLIENT_SECRET,
 )
-app.logger.info('finished app configuration')
+app.logger.info("finished app configuration")
 
 
 @app.after_request
 def add_date_header(response):
-    response.headers.add('Date', http_date())
+    response.headers.add("Date", http_date())
     return response
 
 
 CORS_ALLOWED_HEADERS = [
-    'If-Modified-Since',
-    'Authorization',
-    'Content-Type',
+    "If-Modified-Since",
+    "Authorization",
+    "Content-Type",
 ]
 
 CORS_ALLOWED_METHODS = [
-    'GET',
-    'POST',
-    'PATCH',
-    'HEAD',
-    'OPTIONS',
+    "GET",
+    "POST",
+    "PATCH",
+    "HEAD",
+    "OPTIONS",
 ]
 
 CORS_EXPOSED_HEADERS = [
-    'Last-Modified',
-    'Location',
-    'Link',
-    'X-Total-Count',
-    'X-PeriodO-Server-Version',
+    "Last-Modified",
+    "Location",
+    "Link",
+    "X-Total-Count",
+    "X-PeriodO-Server-Version",
 ]
 
 
 @app.after_request
 def add_cors_headers(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers',
-                         ', '.join(CORS_ALLOWED_HEADERS))
-    response.headers.add('Access-Control-Expose-Headers',
-                         ', '.join(CORS_EXPOSED_HEADERS))
-    response.headers.add('Access-Control-Allow-Methods',
-                         ', '.join(CORS_ALLOWED_METHODS))
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add(
+        "Access-Control-Allow-Headers", ", ".join(CORS_ALLOWED_HEADERS)
+    )
+    response.headers.add(
+        "Access-Control-Expose-Headers", ", ".join(CORS_EXPOSED_HEADERS)
+    )
+    response.headers.add(
+        "Access-Control-Allow-Methods", ", ".join(CORS_ALLOWED_METHODS)
+    )
     return response
 
 
 # end app setup ---------------------------------------------------------------
 
 import periodo.auth  # noqa: E402
+import periodo.database  # noqa: E402
 
 
-SUFFIXES = {
-    '.json': 'application/json',
-    '.jsonld': 'application/ld+json',
-    '.ttl': 'text/turtle',
-    '.json.html': 'application/json+html',
-    '.jsonld.html': 'application/json+html',
-    '.ttl.html': 'text/turtle+html',
-    '.nt': 'application/n-triples',
-    '.csv': 'text/csv',
-}
+@app.errorhandler(periodo.auth.AuthenticationFailed)
+def handle_auth_failed_error(e):
+    parts = ['Bearer realm="PeriodO"']
+    if e.error:
+        parts.append('error="{}"'.format(e.error))
+    if e.error_description:
+        parts.append('error_description="{}"'.format(e.error_description))
+    if e.error_uri:
+        parts.append('error_uri="{}"'.format(e.error_uri))
+    app.logger.debug("authentication failed: " + (", ".join(parts)))
+    return make_response(
+        e.error_description or "", 401, {"WWW-Authenticate": ", ".join(parts)}
+    )
 
 
-class PeriodOApi(Api):
-    def handle_error(self, e):
-        response = periodo.auth.handle_auth_error(e)
-        if response is None:
-            return super().handle_error(e)
-        else:
-            return response
-
-    def make_response(self, data, *args, **kwargs):
-        # Override content negotation for content-type-specific URLs.
-        for suffix, content_type in SUFFIXES.items():
-            if request.path.endswith(suffix):
-                return self.representations[content_type](
-                    data, *args, **kwargs)
-        return super().make_response(data, *args, **kwargs)
-
-
-api = PeriodOApi(app)
+@app.errorhandler(periodo.auth.PermissionDenied)
+def handle_permission_denied_error(_):
+    description = "The access token does not provide sufficient privileges"
+    app.logger.debug(description)
+    return make_response(
+        description,
+        403,
+        {
+            "WWW-Authenticate": 'Bearer realm="PeriodO", error="insufficient_scope", '
+            + "error_description="
+            + '"The access token does not provide sufficient privileges", '
+            + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"'
+        },
+    )
 
 
 @principal.identity_loader
@@ -184,8 +188,14 @@ def load_identity():
     return periodo.auth.load_identity_from_authorization_header()
 
 
+@identity_loaded.connect_via(app)
+def on_identity_loaded(_, identity):
+    if identity.id is not None:
+        g.user = periodo.database.get_user(identity.id)
+
+
 # end api setup ---------------------------------------------------------------
 
-import periodo.routes           # noqa: E402
+import periodo.routes  # noqa: E402
 import periodo.representations  # noqa: E402
-import periodo.resources        # noqa: E402
+import periodo.resources  # noqa: E402

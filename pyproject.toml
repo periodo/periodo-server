@@ -1,0 +1,19 @@
+[project]
+name = "periodo-server"
+description = "A web server for serving and accepting patches for PeriodO data"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+keywords = ["periodo", "periodization", "linked-data"]
+authors = [
+  {name = "Ryan Shaw", email = "ryanshaw@unc.edu"},
+  {name = "Patrick Golden", email = "ptgolden@email.unc.edu"},
+]
+[project.urls]
+homepage = "https://perio.do/"
+repository = "https://github.com/periodo/periodo-server"
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
