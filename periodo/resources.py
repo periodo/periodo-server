@@ -464,7 +464,7 @@ class PatchRequestList(Resource):
         "from": fields.Integer(missing=0),
     }
 
-    def get(self, args):
+    def get(self):
         args = parser.parse(self.PATCH_REQUEST_LIST_ARGS, request, location="query")
         query = PATCH_QUERY
         params = ()
