@@ -675,7 +675,7 @@ class IdentifierMap(Resource):
         return cache.long_time(response, server_only=True)
 
 
-@register_resource("bags", "/bags/", suffixes=("json",))
+@register_resource("bags", "/bags/", suffixes=("json",), as_html=True)
 class Bags(Resource):
     def get(self):
         return jsonify(
@@ -686,7 +686,7 @@ class Bags(Resource):
         )
 
 
-@register_resource("bag", "/bags/<uuid:uuid>", suffixes=("json",))
+@register_resource("bag", "/bags/<uuid:uuid>", suffixes=("json",), as_html=True)
 class Bag(Resource):
     @auth.update_bag_permission.require()
     def put(self, uuid):
