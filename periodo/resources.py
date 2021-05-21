@@ -1,5 +1,5 @@
 import json
-from flask import request, g, abort, url_for, redirect, jsonify, make_response, Response
+from flask import request, g, abort, url_for, redirect, Response
 from flask.views import MethodView
 from marshmallow import Schema, ValidationError, fields, validate
 from jsonpatch import JsonPatch
@@ -670,7 +670,11 @@ class IdentifierMap(Resource):
         if last_edited is not None:
             headers["Last-Modified"] = format_date_time(last_edited)
 
-        response = make_response({"identifier_map": identifier_map}, 200, headers)
+        response = self.make_ok_response(
+            {"identifier_map": identifier_map},
+            headers,
+            filename="periodo-identifier-map",
+        )
 
         return cache.long_time(response, server_only=True)
 
@@ -678,7 +682,7 @@ class IdentifierMap(Resource):
 @register_resource("bags", "/bags/", suffixes=("json",), as_html=True)
 class Bags(Resource):
     def get(self):
-        return jsonify(
+        return self.make_ok_response(
             [
                 url_for("bag", uuid=uuid, _external=True)
                 for uuid in database.get_bag_uuids()
