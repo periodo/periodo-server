@@ -4,6 +4,7 @@ import subprocess
 from pathlib import Path
 from periodo import app
 from tempfile import NamedTemporaryFile, gettempdir
+from time import time
 
 
 TMPDIR = gettempdir()
@@ -31,6 +32,7 @@ def run_subprocess(command_line, out_suffix):
     sentinel = Path(TMPDIR) / "running-jvm"
     try:
         sentinel.touch(exist_ok=False)
+        start_time = time()
         try:
             app.logger.debug("Running subprocess:\n%s" % " ".join(command_line))
             with NamedTemporaryFile(suffix=out_suffix, delete=False) as out:
@@ -46,6 +48,7 @@ def run_subprocess(command_line, out_suffix):
                     app.logger.debug("stderr: %s" % err.name)
                     return (out.name, err.name)
         finally:
+            app.logger.debug(f"elapsed time: {time() - start_time}s")
             try:
                 sentinel.unlink()
             except FileNotFoundError:
