@@ -1,5 +1,6 @@
 import os
 from hashlib import md5
+from typing import Tuple
 from periodo import app
 from operator import attrgetter
 
@@ -56,7 +57,7 @@ def purge(keys):
 DEFAULT_KEY = attrgetter("rule")
 
 
-def purge_endpoint(endpoint, key=DEFAULT_KEY, params: tuple[str, ...] = ()):
+def purge_endpoint(endpoint, key=DEFAULT_KEY, params: Tuple[str, ...] = ()):
     if app.config["CACHE"] is not None:
         keys = [
             key(r) for r in app.url_map.iter_rules() if r.endpoint.startswith(endpoint)

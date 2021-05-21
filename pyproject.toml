@@ -2,7 +2,7 @@
 name = "periodo-server"
 description = "A web server for serving and accepting patches for PeriodO data"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.8"
 license = {file = "LICENSE"}
 keywords = ["periodo", "periodization", "linked-data"]
 authors = [
@@ -15,5 +15,5 @@ repository = "https://github.com/periodo/periodo-server"
 
 [tool.black]
 line-length = 88
-target-version = ['py39']
+target-version = ['py38']
 include = '\.pyi?$'

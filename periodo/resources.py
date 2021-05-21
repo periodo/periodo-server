@@ -14,7 +14,7 @@ from periodo import (
     provenance,
     representations,
 )
-from typing import Optional, Type
+from typing import Optional, Tuple, Type
 from urllib.parse import urlencode
 from webargs.flaskparser import parser
 from wsgiref.handlers import format_date_time
@@ -136,7 +136,7 @@ def register_resource(
     basepath: str,
     shortpath: Optional[str] = None,
     altpath: Optional[str] = None,
-    suffixes: tuple[str, ...] = ("json", "jsonld", "ttl", "csv"),
+    suffixes: Tuple[str, ...] = ("json", "jsonld", "ttl", "csv"),
     register_basepath: bool = True,
     as_html: bool = False,
 ):

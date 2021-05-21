@@ -1,5 +1,5 @@
 import json
-from typing import Optional
+from typing import Optional, Tuple
 from urllib.parse import urlencode
 from flask import make_response as flask_make_response, request, redirect
 from periodo import cache, routes, utils, translate, highlight
@@ -178,7 +178,7 @@ def get_content_type_from_accept_header(supported_content_types):
 
 def make_ok_response(
     data,
-    supported_content_types: tuple[str, ...],
+    supported_content_types: Tuple[str, ...],
     as_html: bool = False,
     headers: dict = None,
     filename: Optional[str] = None,

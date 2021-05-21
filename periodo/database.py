@@ -4,6 +4,7 @@ import sqlite3
 from contextlib import contextmanager
 from periodo import app, identifier, auth
 from flask import g, url_for
+from typing import List
 from uuid import UUID
 
 
@@ -41,7 +42,7 @@ def open_cursor(write=False, trace=False):
             db.set_trace_callback(None)
 
 
-def query_db_for_all(query, args=()) -> list[sqlite3.Row]:
+def query_db_for_all(query, args=()) -> List[sqlite3.Row]:
     with open_cursor() as c:
         c.execute(query, args)
         return c.fetchall()
