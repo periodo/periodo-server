@@ -532,10 +532,9 @@ class PatchRequestList(Resource):
 
         headers["X-Total-Count"] = count
 
-        response = jsonify(patchRequestListSchema.dump(data))
-        response.headers.extend(headers)
-
-        return response, 200
+        return self.make_ok_response(
+            patchRequestListSchema.dump(data), headers, filename="periodo-patches"
+        )
 
 
 class CommentSchema(Schema):
