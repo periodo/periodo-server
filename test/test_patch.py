@@ -59,7 +59,7 @@ def test_submit_patch(active_user, client, load_json):
     assert res.headers["X-Total-Count"] == "2"
     patches = res.json()
     assert len(patches) == 2
-    assert patches[1]["url"] == patch_url
+    assert patches[0]["url"] == patch_url
 
 
 @pytest.mark.client_auth_token("this-token-has-normal-permissions")
