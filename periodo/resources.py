@@ -479,7 +479,7 @@ class PatchRequestList(Resource):
         if where:
             query += " where " + " AND ".join(where)
 
-        query += " order by " + args["sort"] + " " + args["order"]
+        query += f" ORDER by {args['sort']} {args['order']}, patch_request.id ASC"
 
         limit = args["limit"]
         if limit < 0:
