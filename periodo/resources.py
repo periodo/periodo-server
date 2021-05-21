@@ -1,12 +1,19 @@
 import json
-from flask import (
-    request, g, abort, url_for, redirect, jsonify, make_response, Response)
+from flask import request, g, abort, url_for, redirect, jsonify, make_response, Response
 from flask.views import MethodView
 from marshmallow import Schema, ValidationError, fields, validate
 from jsonpatch import JsonPatch
 from periodo import (
-    app, cache, database, auth, identifier, patching, utils,
-    provenance, representations)
+    app,
+    cache,
+    database,
+    auth,
+    identifier,
+    patching,
+    utils,
+    provenance,
+    representations,
+)
 from typing import Optional, Type
 from urllib.parse import urlencode
 from webargs.flaskparser import parser
@@ -30,7 +37,7 @@ class W3CDTF(fields.Field):
 
 class Resource(MethodView):
     # this dummy method is replaced when the resource is registered
-    def make_ok_response(self, data, headers={}, filename=None) -> Response:
+    def make_ok_response(self, data, headers=None, filename=None) -> Response:
         data, headers, filename
         return Response()
 
@@ -41,36 +48,36 @@ class ResourceError(Exception):
         self.message = message
 
     def response(self):
-        return {'status': self.status, 'message': self.message}, self.status
+        return {"status": self.status, "message": self.message}, self.status
 
 
 def parse_json(request):
     try:
         return json.loads(request.get_data(as_text=True))
     except json.JSONDecodeError:
-        raise ResourceError(400, 'Request data could not be parsed as JSON.')
+        raise ResourceError(400, "Request data could not be parsed as JSON.")
 
 
 def attach_to_dataset(o):
     if len(o) > 0:
-        if app.config['CANONICAL']:
+        if app.config["CANONICAL"]:
             path = request.full_path[1:]
-            if path.endswith('?'):
+            if path.endswith("?"):
                 path = path[:-1]
-            o['primaryTopicOf'] = {
-                'id': identifier.prefix(path),
-                'inDataset': {
-                    'id': identifier.prefix('d'),
-                    'changes': identifier.prefix('h#changes')
-                }
+            o["primaryTopicOf"] = {
+                "id": identifier.prefix(path),
+                "inDataset": {
+                    "id": identifier.prefix("d"),
+                    "changes": identifier.prefix("h#changes"),
+                },
             }
         else:
-            o['primaryTopicOf'] = {
-                'id': request.url,
-                'inDataset': {
-                    'id': url_for('abstract_dataset', _external=True),
-                    'changes': url_for('history', _external=True) + '#changes'
-                }
+            o["primaryTopicOf"] = {
+                "id": request.url,
+                "inDataset": {
+                    "id": url_for("abstract_dataset", _external=True),
+                    "changes": url_for("history", _external=True) + "#changes",
+                },
             }
     return o
 
@@ -78,26 +85,27 @@ def attach_to_dataset(o):
 def redirect_to_last_update(entity_id, version):
     if version is None:
         return None
-    v = database.find_version_of_last_update(
-        identifier.prefix(entity_id), version)
+    v = database.find_version_of_last_update(identifier.prefix(entity_id), version)
     if v is None:
         abort(404)
     if v == int(version):
         return None
-    return redirect(request.path + '?version={}'.format(v), code=301)
+    return redirect(request.path + "?version={}".format(v), code=301)
 
 
 def make_dataset_url(version):
-    return url_for('dataset', _external=True) + '?version=' + str(version)
+    return url_for("dataset", _external=True) + "?version=" + str(version)
 
 
 def process_patch_row(row):
     d = dict(row)
-    d['created_from'] = make_dataset_url(row['created_from'])
-    d['applied_to'] = make_dataset_url(
-        row['created_from']) if row['applied_to'] else None
-    d['identifier_map'] = json.loads(
-        row['identifier_map']) if row['identifier_map'] else None
+    d["created_from"] = make_dataset_url(row["created_from"])
+    d["applied_to"] = (
+        make_dataset_url(row["created_from"]) if row["applied_to"] else None
+    )
+    d["identifier_map"] = (
+        json.loads(row["identifier_map"]) if row["identifier_map"] else None
+    )
     return d
 
 
@@ -113,24 +121,24 @@ def get_dataset(version=None):
 
     if not dataset:
         if version:
-            raise ResourceError(404, 'Could not find given version.')
+            raise ResourceError(404, "Could not find given version.")
         else:
-            raise ResourceError(501, 'No dataset loaded yet.')
+            raise ResourceError(501, "No dataset loaded yet.")
 
     return dataset
 
 
-HTTP_METHODS = ['get', 'put', 'post', 'patch', 'delete']
+HTTP_METHODS = ["get", "put", "post", "patch", "delete"]
 
 
 def register_resource(
-        endpoint: str,
-        basepath: str,
-        shortpath: Optional[str] = None,
-        altpath: Optional[str] = None,
-        suffixes: tuple[str, ...] = ('json', 'jsonld', 'ttl', 'csv'),
-        register_basepath: bool = True,
-        as_html: bool = False
+    endpoint: str,
+    basepath: str,
+    shortpath: Optional[str] = None,
+    altpath: Optional[str] = None,
+    suffixes: tuple[str, ...] = ("json", "jsonld", "ttl", "csv"),
+    register_basepath: bool = True,
+    as_html: bool = False,
 ):
     """Adds all the necessary Flask URL routing rules for a resource.
 
@@ -164,13 +172,14 @@ def register_resource(
     added. Defaults to `False`.
 
     """
-    def make_ok_response(_, data, headers={}, filename=None):
+
+    def make_ok_response(_, data, headers=None, filename=None):
         return representations.make_ok_response(
             data,
-            (suffixes + ('html',)) if as_html else suffixes,
+            (suffixes + ("html",)) if as_html else suffixes,
             as_html,
             headers,
-            filename
+            filename,
         )
 
     def decorator(view_class: Type[Resource]):
@@ -179,39 +188,33 @@ def register_resource(
         basepaths = [(endpoint, basepath)]
 
         def add_url_rule(path, endpoint):
-            app.add_url_rule(
-                path,
-                endpoint=endpoint,
-                view_func=view,
-                methods=methods
-            )
+            app.add_url_rule(path, endpoint=endpoint, view_func=view, methods=methods)
 
         if register_basepath and altpath is None:
             add_url_rule(basepath, endpoint)
 
         if shortpath is not None:
-            short_endpoint = f'{endpoint}-short'
+            short_endpoint = f"{endpoint}-short"
             basepaths.append((short_endpoint, shortpath))
             add_url_rule(shortpath, short_endpoint)
 
         if altpath is not None:
             add_url_rule(altpath, endpoint)
 
-        if 'get' in methods:
+        if "get" in methods:
             for suffix in suffixes:
                 for _endpoint, path in basepaths:
-                    if path.endswith('/'):
+                    if path.endswith("/"):
                         path = path[:-1]
 
-                    add_url_rule(f'{path}.{suffix}', f'{_endpoint}-{suffix}')
+                    add_url_rule(f"{path}.{suffix}", f"{_endpoint}-{suffix}")
 
-                    if as_html and not suffix == 'csv':
+                    if as_html and not suffix == "csv":
                         add_url_rule(
-                            f'{path}.{suffix}.html',
-                            f'{_endpoint}-{suffix}-html'
+                            f"{path}.{suffix}.html", f"{_endpoint}-{suffix}-html"
                         )
 
-        setattr(view_class, 'make_ok_response', make_ok_response)
+        setattr(view_class, "make_ok_response", make_ok_response)  # noqa: B010
 
         return view_class
 
@@ -220,51 +223,31 @@ def register_resource(
 
 def describe_endpoint(endpoint, description):
     return {
-        'description': description,
-        'url': (url_for(endpoint, _external=True)
-                if not endpoint == 'client' else app.config['CLIENT_URL'])
+        "description": description,
+        "url": (
+            url_for(endpoint, _external=True)
+            if not endpoint == "client"
+            else app.config["CLIENT_URL"]
+        ),
     }
 
 
 INDEX = {
-    'client':
-    'PeriodO client (browse and edit periods)',
-
-    'dataset':
-    'PeriodO dataset',
-
-    'description':
-    'description of the PeriodO dataset',
-
-    'patches':
-    'patches submitted to the PeriodO dataset',
-
-    'history':
-    'history of changes to the PeriodO dataset',
-
-    'bags':
-    'user-defined subsets of the PeriodO dataset',
-
-    'identifier-map':
-    'a map of skolem IRIs that have been replaced with persistent IRIs',
-
-    'context':
-    'PeriodO JSON-LD context',
-
-    'vocabulary':
-    'PeriodO RDF vocabulary',
-
-    'client-packages':
-    'PeriodO client installation packages',
+    "client": "PeriodO client (browse and edit periods)",
+    "dataset": "PeriodO dataset",
+    "description": "description of the PeriodO dataset",
+    "patches": "patches submitted to the PeriodO dataset",
+    "history": "history of changes to the PeriodO dataset",
+    "bags": "user-defined subsets of the PeriodO dataset",
+    "identifier-map": "a map of skolem IRIs that have been replaced with persistent IRIs",
+    "context": "PeriodO JSON-LD context",
+    "vocabulary": "PeriodO RDF vocabulary",
+    "client-packages": "PeriodO client installation packages",
 }
 
 
 @register_resource(
-    'index',
-    '/index',
-    altpath='/',
-    suffixes=('json', 'ttl'),
-    as_html=True
+    "index", "/index", altpath="/", suffixes=("json", "ttl"), as_html=True
 )
 class Index(Resource):
     def get(self):
@@ -276,38 +259,34 @@ class Index(Resource):
         )
 
 
-VERSIONED_RESOURCE_ARGS = {'version': fields.Integer()}
+VERSIONED_RESOURCE_ARGS = {"version": fields.Integer()}
 
 
 @register_resource(
-    'context',
-    '/context',
-    shortpath='/c',
-    suffixes=('json',),
-    as_html=True
+    "context", "/context", shortpath="/c", suffixes=("json",), as_html=True
 )
 class Context(Resource):
     def get(self):
-        args = parser.parse(VERSIONED_RESOURCE_ARGS, request, location='query')
-        version = args.get('version')
+        args = parser.parse(VERSIONED_RESOURCE_ARGS, request, location="query")
+        version = args.get("version")
 
         try:
             dataset = get_dataset(version)
         except ResourceError as e:
             return e.response()
 
-        context_etag = 'periodo-context-version-{}'.format(dataset['id'])
+        context_etag = "periodo-context-version-{}".format(dataset["id"])
         if request.if_none_match.contains_weak(context_etag):
-            return '', 304
+            return "", 304
 
         headers = {}
-        headers['Last-Modified'] = format_date_time(dataset['created_at'])
+        headers["Last-Modified"] = format_date_time(dataset["created_at"])
 
-        context = json.loads(dataset['data']).get('@context')
+        context = json.loads(dataset["data"]).get("@context")
         if context is None:
-            return '', 404
+            return "", 404
 
-        response = self.make_ok_response({'@context': context}, headers)
+        response = self.make_ok_response({"@context": context}, headers)
         response.set_etag(context_etag, weak=True)
 
         if version is None:
@@ -316,34 +295,36 @@ class Context(Resource):
             return cache.long_time(response)
 
 
-@register_resource('dataset', '/dataset/', shortpath='/d/')
+@register_resource("dataset", "/dataset/", shortpath="/d/")
 class Dataset(Resource):
     def get(self):
-        args = parser.parse(VERSIONED_RESOURCE_ARGS, request, location='query')
-        version = args.get('version')
-        filename = 'periodo-dataset{}'.format(
-            '' if version is None else '-v{}'.format(version))
+        args = parser.parse(VERSIONED_RESOURCE_ARGS, request, location="query")
+        version = args.get("version")
+        filename = "periodo-dataset{}".format(
+            "" if version is None else "-v{}".format(version)
+        )
 
         try:
             dataset = get_dataset(version)
         except ResourceError as e:
             return e.response()
 
-        dataset_etag = 'periodo-dataset-version-{}'.format(dataset['id'])
+        dataset_etag = "periodo-dataset-version-{}".format(dataset["id"])
         if request.if_none_match.contains_weak(dataset_etag):
-            return '', 304
+            return "", 304
 
         headers = {}
-        headers['Last-Modified'] = format_date_time(dataset['created_at'])
+        headers["Last-Modified"] = format_date_time(dataset["created_at"])
 
-        data = json.loads(dataset['data'])
-        if version is not None and '@context' in data:
-            data['@context']['__version'] = version
-        if 'inline-context' in request.args:
-            data['@context']['__inline'] = True
+        data = json.loads(dataset["data"])
+        if version is not None and "@context" in data:
+            data["@context"]["__version"] = version
+        if "inline-context" in request.args:
+            data["@context"]["__inline"] = True
 
         response = self.make_ok_response(
-            attach_to_dataset(data), headers, filename=filename)
+            attach_to_dataset(data), headers, filename=filename
+        )
         response.set_etag(dataset_etag, weak=True)
 
         if version is None:
@@ -355,78 +336,70 @@ class Dataset(Resource):
     def patch(self):
         try:
             patch_request_id = patching.create_request(
-                JsonPatch(parse_json(request)), g.identity.id)
-            return '', 202, {
-                'Location': url_for('patchrequest', id=patch_request_id)
-            }
+                JsonPatch(parse_json(request)), g.identity.id
+            )
+            return "", 202, {"Location": url_for("patchrequest", id=patch_request_id)}
         except ResourceError as e:
             return e.response()
         except patching.InvalidPatchError as e:
-            return {'status': 400, 'message': str(e)}, 400
+            return {"status": 400, "message": str(e)}, 400
 
 
 @register_resource(
-    'history',
-    '/history',
-    shortpath='/h',
-    suffixes=('nt',),
-    register_basepath=False
+    "history", "/history", shortpath="/h", suffixes=("nt",), register_basepath=False
 )
 class History(Resource):
     def get(self):
         response = self.make_ok_response(
-            provenance.history(
-                include_entity_details=('full' in request.args)
-            ),
-            filename='periodo-history'
+            provenance.history(include_entity_details=("full" in request.args)),
+            filename="periodo-history",
         )
         return cache.medium_time(response, server_only=True)
 
 
 @register_resource(
-    'authority',
-    '/<string(length={}):authority_id>'.format(
-        identifier.AUTHORITY_SEQUENCE_LENGTH + 1),
+    "authority",
+    "/<string(length={}):authority_id>".format(
+        identifier.AUTHORITY_SEQUENCE_LENGTH + 1
+    ),
     register_basepath=False,
-    as_html=True
+    as_html=True,
 )
 class Authority(Resource):
     def get(self, authority_id):
-        version = request.args.get('version')
+        version = request.args.get("version")
         new_location = redirect_to_last_update(authority_id, version)
         if new_location is not None:
             return new_location
         try:
-            authority = attach_to_dataset(
-                database.get_authority(authority_id, version))
-            filename = 'periodo-authority-{}{}'.format(
-                authority_id,
-                '' if version is None else '-v{}'.format(version))
+            authority = attach_to_dataset(database.get_authority(authority_id, version))
+            filename = "periodo-authority-{}{}".format(
+                authority_id, "" if version is None else "-v{}".format(version)
+            )
             return self.make_ok_response(authority, filename=filename)
         except database.MissingKeyError as e:
             abort_gone_or_not_found(e.key)
 
 
 @register_resource(
-    'period',
-    '/<string(length={}):period_id>'.format(
-        identifier.AUTHORITY_SEQUENCE_LENGTH + 1
-        + identifier.PERIOD_SEQUENCE_LENGTH + 1),
+    "period",
+    "/<string(length={}):period_id>".format(
+        identifier.AUTHORITY_SEQUENCE_LENGTH + 1 + identifier.PERIOD_SEQUENCE_LENGTH + 1
+    ),
     register_basepath=False,
-    as_html=True
+    as_html=True,
 )
 class Period(Resource):
     def get(self, period_id):
-        version = request.args.get('version')
+        version = request.args.get("version")
         new_location = redirect_to_last_update(period_id, version)
         if new_location is not None:
             return new_location
         try:
-            period = attach_to_dataset(
-                database.get_period(period_id, version))
-            filename = 'periodo-period-{}{}'.format(
-                period_id,
-                '' if version is None else '-v{}'.format(version))
+            period = attach_to_dataset(database.get_period(period_id, version))
+            filename = "periodo-period-{}{}".format(
+                period_id, "" if version is None else "-v{}".format(version)
+            )
             return self.make_ok_response(period, filename=filename)
         except database.MissingKeyError as e:
             abort_gone_or_not_found(e.key)
@@ -460,12 +433,14 @@ class PatchRequestSchema(Schema):
     open = fields.Boolean()
     merged = fields.Boolean()
     first_comment = fields.String()
-    url = fields.Function(lambda patch_request: url_for(
-        'patchrequest', id=patch_request['id'], _external=True
-    ))
-    text = fields.Function(lambda patch_request: url_for(
-        'patch', id=patch_request['id'], _external=True
-    ))
+    url = fields.Function(
+        lambda patch_request: url_for(
+            "patchrequest", id=patch_request["id"], _external=True
+        )
+    )
+    text = fields.Function(
+        lambda patch_request: url_for("patch", id=patch_request["id"], _external=True)
+    )
 
     class Meta:
         ordered = True
@@ -474,90 +449,88 @@ class PatchRequestSchema(Schema):
 patchRequestListSchema = PatchRequestSchema(many=True)
 
 
-@register_resource('patches', '/patches/', suffixes=('json',))
+@register_resource("patches", "/patches/", suffixes=("json",))
 class PatchRequestList(Resource):
     PATCH_REQUEST_LIST_ARGS = {
-        'sort': fields.String(
-            validate=validate.OneOf(['created_at', 'updated_at']),
-            missing='updated_at'
+        "sort": fields.String(
+            validate=validate.OneOf(["created_at", "updated_at"]), missing="updated_at"
         ),
-        'order': fields.String(
-            validate=validate.OneOf(['asc', 'desc']),
-            missing='desc'
+        "order": fields.String(
+            validate=validate.OneOf(["asc", "desc"]), missing="desc"
         ),
-        'open': fields.Boolean(),
-        'merged': fields.Boolean(),
-        'limit': fields.Integer(missing=25),
-        'from': fields.Integer(missing=0),
+        "open": fields.Boolean(),
+        "merged": fields.Boolean(),
+        "limit": fields.Integer(missing=25),
+        "from": fields.Integer(missing=0),
     }
 
     def get(self, args):
-        args = parser.parse(
-            self.PATCH_REQUEST_LIST_ARGS, request, location='query')
+        args = parser.parse(self.PATCH_REQUEST_LIST_ARGS, request, location="query")
         query = PATCH_QUERY
         params = ()
 
         where = []
-        if args['open'] is not None:
-            where.append('open = ?')
-            params += (True if args['open'] == 'true' else False,)
-        if args['merged'] is not None:
-            where.append('merged = ?')
-            params += (True if args['merged'] == 'true' else False,)
+        if args["open"] is not None:
+            where.append("open = ?")
+            params += (True if args["open"] == "true" else False,)
+        if args["merged"] is not None:
+            where.append("merged = ?")
+            params += (True if args["merged"] == "true" else False,)
         if where:
-            query += ' where ' + ' AND '.join(where)
+            query += " where " + " AND ".join(where)
 
-        query += ' order by ' + args['sort'] + ' ' + args['order']
+        query += " order by " + args["sort"] + " " + args["order"]
 
-        limit = args['limit']
+        limit = args["limit"]
         if limit < 0:
             limit = 25
         if limit > 250:
             limit = 250
 
-        offset = args['from']
+        offset = args["from"]
         if offset < 0:
             offset = 0
-        query += ' limit ' + str(limit + 1) + ' offset ' + str(offset)
+        query += " limit " + str(limit + 1) + " offset " + str(offset)
 
         rows = database.query_db_for_all(query, params)
         data = [process_patch_row(row) for row in rows][:limit]
         count = database.query_db_for_one(
-            'SELECT COUNT(*) AS count FROM patch_request'
-        )['count']
+            "SELECT COUNT(*) AS count FROM patch_request"
+        )["count"]
 
         link_headers = []
 
         if offset > 0:
-            prev_url = url_for('patches', _external=True)
+            prev_url = url_for("patches", _external=True)
 
             prev_params = request.args.to_dict().copy()
-            prev_params['from'] = offset - limit
-            if (prev_params['from'] <= 0):
-                prev_params.pop('from')
+            prev_params["from"] = offset - limit
+            if prev_params["from"] <= 0:
+                prev_params.pop("from")
 
             prev_params = urlencode(prev_params)
-            if (prev_params):
-                prev_url += '?' + prev_params
+            if prev_params:
+                prev_url += "?" + prev_params
 
             link_headers.append('<{}>; rel="prev"'.format(prev_url))
 
         # We fetched 1 more than the limit. If there are limit+1 rows in the
         # retrieved query, then there are more rows to be fetched
         if len(rows) > limit:
-            next_url = url_for('patches', _external=True)
+            next_url = url_for("patches", _external=True)
             next_params = request.args.to_dict().copy()
 
-            next_params['from'] = offset + limit
+            next_params["from"] = offset + limit
             link_headers.append(
-                '<{}?{}>; rel="next"'.format(next_url, urlencode(next_params)))
+                '<{}?{}>; rel="next"'.format(next_url, urlencode(next_params))
+            )
 
         headers = {}
 
-        if (link_headers):
-            headers['Link'] = ', '.join(link_headers)
+        if link_headers:
+            headers["Link"] = ", ".join(link_headers)
 
-        headers['X-Total-Count'] = count
+        headers["X-Total-Count"] = count
 
         return patchRequestListSchema.dump(data), 200, headers
 
@@ -576,22 +549,23 @@ class PatchSchema(PatchRequestSchema):
 patchSchema = PatchSchema()
 
 
-@register_resource('patchrequest', '/patches/<int:id>/', suffixes=('json',))
+@register_resource("patchrequest", "/patches/<int:id>/", suffixes=("json",))
 class PatchRequest(Resource):
     def get(self, id):
         row = database.query_db_for_one(
-            PATCH_QUERY + ' where patch_request.id = ?', (id,))
+            PATCH_QUERY + " where patch_request.id = ?", (id,)
+        )
         if not row:
             abort(404)
         data = process_patch_row(row)
-        data['mergeable'] = patching.is_mergeable(data['original_patch'])
-        data['comments'] = [dict(c) for c in
-                            database.get_patch_request_comments(id)]
+        data["mergeable"] = patching.is_mergeable(data["original_patch"])
+        data["comments"] = [dict(c) for c in database.get_patch_request_comments(id)]
         headers = {}
         try:
             if auth.accept_patch_permission.can():
-                headers['Link'] = '<{}>;rel="merge"'.format(
-                    url_for('patch-merge', id=id))
+                headers["Link"] = '<{}>;rel="merge"'.format(
+                    url_for("patch-merge", id=id)
+                )
         except auth.AuthenticationFailed:
             pass
 
@@ -599,22 +573,23 @@ class PatchRequest(Resource):
 
 
 @register_resource(
-    'patch',
-    '/patches/<int:id>/patch',
-    altpath='/patches/<int:id>/patch.jsonpatch',
-    suffixes=('json',),
+    "patch",
+    "/patches/<int:id>/patch",
+    altpath="/patches/<int:id>/patch.jsonpatch",
+    suffixes=("json",),
 )
 class Patch(Resource):
     def get(self, id):
         row = database.query_db_for_one(
-            PATCH_QUERY + ' where patch_request.id = ?', (id,))
+            PATCH_QUERY + " where patch_request.id = ?", (id,)
+        )
         if not row:
             abort(404)
-        if row['merged']:
-            patch = row['applied_patch']
+        if row["merged"]:
+            patch = row["applied_patch"]
         else:
-            patch = row['original_patch']
-        return patch, 200, {'Content-Type': 'application/json'}
+            patch = row["original_patch"]
+        return patch, 200, {"Content-Type": "application/json"}
 
     def put(self, id):
         permission = auth.UpdatePatchPermission(id)
@@ -626,13 +601,13 @@ class Patch(Resource):
         except ResourceError as e:
             return e.response()
         except patching.InvalidPatchError as e:
-            if str(e) != 'Could not apply JSON patch to dataset.':
-                return {'status': 400, 'message': str(e)}, 400
+            if str(e) != "Could not apply JSON patch to dataset.":
+                return {"status": 400, "message": str(e)}, 400
 
-        return '', 200
+        return "", 200
 
 
-@register_resource('patch-merge', '/patches/<int:id>/merge')
+@register_resource("patch-merge", "/patches/<int:id>/merge")
 class PatchMerge(Resource):
     @auth.accept_patch_permission.require()
     def post(self, id):
@@ -641,72 +616,75 @@ class PatchMerge(Resource):
             cache.purge_history()
             cache.purge_dataset()
             cache.purge_graphs()
-            return '', 204
+            return "", 204
         except patching.UnmergeablePatchError as e:
-            return {'message': e.message}, 400
+            return {"message": str(e)}, 400
         except patching.MergeError as e:
-            return {'message': e.message}, 404
+            return {"message": str(e)}, 404
 
 
-@register_resource('patch-reject', '/patches/<int:id>/reject')
+@register_resource("patch-reject", "/patches/<int:id>/reject")
 class PatchReject(Resource):
     @auth.accept_patch_permission.require()
     def post(self, id):
         try:
             patching.reject(id, g.identity.id)
-            return '', 204
+            return "", 204
         except patching.MergeError as e:
-            return {'message': e.message}, 404
+            return {"message": str(e)}, 404
 
 
-@register_resource('patch-messages', '/patches/<int:id>/messages')
+@register_resource("patch-messages", "/patches/<int:id>/messages")
 class PatchMessages(Resource):
     @auth.submit_patch_permission.require()
     def post(self, id):
-        data = request.data or ''
+        data = request.data or ""
         if isinstance(data, bytes):
             data = data.decode()
 
         try:
             data = json.loads(data)
-            message = data['message']
+            message = data["message"]
         except KeyError:
-            return {'message': 'No message present in request data.'}, 400
+            return {"message": "No message present in request data."}, 400
 
         try:
             patching.add_comment(id, g.identity.id, message)
-            return '', 200, {
-                'Location': url_for('patchrequest', id=id)
-            }
+            return "", 200, {"Location": url_for("patchrequest", id=id)}
         except patching.MergeError as e:
-            return {'message': e.message}, 404
+            return {"message": str(e)}, 404
 
 
-@register_resource('identifier-map', '/identifier-map/', suffixes=('json',),)
+@register_resource(
+    "identifier-map",
+    "/identifier-map/",
+    suffixes=("json",),
+)
 class IdentifierMap(Resource):
     def get(self):
         identifier_map, last_edited = database.get_identifier_map()
 
         headers = {}
         if last_edited is not None:
-            headers['Last-Modified'] = format_date_time(last_edited)
+            headers["Last-Modified"] = format_date_time(last_edited)
 
-        response = make_response(
-            {'identifier_map': identifier_map}, 200, headers)
+        response = make_response({"identifier_map": identifier_map}, 200, headers)
 
         return cache.long_time(response, server_only=True)
 
 
-@register_resource('bags', '/bags/', suffixes=('json',))
+@register_resource("bags", "/bags/", suffixes=("json",))
 class Bags(Resource):
     def get(self):
-        return jsonify([
-            url_for('bag', uuid=uuid, _external=True)
-            for uuid in database.get_bag_uuids()
-        ])
+        return jsonify(
+            [
+                url_for("bag", uuid=uuid, _external=True)
+                for uuid in database.get_bag_uuids()
+            ]
+        )
 
 
-@register_resource('bag', '/bags/<uuid:uuid>', suffixes=('json',))
+@register_resource("bag", "/bags/<uuid:uuid>", suffixes=("json",))
 class Bag(Resource):
     @auth.update_bag_permission.require()
     def put(self, uuid):
@@ -716,65 +694,63 @@ class Bag(Resource):
         except ResourceError as e:
             return e.response()
 
-        title = str(data.get('title', ''))
+        title = str(data.get("title", ""))
         if len(title) == 0:
-            return {'message': 'A bag must have a title'}, 400
+            return {"message": "A bag must have a title"}, 400
 
-        items = data.get('items', [])
+        items = data.get("items", [])
         if len(items) < 2:
-            return {'message': 'A bag must have at least two items'}, 400
+            return {"message": "A bag must have at least two items"}, 400
 
         try:
             _, ctx = database.get_periods_and_context(items, raiseErrors=True)
         except database.MissingKeyError as e:
-            return {'message': 'No resource with key: ' + e.key}, 400
+            return {"message": "No resource with key: " + e.key}, 400
 
-        base = ctx['@base']
-        bag_ctx = data.get('@context', {})
-        context_url = utils.absolute_url(ctx['@base'], 'context-short')
+        base = ctx["@base"]
+        bag_ctx = data.get("@context", {})
+        context_url = utils.absolute_url(ctx["@base"], "context-short")
         if type(bag_ctx) is list:
             contexts = bag_ctx
             if context_url not in contexts:
                 contexts.insert(0, context_url)
             if type(contexts[-1]) is dict:
-                contexts[-1]['@base'] = base
+                contexts[-1]["@base"] = base
             else:
-                contexts.append({'@base': base})
+                contexts.append({"@base": base})
         else:
-            contexts = [context_url, {**bag_ctx, '@base': base}]
+            contexts = [context_url, {**bag_ctx, "@base": base}]
 
-        data['@context'] = contexts
+        data["@context"] = contexts
 
         bag = database.get_bag(uuid)
-        if bag and g.identity.id not in json.loads(bag['owners']):
-            return '', 403
+        if bag and g.identity.id not in json.loads(bag["owners"]):
+            return "", 403
 
         version = database.create_or_update_bag(uuid, g.identity.id, data)
-        return '', 201, {
-            'Location': url_for('bag', uuid=uuid, version=version)
-        }
+        return "", 201, {"Location": url_for("bag", uuid=uuid, version=version)}
 
     def get(self, uuid):
-        args = parser.parse(VERSIONED_RESOURCE_ARGS, request, location='query')
-        version = args.get('version')
+        args = parser.parse(VERSIONED_RESOURCE_ARGS, request, location="query")
+        version = args.get("version")
         bag = database.get_bag(uuid, version=version)
 
         if not bag:
             abort(404)
 
-        bag_etag = 'bag-{}-version-{}'.format(uuid, bag['version'])
+        bag_etag = "bag-{}-version-{}".format(uuid, bag["version"])
         if request.if_none_match.contains_weak(bag_etag):
-            return '', 304
+            return "", 304
 
         headers = {}
-        headers['Last-Modified'] = format_date_time(bag['created_at'])
+        headers["Last-Modified"] = format_date_time(bag["created_at"])
 
-        data = json.loads(bag['data'])
-        defs, _ = database.get_periods_and_context(data['items'])
+        data = json.loads(bag["data"])
+        defs, _ = database.get_periods_and_context(data["items"])
 
-        data['@id'] = identifier.prefix('bags/%s' % uuid)
-        data['creator'] = bag['created_by']
-        data['items'] = defs
+        data["@id"] = identifier.prefix("bags/%s" % uuid)
+        data["creator"] = bag["created_by"]
+        data["items"] = defs
 
         response = self.make_ok_response(data, headers)
         response.set_etag(bag_etag, weak=True)
@@ -787,86 +763,78 @@ class Bag(Resource):
 
 def external_graph_url(graph, version):
     if version is None:
-        return url_for('graph', id=graph['id'], _external=True)
-    return url_for('graph', id=graph['id'], version=version, _external=True)
+        return url_for("graph", id=graph["id"], _external=True)
+    return url_for("graph", id=graph["id"], version=version, _external=True)
 
 
 def graph_container(url, graphs, version=None):
     return {
-        '@context': {
-            '@version': 1.1,
-            'graphs': {
-                '@id': url,
-                '@container': ['@graph', '@id']
-            }},
-        'graphs': {
-            external_graph_url(graph, version): json.loads(graph['data'])
+        "@context": {
+            "@version": 1.1,
+            "graphs": {"@id": url, "@container": ["@graph", "@id"]},
+        },
+        "graphs": {
+            external_graph_url(graph, version): json.loads(graph["data"])
             for graph in graphs
-        }
+        },
     }
 
 
 def get_graphs(prefix=None):
-    if prefix and prefix.endswith('/'):
+    if prefix and prefix.endswith("/"):
         prefix = prefix[:-1]
-    url = (url_for('graphs', _external=True)
-           + ((prefix + '/') if prefix else ''))
+    url = url_for("graphs", _external=True) + ((prefix + "/") if prefix else "")
     return graph_container(url, database.get_graphs(prefix))
 
 
-@register_resource('graphs', '/graphs/', suffixes=('json',))
+@register_resource("graphs", "/graphs/", suffixes=("json",))
 class Graphs(Resource):
     def get(self):
         data = get_graphs()
         dataset = database.get_dataset()
         if dataset:
-            dataset_url = url_for('dataset-short', _external=True)
-            data['graphs'][dataset_url] = json.loads(dataset['data'])
-        return cache.medium_time(
-            self.make_ok_response(data, filename='periodo-graphs'))
+            dataset_url = url_for("dataset-short", _external=True)
+            data["graphs"][dataset_url] = json.loads(dataset["data"])
+        return cache.medium_time(self.make_ok_response(data, filename="periodo-graphs"))
 
 
-@register_resource('graph', '/graphs/<path:id>', suffixes=('json',))
+@register_resource("graph", "/graphs/<path:id>", suffixes=("json",))
 class Graph(Resource):
     @auth.update_graph_permission.require()
     def put(self, id):
-        if id.endswith('/'):
-            return {'message': 'graph uri path cannot end in /'}, 400
+        if id.endswith("/"):
+            return {"message": "graph uri path cannot end in /"}, 400
         try:
             version = database.create_or_update_graph(id, parse_json(request))
-            if (version > 0):
+            if version > 0:
                 cache.purge_graph(id)
-            return '', 201, {
-                'Location': url_for('graph', id=id, version=version)
-            }
+            return "", 201, {"Location": url_for("graph", id=id, version=version)}
         except ResourceError as e:
             return e.response()
 
     def get(self, id):
         data = get_graphs(prefix=id)
-        filename = 'periodo-graph-{}'.format(id.replace('/', '-'))
+        filename = "periodo-graph-{}".format(id.replace("/", "-"))
 
-        if len(data['graphs']) > 0:
-            return cache.medium_time(
-                self.make_ok_response(data, filename=filename))
+        if len(data["graphs"]) > 0:
+            return cache.medium_time(self.make_ok_response(data, filename=filename))
 
-        args = parser.parse(VERSIONED_RESOURCE_ARGS, request, location='query')
-        version = args.get('version')
+        args = parser.parse(VERSIONED_RESOURCE_ARGS, request, location="query")
+        version = args.get("version")
         graph = database.get_graph(id, version=version)
-        filename += ('' if version is None else '-v{}'.format(version))
+        filename += "" if version is None else "-v{}".format(version)
 
         if not graph:
             abort(404)
 
-        graph_etag = 'graph-{}-version-{}'.format(id, graph['version'])
+        graph_etag = "graph-{}-version-{}".format(id, graph["version"])
         if request.if_none_match.contains_weak(graph_etag):
-            return '', 304
+            return "", 304
 
         headers = {}
-        headers['Last-Modified'] = format_date_time(graph['created_at'])
+        headers["Last-Modified"] = format_date_time(graph["created_at"])
 
-        data = graph_container(
-            external_graph_url(graph, version), [graph], version)
+        data = graph_container(external_graph_url(graph, version), [graph], version)
         response = self.make_ok_response(data, headers, filename=filename)
         response.set_etag(graph_etag, weak=True)
 
@@ -879,22 +847,23 @@ class Graph(Resource):
     def delete(self, id):
         if database.delete_graph(id):
             cache.purge_graph(id)
-            return '', 204
+            return "", 204
         else:
             abort(404)
 
 
-@register_resource('identity', '/identity', suffixes=('json',))
+@register_resource("identity", "/identity", suffixes=("json",))
 class Identity(Resource):
     # submit_patch is the minimal permission
     @auth.submit_patch_permission.require()
     def get(self):
-        if (g.identity.id is None):  # shouldn't be possible but just in case
+        if g.identity.id is None:  # shouldn't be possible but just in case
             return {}, 200
         user = database.query_db_for_one(
-            'SELECT name FROM user WHERE id = ?', (g.identity.id,))
+            "SELECT name FROM user WHERE id = ?", (g.identity.id,)
+        )
         return {
-            'id': g.identity.id,
-            'name': user['name'],
-            'permissions': auth.describe(g.identity.provides),
+            "id": g.identity.id,
+            "name": user["name"],
+            "permissions": auth.describe(g.identity.provides),
         }, 200

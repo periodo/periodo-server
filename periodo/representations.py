@@ -7,29 +7,28 @@ from periodo import cache, routes, utils, translate, highlight
 
 def abbreviate_context(data):
     # don't abbreviate...
-    if ((data is None                          # empty responses,
-         or '@context' not in data             # non-LD responses,
-         or '@base' not in data['@context']    # external LD graphs,
-         or len(data) == 1                     # the context object itself,
-         or type(data['@context']) is list)):  # or already-abbreviated contexts
+    if (
+        data is None  # empty responses,
+        or "@context" not in data  # non-LD responses,
+        or "@base" not in data["@context"]  # external LD graphs,
+        or len(data) == 1  # the context object itself,
+        or type(data["@context"]) is list
+    ):  # or already-abbreviated contexts
 
         return data
 
-    context = data['@context']
-    base = context['@base']
+    context = data["@context"]
+    base = context["@base"]
 
-    if '__inline' in context:
+    if "__inline" in context:
         # keep context inline as requested
-        context.pop('__inline', None)
-        context.pop('__version', None)
-        data['@context'] = context
+        context.pop("__inline", None)
+        context.pop("__version", None)
+        data["@context"] = context
     else:
-        data['@context'] = [
-            utils.absolute_url(base, 'context-short'),
-            {'@base': base}
-        ]
-        if '__version' in context:
-            data['@context'][0] += '?version=%s' % context['__version']
+        data["@context"] = [utils.absolute_url(base, "context-short"), {"@base": base}]
+        if "__version" in context:
+            data["@context"][0] += "?version=%s" % context["__version"]
 
     return data
 
@@ -39,54 +38,56 @@ def make_response(data, code=200):
 
 
 def translation_failure(e):
-    response = make_response('%s\n' % e, e.code)
-    if (e.code == 503):
-        response.headers.add('Retry-After', 120)
+    response = make_response("%s\n" % e, e.code)
+    if e.code == 503:
+        response.headers.add("Retry-After", 120)
     return response
 
 
-def redirect_to_html(content_type, headers={}):
-    if request.path == '/':
-        location = f'/index.{content_type}.html'
-    elif request.path.endswith('.jsonpatch'):
-        location = request.path.replace('.jsonpatch', f'.{content_type}.html')
-    elif request.path.endswith(f'.{content_type}'):
-        location = f'{request.path}.html'
+def redirect_to_html(content_type, headers=None):
+    if request.path == "/":
+        location = f"/index.{content_type}.html"
+    elif request.path.endswith(".jsonpatch"):
+        location = request.path.replace(".jsonpatch", f".{content_type}.html")
+    elif request.path.endswith(f".{content_type}"):
+        location = f"{request.path}.html"
     else:
         path = request.path[:-1] if request.path.endswith("/") else request.path
-        location = f'{path}.{content_type}.html'
+        location = f"{path}.{content_type}.html"
 
     if len(request.args) > 0:
-        location += f'?{urlencode(request.args)}'
+        location += f"?{urlencode(request.args)}"
 
     response = redirect(location, code=303)
     response.headers.add(
-        'Link',
-        f'<>; rel="alternate"; type="{SHORT_CONTENT_TYPES[content_type]}"'
+        "Link", f'<>; rel="alternate"; type="{SHORT_CONTENT_TYPES[content_type]}"'
     )
 
-    if request.path == '/':
+    if request.path == "/":
         response.headers.add(
-            'Link', '</>; rel="alternate"; type="text/turtle"; '
-            + 'title="VoID description of the PeriodO Period Gazetteer')
+            "Link",
+            '</>; rel="alternate"; type="text/turtle"; '
+            + 'title="VoID description of the PeriodO Period Gazetteer',
+        )
 
-    response.headers.extend(headers)
+    if headers is not None:
+        response.headers.extend(headers)
 
     return response
 
 
 def output_json(data):
     return make_response(
-        json.dumps(abbreviate_context(data), ensure_ascii=False) + '\n',
+        json.dumps(abbreviate_context(data), ensure_ascii=False) + "\n",
     )
 
 
 def output_nt(graph):
-    return make_response(graph.serialize(format='nt'))
+    return make_response(graph.serialize(format="nt"))
 
 
 def output_turtle(data):
-    if request.path == '/':
+    if request.path == "/":
         return routes.void()
 
     try:
@@ -124,45 +125,45 @@ def output_json_as_html(data):
 
 
 SHORT_CONTENT_TYPES = {
-    'csv': 'text/csv',
-    'json': 'application/json',
-    'json.html': 'text/html; charset=utf-8',
-    'jsonld': 'application/ld+json',
-    'jsonld.html': 'text/html; charset=utf-8',
-    'nt': 'application/n-triples',
-    'ttl': 'text/turtle',
-    'ttl.html': 'text/html; charset=utf-8',
+    "csv": "text/csv",
+    "json": "application/json",
+    "json.html": "text/html; charset=utf-8",
+    "jsonld": "application/ld+json",
+    "jsonld.html": "text/html; charset=utf-8",
+    "nt": "application/n-triples",
+    "ttl": "text/turtle",
+    "ttl.html": "text/html; charset=utf-8",
 }
 
 
 LONG_CONTENT_TYPES = {
-    'application/json': 'json',
-    'application/json+html': 'json.html',
-    'application/ld+json': 'jsonld',
-    'application/ld+json+html': 'jsonld.html',
-    'application/n-triples': 'nt',
-    'text/csv': 'csv',
-    'text/html': 'html',
-    'text/turtle': 'ttl',
-    'text/turtle+html': 'ttl.html',
+    "application/json": "json",
+    "application/json+html": "json.html",
+    "application/ld+json": "jsonld",
+    "application/ld+json+html": "jsonld.html",
+    "application/n-triples": "nt",
+    "text/csv": "csv",
+    "text/html": "html",
+    "text/turtle": "ttl",
+    "text/turtle+html": "ttl.html",
 }
 
 
 REPRESENTATIONS = {
-    'csv': output_csv,
-    'json': output_json,
-    'json.html': output_json_as_html,
-    'jsonld': output_json,
-    'jsonld.html': output_json_as_html,
-    'nt': output_nt,
-    'ttl': output_turtle,
-    'ttl.html': output_turtle_as_html,
+    "csv": output_csv,
+    "json": output_json,
+    "json.html": output_json_as_html,
+    "jsonld": output_json,
+    "jsonld.html": output_json_as_html,
+    "nt": output_nt,
+    "ttl": output_turtle,
+    "ttl.html": output_turtle_as_html,
 }
 
 
 def get_content_type_from_request_path():
     for content_type in SHORT_CONTENT_TYPES:
-        if request.path.endswith(f'.{content_type}'):
+        if request.path.endswith(f".{content_type}"):
             return content_type
 
     return None
@@ -176,11 +177,11 @@ def get_content_type_from_accept_header(supported_content_types):
 
 
 def make_ok_response(
-        data,
-        supported_content_types: tuple[str, ...],
-        as_html: bool = False,
-        headers: dict = {},
-        filename: Optional[str] = None,
+    data,
+    supported_content_types: tuple[str, ...],
+    as_html: bool = False,
+    headers: dict = None,
+    filename: Optional[str] = None,
 ):
     """Handles content negotation for resources with multiple representations.
 
@@ -208,23 +209,21 @@ def make_ok_response(
     content_type = (
         path_type
         or accept_type
-        or (supported_content_types[0]
-            if len(supported_content_types) > 0 else 'json')
+        or (supported_content_types[0] if len(supported_content_types) > 0 else "json")
     )
 
-    if (
-            as_html
-            and content_type == 'html'
-            and not content_type.endswith('.html')
-    ):
-        return redirect_to_html(path_type or 'json', headers)
+    if as_html and content_type == "html" and not content_type.endswith(".html"):
+        return redirect_to_html(path_type or "json", headers)
 
     response = REPRESENTATIONS[content_type](data)
     response.content_type = SHORT_CONTENT_TYPES[content_type]
-    response.headers.extend(headers)
+
+    if headers is not None:
+        response.headers.extend(headers)
 
     if response.status_code == 200 and filename is not None:
-        response.headers['Content-Disposition'] = (
-            f'attachment; filename="{filename}.{content_type}"')
+        response.headers[
+            "Content-Disposition"
+        ] = f'attachment; filename="{filename}.{content_type}"'
 
     return response
