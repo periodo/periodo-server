@@ -532,7 +532,10 @@ class PatchRequestList(Resource):
 
         headers["X-Total-Count"] = count
 
-        return patchRequestListSchema.dump(data), 200, headers
+        response = jsonify(patchRequestListSchema.dump(data))
+        response.headers.extend(headers)
+
+        return response, 200
 
 
 class CommentSchema(Schema):

@@ -39,7 +39,8 @@ def test_submit_patch(active_user, client, load_json):
     active_user
     res = client.patch("/d/", json=load_json("test-patch-replace-values-1.json"))
     assert res.status_code == httpx.codes.ACCEPTED
-    patch_id = int(res.headers["Location"].split("/")[-2])
+    patch_url = res.headers["Location"]
+    patch_id = int(patch_url.split("/")[-2])
     with app.app_context():
         updated_entities = json.loads(
             database.query_db_for_one(
@@ -53,6 +54,12 @@ def test_submit_patch(active_user, client, load_json):
             )["created_entities"]
         )
         assert created_entities == []
+    res = client.get("/patches/")
+    assert res.status_code == httpx.codes.OK
+    assert res.headers["X-Total-Count"] == "2"
+    patches = res.json()
+    assert len(patches) == 2
+    assert patches[1]["url"] == patch_url
 
 
 @pytest.mark.client_auth_token("this-token-has-normal-permissions")
