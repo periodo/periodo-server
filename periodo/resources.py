@@ -470,12 +470,12 @@ class PatchRequestList(Resource):
         params = ()
 
         where = []
-        if args["open"] is not None:
+        if "open" in args:
             where.append("open = ?")
-            params += (True if args["open"] == "true" else False,)
-        if args["merged"] is not None:
+            params += (True if args.get("open") == "true" else False,)
+        if "merged" in args:
             where.append("merged = ?")
-            params += (True if args["merged"] == "true" else False,)
+            params += (True if args.get("merged") == "true" else False,)
         if where:
             query += " where " + " AND ".join(where)
 
