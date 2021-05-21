@@ -477,7 +477,7 @@ class PatchRequestList(Resource):
             where.append("merged = ?")
             params += (True if args.get("merged") == "true" else False,)
         if where:
-            query += " where " + " AND ".join(where)
+            query += f" WHERE {' AND '.join(where)}"
 
         query += f" ORDER by {args['sort']} {args['order']}, patch_request.id ASC"
 
@@ -490,7 +490,7 @@ class PatchRequestList(Resource):
         offset = args["from"]
         if offset < 0:
             offset = 0
-        query += " limit " + str(limit + 1) + " offset " + str(offset)
+        query += f" LIMIT {limit + 1} OFFSET {offset}"
 
         rows = database.query_db_for_all(query, params)
         data = [process_patch_row(row) for row in rows][:limit]
