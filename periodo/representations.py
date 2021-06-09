@@ -221,7 +221,11 @@ def make_ok_response(
     if headers is not None:
         response.headers.extend(headers)
 
-    if response.status_code == 200 and filename is not None:
+    if (
+        response.status_code == 200
+        and not content_type.endswith(".html")
+        and filename is not None
+    ):
         response.headers[
             "Content-Disposition"
         ] = f'attachment; filename="{filename}.{content_type}"'

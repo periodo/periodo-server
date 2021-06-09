@@ -327,6 +327,7 @@ def test_authority_json(client):
     res = client.get("/trgkv.json.html")
     assert res.status_code == httpx.codes.OK
     assert res.headers["Content-Type"] == "text/html; charset=utf-8"
+    assert "Content-Disposition" not in res.headers
 
 
 def test_authority_turtle(client):
@@ -349,6 +350,7 @@ def test_authority_turtle(client):
     assert res.headers["Content-Type"] == "text/html; charset=utf-8"
     assert res.headers["Cache-Control"] == "public, max-age={}".format(cache.SHORT_TIME)
     assert "Date" in res.headers
+    assert "Content-Disposition" not in res.headers
 
     res = client.get("/trgkv.ttl/")
     assert res.status_code == httpx.codes.NOT_FOUND
@@ -437,6 +439,7 @@ def test_period_json(client):
     res = client.get("/trgkvwbjd.json.html")
     assert res.status_code == httpx.codes.OK
     assert res.headers["Content-Type"] == "text/html; charset=utf-8"
+    assert "Content-Disposition" not in res.headers
 
 
 def test_period_turtle(client):
@@ -459,6 +462,7 @@ def test_period_turtle(client):
     assert res.status_code == httpx.codes.OK
     assert res.headers["Content-Type"] == "text/html; charset=utf-8"
     assert res.headers["Cache-Control"] == "public, max-age={}".format(cache.SHORT_TIME)
+    assert "Content-Disposition" not in res.headers
 
 
 def test_d_turtle(client):
