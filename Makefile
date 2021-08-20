@@ -11,6 +11,7 @@ all: vocab.html $(DB)
 
 $(PYTHON3):
 	python3 -m venv $(VENV_DIR)
+	$(PYTHON3) -m pip install --upgrade pip
 	$(PYTHON3) -m pip install wheel
 	$(PYTHON3) -m pip install -r requirements.txt
 
