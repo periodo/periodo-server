@@ -54,8 +54,6 @@ def test_get_history(
     assert res.status_code == httpx.codes.OK
     assert res.headers["Content-Type"] == "application/n-triples"
 
-    print(res.text)
-
     g = ConjunctiveGraph()
     g.parse(format="nt", data=res.text)
 
