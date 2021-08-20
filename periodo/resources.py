@@ -453,15 +453,16 @@ patchRequestListSchema = PatchRequestSchema(many=True)
 class PatchRequestList(Resource):
     PATCH_REQUEST_LIST_ARGS = {
         "sort": fields.String(
-            validate=validate.OneOf(["created_at", "updated_at"]), missing="updated_at"
+            validate=validate.OneOf(["created_at", "updated_at"]),
+            load_default="updated_at",
         ),
         "order": fields.String(
-            validate=validate.OneOf(["asc", "desc"]), missing="desc"
+            validate=validate.OneOf(["asc", "desc"]), load_default="desc"
         ),
         "open": fields.Boolean(),
         "merged": fields.Boolean(),
-        "limit": fields.Integer(missing=25),
-        "from": fields.Integer(missing=0),
+        "limit": fields.Integer(load_default=25),
+        "from": fields.Integer(load_default=0),
     }
 
     def get(self):
