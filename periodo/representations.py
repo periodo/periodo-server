@@ -83,7 +83,7 @@ def output_json(data):
 
 
 def output_nt(graph):
-    return make_response(graph.serialize(format="nt"))
+    return make_response(graph.serialize(format="nt11"))
 
 
 def output_turtle(data):
