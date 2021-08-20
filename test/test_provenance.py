@@ -2,10 +2,9 @@ import httpx
 import pytest
 import re
 from rdflib import ConjunctiveGraph, URIRef
-from rdflib.namespace import Namespace, RDFS, FOAF, XSD, RDF
+from rdflib.namespace import Namespace, RDFS, FOAF, RDF
 from urllib.parse import urlparse
 from periodo import DEV_SERVER_NAME
-
 
 PERIODO = Namespace("http://n2t.net/ark:/99152/")
 PROV = Namespace("http://www.w3.org/ns/prov#")
@@ -82,7 +81,7 @@ def test_get_history(
     assert (HOST["h#change-2"], PROV.endedAtTime, None) in g
 
     def check_time(time):
-        assert time.datatype == XSD.dateTime
+        assert time.datatype == URIRef("http://www.w3.org/2001/XMLSchema#dateTime")
         assert re.match(W3CDTF, time.value.isoformat())
 
     check_time(g.value(subject=HOST["h#change-2"], predicate=PROV.startedAtTime))
