@@ -527,13 +527,11 @@ def test_dataset_csv(client):
         "period",
         "label",
         "spatial_coverage",
-        "gazetteer_links",
         "start",
         "stop",
         "authority",
         "source",
         "publication_year",
-        "derived_periods",
         "broader_periods",
         "narrower_periods",
     ]
@@ -541,7 +539,6 @@ def test_dataset_csv(client):
         "http://n2t.net/ark:/99152/p0trgkvkhrv",
         "Iron Age",
         "Spain",
-        "http://www.wikidata.org/entity/Q29",
         "-0799",
         "-0549",
         "http://n2t.net/ark:/99152/p0trgkv",
@@ -550,7 +547,6 @@ def test_dataset_csv(client):
         + " | Greenewalt, Crawford H. (Crawford Hallock), 1937-2012."
         + " | Ramage, Nancy H., 1942-",
         "1997",
-        "",
         "http://n2t.net/ark:/99152/p0trgkv4kxb",
         "",
     ]
