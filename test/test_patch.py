@@ -191,7 +191,6 @@ def test_versioning(client, submit_and_merge_patch):
             "/trgkv",
             params={"version": version},
             headers={"Accept": "application/json"},
-            allow_redirects=False,
         )
         assert res.status_code == httpx.codes.SEE_OTHER
         assert (

@@ -40,10 +40,8 @@ def test_get_history(
 
     def check_redirects_to_nt(content_type):
         res = client.get("/h", headers={"Accept": content_type})
-        assert res.status_code == httpx.codes.OK
-        assert res.url.path == "/h.nt"
-        assert len(res.history) == 1
-        assert res.history[0].status_code == httpx.codes.SEE_OTHER
+        assert res.status_code == httpx.codes.SEE_OTHER
+        assert urlparse(res.headers["Location"]).path == "/h.nt"
 
     check_redirects_to_nt("text/turtle")
     check_redirects_to_nt("application/ld+json")

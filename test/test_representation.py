@@ -25,27 +25,32 @@ def test_context(client):
     assert res.headers["Cache-Control"] == "public, max-age=0"
     assert list(res.json().keys()) == ["@context"]
 
-    res = client.get("/c", headers={"Accept": "text/html"})
+    res = client.get("/c", headers={"Accept": "text/html"}, follow_redirects=True)
     assert res.status_code == httpx.codes.OK
     assert res.url == f"http://{DEV_SERVER_NAME}/c.json.html"
 
-    res = client.get("/c", params={"version": 1}, headers={"Accept": "text/html"})
+    res = client.get(
+        "/c",
+        params={"version": 1},
+        headers={"Accept": "text/html"},
+        follow_redirects=True,
+    )
     assert res.status_code == httpx.codes.OK
     assert res.url == f"http://{DEV_SERVER_NAME}/c.json.html?version=1"
 
 
 def test_vocab(client):
-    res = client.get("/v", allow_redirects=False)
+    res = client.get("/v")
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/v.ttl.html"
 
-    res = client.get("/v", headers={"Accept": "text/turtle"}, allow_redirects=False)
+    res = client.get("/v", headers={"Accept": "text/turtle"})
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/v.ttl"
 
 
 def test_dataset_description(client):
-    res = client.get("/", headers={"Accept": "text/html"}, allow_redirects=False)
+    res = client.get("/", headers={"Accept": "text/html"})
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/index.json.html"
 
@@ -67,7 +72,9 @@ def test_dataset_description(client):
     assert res.status_code == httpx.codes.OK
     assert res.headers["Content-Type"] == "text/html; charset=utf-8"
 
-    res = client.get("/.well-known/void", headers={"Accept": "text/html"})
+    res = client.get(
+        "/.well-known/void", headers={"Accept": "text/html"}, follow_redirects=True
+    )
     assert res.status_code == httpx.codes.OK
     assert res.headers["Content-Type"] == "text/html; charset=utf-8"
     assert res.url == f"http://{DEV_SERVER_NAME}/.wellknown/void.ttl.html"
@@ -149,13 +156,13 @@ def test_add_contributors_to_dataset_description(client, submit_and_merge_patch)
 
 
 def test_dataset(client):
-    res = client.get("/d", allow_redirects=False)
+    res = client.get("/d")
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/d/"
 
 
 def test_dataset_data_even_if_html_accepted(client):
-    res = client.get("/d/", headers={"Accept": "text/html"}, allow_redirects=False)
+    res = client.get("/d/", headers={"Accept": "text/html"})
     assert res.status_code == httpx.codes.OK
     assert res.headers["Content-Type"] == "application/json"
     assert res.headers["Cache-Control"] == "public, max-age=0"
@@ -248,7 +255,7 @@ def test_if_none_match(client):
 
 
 def test_authority(client):
-    res = client.get("/trgkv", allow_redirects=False)
+    res = client.get("/trgkv")
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/"
     assert urlparse(res.headers["Location"]).query == urlencode(
@@ -259,19 +266,15 @@ def test_authority(client):
         }
     )
 
-    res = client.get(
-        "/trgkv", headers={"Accept": "application/json"}, allow_redirects=False
-    )
+    res = client.get("/trgkv", headers={"Accept": "application/json"})
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/trgkv.json"
 
-    res = client.get(
-        "/trgkv", headers={"Accept": "application/ld+json"}, allow_redirects=False
-    )
+    res = client.get("/trgkv", headers={"Accept": "application/ld+json"})
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/trgkv.jsonld"
 
-    res = client.get("/trgkv", headers={"Accept": "text/html"}, allow_redirects=False)
+    res = client.get("/trgkv", headers={"Accept": "text/html"})
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/"
     assert urlparse(res.headers["Location"]).query == urlencode(
@@ -285,7 +288,7 @@ def test_authority(client):
     res = client.get("/trgkv/")
     assert res.status_code == httpx.codes.NOT_FOUND
 
-    res = client.get("/trgkv", headers={"Accept": "text/turtle"}, allow_redirects=False)
+    res = client.get("/trgkv", headers={"Accept": "text/turtle"})
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/trgkv.ttl"
 
@@ -357,7 +360,7 @@ def test_authority_turtle(client):
 
 
 def test_period(client):
-    res = client.get("/trgkvwbjd", allow_redirects=False)
+    res = client.get("/trgkvwbjd")
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/"
     assert urlparse(res.headers["Location"]).query == urlencode(
@@ -369,21 +372,15 @@ def test_period(client):
         }
     )
 
-    res = client.get(
-        "/trgkvwbjd", headers={"Accept": "application/json"}, allow_redirects=False
-    )
+    res = client.get("/trgkvwbjd", headers={"Accept": "application/json"})
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/trgkvwbjd.json"
 
-    res = client.get(
-        "/trgkvwbjd", headers={"Accept": "application/ld+json"}, allow_redirects=False
-    )
+    res = client.get("/trgkvwbjd", headers={"Accept": "application/ld+json"})
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/trgkvwbjd.jsonld"
 
-    res = client.get(
-        "/trgkvwbjd", headers={"Accept": "text/html"}, allow_redirects=False
-    )
+    res = client.get("/trgkvwbjd", headers={"Accept": "text/html"})
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/"
     assert urlparse(res.headers["Location"]).query == urlencode(
@@ -395,9 +392,7 @@ def test_period(client):
         }
     )
 
-    res = client.get(
-        "/trgkvwbjd", headers={"Accept": "text/turtle"}, allow_redirects=False
-    )
+    res = client.get("/trgkvwbjd", headers={"Accept": "text/turtle"})
     assert res.status_code == httpx.codes.SEE_OTHER
     assert urlparse(res.headers["Location"]).path == "/trgkvwbjd.ttl"
 
@@ -576,7 +571,7 @@ def test_h_nt(client, submit_and_merge_patch):
 
 
 def test_h_turtle(client):
-    res = client.get("/h.ttl", allow_redirects=False)
+    res = client.get("/h.ttl")
     assert res.status_code == httpx.codes.MOVED_PERMANENTLY
     assert res.headers["Location"] == str(HOST["h.nt"])
 
