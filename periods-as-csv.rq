@@ -10,13 +10,13 @@ SELECT
 (?concept as ?period)
 (group_concat(distinct ?labels;separator='|') as ?label)
 (group_concat(distinct ?places;separator=' | ') as ?spatial_coverage)
-(group_concat(distinct ?place_uri;separator=' ') as ?gazetteer_links)
+# (group_concat(distinct ?place_uri;separator=' ') as ?gazetteer_links)
 (xsd:integer(group_concat(distinct ?starts;separator='|')) as ?start)
 (group_concat(distinct ?stops;separator='|') as ?stop)
 (group_concat(distinct ?scheme;separator='|') as ?authority)
 (group_concat(distinct ?sources;separator=' | ') as ?source)
 (group_concat(distinct ?issued;separator='|') as ?publication_year)
-(group_concat(distinct ?derived;separator=' ') as ?derived_periods)
+# (group_concat(distinct ?derived;separator=' ') as ?derived_periods)
 (group_concat(distinct ?broader;separator=' ') as ?broader_periods)
 (group_concat(distinct ?narrower;separator=' ') as ?narrower_periods)
 
@@ -45,9 +45,9 @@ WHERE {
     ?places
     .
   }
-  OPTIONAL {
-    ?concept dc:spatial ?place_uri .
-  }
+  # OPTIONAL {
+  #   ?concept dc:spatial ?place_uri .
+  # }
   OPTIONAL {
     ?concept
     time:intervalStartedBy/time:hasDateTimeDescription [
@@ -62,9 +62,9 @@ WHERE {
     ]
     .
   }
-  OPTIONAL {
-    ?derived prov:wasDerivedFrom ?concept .
-  }
+  # OPTIONAL {
+  #   ?derived prov:wasDerivedFrom ?concept .
+  # }
   OPTIONAL {
     ?concept skos:broader ?broader .
   }
