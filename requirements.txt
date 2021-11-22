@@ -6,7 +6,7 @@ bleach==4.1.0
 feedgen==0.9.0
 httpx==0.21.1
 jsonpatch==1.32
-marshmallow==3.13.0
+marshmallow==3.14.1
 pytest==6.2.5
 pytest-datadir==1.3.1
 rdflib==6.0.2
