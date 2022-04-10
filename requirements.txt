@@ -4,7 +4,7 @@ Pygments==2.11.2
 Werkzeug==2.0.2
 bleach==4.1.0
 feedgen==0.9.0
-httpx==0.21.1
+httpx==0.22.0
 jsonpatch==1.32
 marshmallow==3.14.1
 pytest==6.2.5
