@@ -54,11 +54,11 @@ def test_submit_patch(active_user, client, load_json):
             )["created_entities"]
         )
         assert created_entities == []
-    res = client.get("/patches/")
+    res = client.get("/patches/", params={"open": "true", "merged": "false"})
     assert res.status_code == httpx.codes.OK
     assert res.headers["X-Total-Count"] == "2"
     patches = res.json()
-    assert len(patches) == 2
+    assert len(patches) == 1
     assert patches[0]["url"] == patch_url
 
 

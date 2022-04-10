@@ -24,6 +24,7 @@ def _get_db_connection():
 @contextmanager
 def open_cursor(write=False, trace=False):
     db = _get_db_connection()
+    trace = trace or app.config.get("TESTING", False)
     if trace:
         db.set_trace_callback(app.logger.debug)
     c = db.cursor()

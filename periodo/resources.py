@@ -473,10 +473,10 @@ class PatchRequestList(Resource):
         where = []
         if "open" in args:
             where.append("open = ?")
-            params += args.get("open")
+            params += (args.get("open"),)
         if "merged" in args:
             where.append("merged = ?")
-            params += args.get("merged")
+            params += (args.get("merged"),)
         if where:
             query += f" WHERE {' AND '.join(where)}"
 
