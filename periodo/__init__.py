@@ -62,6 +62,7 @@ if not os.environ.get("TESTING", False):
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 app.url_map.converters["uuid"] = UUIDConverter
+app.response_class.autocorrect_location_header = True  # type: ignore
 principal = Principal(app, use_sessions=False)
 
 # When receiving requests with the HTTP header 'Transfer-Encoding: chunked',
