@@ -11,6 +11,7 @@ from flask import (
     abort,
     Response,
     stream_with_context,
+    escape,
 )
 from periodo import app, database, identifier, auth, highlight
 from urllib.parse import urlencode
@@ -224,7 +225,7 @@ def registered():
         """.format(
                 json.dumps(user.name),
                 json.dumps(user.b64token.decode()),
-                request.args.get("origin", app.config["CLIENT_URL"]),
+                escape(request.args.get("origin", app.config["CLIENT_URL"])),
             )
         )
 
