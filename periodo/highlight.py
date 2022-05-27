@@ -49,5 +49,5 @@ class LinkifiedHtmlFormatter(HtmlFormatter):
             else:
                 yield i, t
 
-    def wrap(self, source, _):
+    def wrap(self, source):
         return self._wrap_div(self._wrap_pre(self._linkify(source)))
