@@ -198,6 +198,7 @@ def registered():
         data=data,
     )
     if not response.status_code == 200:
+        data.pop("client_secret", None)
         app.logger.error("Response to request for ORCID credential was not OK")
         app.logger.error("Request: %s", data)
         app.logger.error("Response: %s", response.text)
