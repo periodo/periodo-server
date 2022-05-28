@@ -44,6 +44,14 @@ def translation_failure(e):
     return response
 
 
+def validate_redirect_location(location: str) -> bool:
+    path = location.split("?")[0]
+    if path.startswith("/") and path.endswith(".html"):
+        return True
+    else:
+        return False
+
+
 def redirect_to_html(content_type, headers=None):
     if request.path == "/":
         location = f"/index.{content_type}.html"
@@ -58,7 +66,11 @@ def redirect_to_html(content_type, headers=None):
     if len(request.args) > 0:
         location += f"?{urlencode(request.args)}"
 
-    response = redirect(location, code=303)
+    if validate_redirect_location(location):
+        response = redirect(location, code=303)
+    else:
+        return make_response(f"Bad request path: {request.path}", 400)
+
     response.headers.add(
         "Link", f'<>; rel="alternate"; type="{SHORT_CONTENT_TYPES[content_type]}"'
     )
