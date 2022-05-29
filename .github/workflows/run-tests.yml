@@ -1,4 +1,4 @@
-name: periodo server tests
+name: server tests
 on: [push]
 jobs:
   run-tests:
