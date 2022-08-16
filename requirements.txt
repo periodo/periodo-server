@@ -1,6 +1,6 @@
 Flask-Principal==0.4.0
 Flask==2.2.2
-Pygments==2.12.0
+Pygments==2.13.0
 Werkzeug==2.2.2
 bleach==5.0.1
 feedgen==0.9.0
