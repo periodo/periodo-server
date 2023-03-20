@@ -9,5 +9,5 @@ jsonpatch==1.32
 marshmallow==3.19.0
 pytest==7.2.2
 pytest-datadir==1.4.1
-rdflib==6.3.0
+rdflib==6.3.1
 webargs==8.2.0
