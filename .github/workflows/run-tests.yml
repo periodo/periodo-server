@@ -13,11 +13,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: >-
           curl
-          http://archive.apache.org/dist/jena/binaries/apache-jena-3.17.0.tar.gz
+          http://archive.apache.org/dist/jena/binaries/apache-jena-4.8.0.tar.gz
           | tar -zx -C /opt
       - run: >-
           TESTING=1
           TMPDIR=/tmp
-          RIOT=/opt/apache-jena-3.17.0/bin/riot
-          ARQ=/opt/apache-jena-3.17.0/bin/arq
+          RIOT=/opt/apache-jena-4.8.0/bin/riot
+          ARQ=/opt/apache-jena-4.8.0/bin/arq
           make test
