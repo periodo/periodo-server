@@ -7,7 +7,7 @@ feedgen==0.9.0
 httpx==0.24.1
 jsonpatch==1.32
 marshmallow==3.19.0
-pytest==7.3.1
+pytest==7.3.2
 pytest-datadir==1.4.1
 rdflib==6.3.2
 webargs==8.2.0
