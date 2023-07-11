@@ -10,4 +10,4 @@ marshmallow==3.19.0
 pytest==7.4.0
 pytest-datadir==1.4.1
 rdflib==6.3.2
-webargs==8.2.0
+webargs==8.3.0
