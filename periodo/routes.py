@@ -11,8 +11,8 @@ from flask import (
     abort,
     Response,
     stream_with_context,
-    escape,
 )
+from markupsafe import escape
 from periodo import app, database, identifier, auth, highlight
 from urllib.parse import urlencode
 from werkzeug.http import http_date
