@@ -25,7 +25,7 @@ class InvalidPatchError(Exception):
     pass
 
 
-class MergeError(Exception):  # noqa: B903
+class MergeError(Exception):
     def __init__(self, message):
         self.message = message
 
@@ -40,8 +40,8 @@ def _from_text(patch_text):
         patch_text = patch_text.decode()
     try:
         patch = json.loads(patch_text)
-    except Exception:
-        raise InvalidPatchError("Patch data could not be parsed as JSON.")
+    except Exception as e:
+        raise InvalidPatchError("Patch data could not be parsed as JSON.") from e
     patch = JsonPatch(patch)
     return patch
 
@@ -98,10 +98,10 @@ def validate(patch, dataset):
     # Test to make sure it will apply
     try:
         patch.apply(data)
-    except JsonPatchException:
-        raise InvalidPatchError("Not a valid JSON patch.")
-    except JsonPointerException:
-        raise InvalidPatchError("Could not apply JSON patch to dataset.")
+    except JsonPatchException as e:
+        raise InvalidPatchError("Not a valid JSON patch.") from e
+    except JsonPointerException as e:
+        raise InvalidPatchError("Could not apply JSON patch to dataset.") from e
 
     return _find_affected_entities(patch, data)
 
@@ -229,7 +229,7 @@ def merge(patch_id, user_id):
             original_patch, data, database.get_removed_entity_keys(), dataset_id_map
         )
     except IdentifierException as e:
-        raise UnmergeablePatchError(str(e))
+        raise UnmergeablePatchError(str(e)) from e
 
     created_entities = set(patch_id_map.values())
 

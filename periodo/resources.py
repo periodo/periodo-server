@@ -22,13 +22,11 @@ from wsgiref.handlers import format_date_time
 
 class W3CDTF(fields.Field):
     def _serialize(self, value, attr, obj, **kwargs):
-        attr, obj, kwargs  # ignored
         if value is None:
             return ""
         return utils.isoformat(value)
 
     def _deserialize(self, value, attr, data, **kwargs):
-        attr, data, kwargs  # ignored
         try:
             return utils.isoparse(value)
         except ValueError as e:
@@ -38,7 +36,6 @@ class W3CDTF(fields.Field):
 class Resource(MethodView):
     # this dummy method is replaced when the resource is registered
     def make_ok_response(self, data, headers=None, filename=None) -> Response:
-        data, headers, filename
         return Response()
 
 
@@ -54,8 +51,8 @@ class ResourceError(Exception):
 def parse_json(request):
     try:
         return json.loads(request.get_data(as_text=True))
-    except json.JSONDecodeError:
-        raise ResourceError(400, "Request data could not be parsed as JSON.")
+    except json.JSONDecodeError as e:
+        raise ResourceError(400, "Request data could not be parsed as JSON.") from e
 
 
 def attach_to_dataset(o):
@@ -695,7 +692,6 @@ class Bags(Resource):
 class Bag(Resource):
     @auth.update_bag_permission.require()
     def put(self, uuid):
-
         try:
             data = parse_json(request)
         except ResourceError as e:

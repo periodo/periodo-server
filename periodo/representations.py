@@ -14,7 +14,6 @@ def abbreviate_context(data):
         or len(data) == 1  # the context object itself,
         or type(data["@context"]) is list
     ):  # or already-abbreviated contexts
-
         return data
 
     context = data["@context"]
@@ -40,7 +39,7 @@ def make_response(data, code=200):
 def translation_failure(e):
     response = make_response("%s\n" % e, e.code)
     if e.code == 503:
-        response.headers.add("Retry-After", 120)
+        response.headers.add("Retry-After", "120")
     return response
 
 
@@ -180,7 +179,7 @@ def make_ok_response(
     data,
     supported_content_types: Tuple[str, ...],
     as_html: bool = False,
-    headers: dict = None,
+    headers: Optional[dict] = None,
     filename: Optional[str] = None,
 ):
     """Handles content negotation for resources with multiple representations.

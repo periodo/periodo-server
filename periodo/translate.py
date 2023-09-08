@@ -55,7 +55,7 @@ def run_subprocess(command_line, out_suffix):
                 pass
     except FileExistsError:
         app.logger.debug("jvm is already running; returning 503")
-        raise RDFTranslationError(code=503)
+        raise RDFTranslationError(code=503) from None
 
 
 def triples_to_csv(triples_file):
