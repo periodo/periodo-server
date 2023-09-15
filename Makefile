@@ -28,7 +28,7 @@ endif
 
 export.sql.gz:
 ifeq ($(IMPORT_URL),)
-	$(error No import URL provided. Run e.g. `make import IMPORT_URL=https://staging.perio.do/export.sql`)
+	$(error No import URL provided. Run e.g. `make import IMPORT_URL=https://data.staging.perio.do/export.sql`)
 endif
 	curl -X GET -H 'Accept-Encoding: gzip' "$(IMPORT_URL)" > $@
 
@@ -42,7 +42,7 @@ endif
 .PHONY: set_permissions
 set_permissions: | $(PYTHON3)
 ifeq ($(ORCID),)
-	$(error No orcid provided. Run `make set_permissions ORCID=https://orcid.org/0000-1234 PERMISSIONS=perm1,perm2,perm3)
+	$(error No orcid provided. Run `make set_permissions ORCID=https://orcid.org/0000-1234 PERMISSIONS=perm1,perm2,perm3`)
 endif
 	DATABASE=$(DB) $(PYTHON3) -c\
 	 "from periodo.commands import set_permissions; set_permissions('$(ORCID)','$(PERMISSIONS)'.split(','))"
