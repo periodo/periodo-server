@@ -1,6 +1,7 @@
 VENV_DIR := venv
 PYTHON3 := $(VENV_DIR)/bin/python3
 PYTEST := $(VENV_DIR)/bin/pytest
+FLASK := $(VENV_DIR)/bin/flask
 DB := ./db.sqlite
 
 VOCAB_FILES := $(shell find vocab -name *.ttl)
@@ -74,4 +75,7 @@ test: | $(PYTHON3)
 
 .PHONY: run
 run: test
-	$(PYTHON3) runserver.py
+	set -a && \
+	source .env.prod && \
+	set +a && \
+	$(FLASK) --app periodo run
