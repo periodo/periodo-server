@@ -55,11 +55,6 @@ def vocab():
         return redirect("v.ttl.html", code=303)
 
 
-@app.route("/client-packages/", endpoint="client-packages")
-def client_packages():
-    abort(404)  # this is served by nginx
-
-
 # http://www.w3.org/TR/void/#well-known
 @app.route("/.well-known/void", endpoint="description")
 @app.route("/.well-known/void.ttl")

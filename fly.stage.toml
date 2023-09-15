@@ -1,0 +1,20 @@
+app = "periodo-server"
+primary_region = "iad"
+
+[build]
+
+[env]
+  DATABASE = "/mnt/data/db.sqlite"
+  SERVER_NAME = "data.staging.perio.do"
+  CLIENT_URL = "https://client.staging.perio.do"
+  CACHE_PURGER_URL = "http://periodo-proxy.internal:8081"
+
+[[mounts]]
+  source = "data"
+  destination = "/mnt/data"
+
+[http_service]
+  internal_port = 8080
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0

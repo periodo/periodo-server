@@ -2,25 +2,25 @@ import os
 import json
 import rdflib
 import logging
-import subprocess
 from uuid import UUID
 from logging.config import dictConfig
 from flask import Flask, make_response, g
 from flask_principal import Principal, identity_loaded
 from werkzeug.http import http_date
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.routing import BaseConverter
 from periodo.middleware import RemoveTransferEncodingHeaderMiddleware
 
 DEV_SERVER_NAME = "localhost.localdomain:5000"
 
-# Allow running tests without access to periodo.secrets
-try:
-    from periodo.secrets import SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET
-except ModuleNotFoundError as e:
-    if "TESTING" in os.environ:
-        SECRET_KEY, ORCID_CLIENT_ID, ORCID_CLIENT_SECRET = "xxx", "xxx", "xxx"
-    else:
-        raise e
+SECRETS = {"SECRET_KEY": "xxx", "ORCID_CLIENT_ID": "xxx", "ORCID_CLIENT_SECRET": "xxx"}
+if "TESTING" not in os.environ:
+    for secret in SECRETS.keys():
+        value = os.environ.get(secret)
+        if value is None:
+            raise Exception(f"{secret} is not set")
+        else:
+            SECRETS[secret] = value
 
 # Disable normalization of literals because rdflib handles gYears improperly:
 # https://github.com/RDFLib/rdflib/issues/806
@@ -55,15 +55,19 @@ if not os.environ.get("TESTING", False):
                     "formatter": "default",
                 }
             },
-            "root": {"level": "DEBUG", "handlers": ["wsgi"]},
+            "root": {"level": "INFO", "handlers": ["wsgi"]},
         }
     )
 
 app = Flask(__name__)
-app.secret_key = SECRET_KEY
+app.secret_key = SECRETS["SECRET_KEY"]
 app.url_map.converters["uuid"] = UUIDConverter
 app.response_class.autocorrect_location_header = True  # type: ignore
 principal = Principal(app, use_sessions=False)
+
+# Flask is poorly designed and so doesn't play well with standard HTTP things
+# like proxies. So we have to add this ridiculous "proxy fix" middleware.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
 # When receiving requests with the HTTP header 'Transfer-Encoding: chunked',
 # the combination of nginx + uwsgi somehow adds a (correct) 'Content-Length'
@@ -72,33 +76,18 @@ principal = Principal(app, use_sessions=False)
 # 'Transfer-Encoding' header with this middleware.
 app.wsgi_app = RemoveTransferEncodingHeaderMiddleware(app.wsgi_app)
 
-
-def locate_bin(name, envvar):
-    path = os.environ.get(envvar)
-    if path is not None:
-        return path
-    try:
-        res = subprocess.check_output("which " + name, shell=True)
-        return res.decode("utf-8").strip()
-    except Exception:
-        app.logger.error(
-            f"Could not find binary for `{name}`. Either include this binary"
-            + f" in your PATH, or set the environment variable {envvar}"
-        )
-        return "/usr/local/bin/" + name
-
-
 app.config.update(
     DATABASE=os.environ.get("DATABASE", "./db.sqlite"),
-    CACHE=os.environ.get("CACHE", None),
-    RIOT=locate_bin("riot", "RIOT"),
-    ARQ=locate_bin("arq", "ARQ"),
+    CACHE_PURGER_URL=os.environ.get("CACHE_PURGER_URL", None),
     CSV_QUERY=os.environ.get("CSV_QUERY", "./periods-as-csv.rq"),
     SERVER_NAME=os.environ.get("SERVER_NAME", DEV_SERVER_NAME),
     CLIENT_URL=os.environ.get("CLIENT_URL", "https://client.perio.do"),
     CANONICAL=json.loads(os.environ.get("CANONICAL", "false")),
-    ORCID_CLIENT_ID=ORCID_CLIENT_ID,
-    ORCID_CLIENT_SECRET=ORCID_CLIENT_SECRET,
+    ORCID_CLIENT_ID=SECRETS["ORCID_CLIENT_ID"],
+    ORCID_CLIENT_SECRET=SECRETS["ORCID_CLIENT_SECRET"],
+    TRANSLATION_SERVICE=os.environ.get(
+        "TRANSLATION_SERVICE", "http://periodo-translator.flycast"
+    ),
 )
 app.logger.info("finished app configuration")
 

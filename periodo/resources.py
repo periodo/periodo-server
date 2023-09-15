@@ -239,7 +239,6 @@ INDEX = {
     "identifier-map": "a map of skolem IRIs that have been replaced with persistent IRIs",
     "context": "PeriodO JSON-LD context",
     "vocabulary": "PeriodO RDF vocabulary",
-    "client-packages": "PeriodO client installation packages",
 }
 
 

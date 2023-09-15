@@ -1,8 +1,7 @@
-import os
-from hashlib import md5
-from typing import Tuple
+import httpx
 from periodo import app
-from operator import attrgetter
+from typing import Tuple
+from werkzeug.routing import Rule
 
 LONG_TIME = 31557600  # 1 year - versioned reprs that should not change
 MEDIUM_TIME = 604800  # 1 week - slow-to-generate reprs that change infreq.
@@ -39,57 +38,50 @@ def no_time(response, server_only=False):
     return set_max_age(response, 0, server_only)
 
 
-def purge(keys):
-    if app.config["CACHE"] is not None:
-        for key in keys:
-            filename = md5(key.encode("utf-8")).hexdigest()
-            path = os.path.join(  # because nginx cache_path levels=1:2
-                app.config["CACHE"], filename[-1], filename[-3:-1], filename
-            )
-            try:
-                if os.path.isfile(path):
-                    os.remove(path)
-            except OSError as e:
-                app.logger.error("Failed to purge: {}".format(key))
-                app.logger.error("Error was: {}".format(e))
+def purge(keys: list[str]) -> None:
+    cache_purger = app.config["CACHE_PURGER_URL"]
+    if cache_purger is not None:
+        try:
+            response = httpx.post(cache_purger, json=keys)
+            response.raise_for_status()
+        except httpx.HTTPError as e:
+            app.logger.error(f"Cache purge failed: {e}")
 
 
-DEFAULT_KEY = attrgetter("rule")
+def DEFAULT_KEY(r: Rule) -> str:
+    return r.rule
 
 
-def purge_endpoint(endpoint, key=DEFAULT_KEY, params: Tuple[str, ...] = ()):
-    if app.config["CACHE"] is not None:
-        keys = [
-            key(r) for r in app.url_map.iter_rules() if r.endpoint.startswith(endpoint)
-        ]
-        purge(keys)
-        for p in params:
-            purge(["{}?{}".format(k, p) for k in keys])
+def purge_endpoint(endpoint: str, key=DEFAULT_KEY, params: Tuple[str, ...] = ()):
+    keys = [key(r) for r in app.url_map.iter_rules() if r.endpoint.startswith(endpoint)]
+    purge(keys)
+    for p in params:
+        purge(["{}?{}".format(k, p) for k in keys])
 
 
-def purge_history():
+def purge_history() -> None:
     purge_endpoint("history", params=("full",))
 
 
-def purge_dataset():
+def purge_dataset() -> None:
     purge_endpoint("dataset", params=("inline-context",))
 
 
-def purge_graphs():
+def purge_graphs() -> None:
     purge_endpoint("graphs")
 
 
-def subpaths(path):
+def subpaths(path: str) -> list[str]:
     if path == "":
         return []
     end = -2 if path.endswith("/") else -1
     return [path] + subpaths(path[0 : path.rfind("/", 0, end) + 1])
 
 
-def purge_graph(graph_id):
+def purge_graph(graph_id: str) -> None:
     for path in subpaths(graph_id):
 
-        def key(r):
+        def key(r: Rule, path: str = path):
             return r.rule.replace("<path:id>", path)
 
         purge_endpoint("graph", key=key)

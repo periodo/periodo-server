@@ -61,3 +61,10 @@ run: test
 	source .env.prod && \
 	set +a && \
 	$(FLASK) --app periodo run
+
+.PHONY: stage publish
+
+stage: APP_CONFIG = fly.stage.toml
+publish: APP_CONFIG = fly.publish.toml
+stage publish:
+	fly deploy --config $(APP_CONFIG)
