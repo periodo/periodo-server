@@ -50,7 +50,7 @@ endif
 
 .PHONY: clean
 clean:
-	rm -rf $(VENV_DIR) vocab.html
+	rm -rf $(VENV_DIR)
 
 .PHONY: test
 test: | $(PYTHON3)
