@@ -3,6 +3,7 @@ PYTHON3 := $(VENV_DIR)/bin/python3
 PYTEST := $(VENV_DIR)/bin/pytest
 FLASK := $(VENV_DIR)/bin/flask
 DB := ./db.sqlite
+SERVER_VERSION := $(shell git describe --tags)
 
 .PHONY: all
 all: $(DB)
@@ -65,6 +66,10 @@ run: test
 .PHONY: stage publish
 
 stage: APP_CONFIG = fly.stage.toml
+
 publish: APP_CONFIG = fly.publish.toml
+
 stage publish:
-	fly deploy --config $(APP_CONFIG)
+	fly deploy \
+	--config $(APP_CONFIG) \
+	--env SERVER_VERSION=$(SERVER_VERSION)

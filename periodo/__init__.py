@@ -82,6 +82,9 @@ app.config.update(
     CSV_QUERY=os.environ.get("CSV_QUERY", "./periods-as-csv.rq"),
     SERVER_NAME=os.environ.get("SERVER_NAME", DEV_SERVER_NAME),
     CLIENT_URL=os.environ.get("CLIENT_URL", "https://client.perio.do"),
+    SERVER_VERSION=os.environ.get(
+        "SERVER_VERSION", os.environ.get("SERVER_VERSION", "development")
+    ),
     CANONICAL=json.loads(os.environ.get("CANONICAL", "false")),
     ORCID_CLIENT_ID=SECRETS["ORCID_CLIENT_ID"],
     ORCID_CLIENT_SECRET=SECRETS["ORCID_CLIENT_SECRET"],
@@ -133,6 +136,12 @@ def add_cors_headers(response):
     response.headers.add(
         "Access-Control-Allow-Methods", ", ".join(CORS_ALLOWED_METHODS)
     )
+    return response
+
+
+@app.after_request
+def add_server_version_header(response):
+    response.headers.add("X-PeriodO-Server-Version", app.config["SERVER_VERSION"])
     return response
 
 
