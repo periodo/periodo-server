@@ -69,7 +69,7 @@ stage: APP_CONFIG = fly.stage.toml
 
 publish: APP_CONFIG = fly.publish.toml
 
-stage publish:
+stage publish: clean test
 	fly deploy \
 	--config $(APP_CONFIG) \
 	--env SERVER_VERSION=$(SERVER_VERSION)
