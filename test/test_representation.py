@@ -1,6 +1,8 @@
 import httpx
 import json
 import csv
+import os
+import pytest
 from rdflib import Graph, URIRef
 from rdflib.plugins import sparql
 from rdflib.namespace import Namespace, DCTERMS, RDF
@@ -333,6 +335,10 @@ def test_authority_json(client):
     assert "Content-Disposition" not in res.headers
 
 
+@pytest.mark.skipif(
+    os.environ.get("SKIP_TRANSLATION") == "true",
+    reason="RDF translation tests require access to private network",
+)
 def test_authority_turtle(client):
     res = client.get("/trgkv.ttl")
     assert res.status_code == httpx.codes.OK
@@ -437,6 +443,10 @@ def test_period_json(client):
     assert "Content-Disposition" not in res.headers
 
 
+@pytest.mark.skipif(
+    os.environ.get("SKIP_TRANSLATION") == "true",
+    reason="RDF translation tests require access to private network",
+)
 def test_period_turtle(client):
     res = client.get("/trgkvwbjd.ttl")
     assert res.status_code == httpx.codes.OK
@@ -460,6 +470,10 @@ def test_period_turtle(client):
     assert "Content-Disposition" not in res.headers
 
 
+@pytest.mark.skipif(
+    os.environ.get("SKIP_TRANSLATION") == "true",
+    reason="RDF translation tests require access to private network",
+)
 def test_d_turtle(client):
     res = client.get("/d.ttl")
     assert res.status_code == httpx.codes.OK
@@ -479,6 +493,10 @@ def test_d_turtle(client):
     assert res.status_code == httpx.codes.NOT_FOUND
 
 
+@pytest.mark.skipif(
+    os.environ.get("SKIP_TRANSLATION") == "true",
+    reason="RDF translation tests require access to private network",
+)
 def test_dataset_turtle(client):
     res = client.get("/dataset.ttl")
     assert res.status_code == httpx.codes.OK
@@ -502,6 +520,10 @@ def test_dataset_turtle(client):
     assert res.status_code == httpx.codes.NOT_FOUND
 
 
+@pytest.mark.skipif(
+    os.environ.get("SKIP_TRANSLATION") == "true",
+    reason="RDF translation tests require access to private network",
+)
 def test_dataset_csv(client):
     res = client.get("/dataset.csv")
     data = res.text
@@ -548,7 +570,6 @@ def test_dataset_csv(client):
 
 
 def test_h_nt(client, submit_and_merge_patch):
-
     submit_and_merge_patch("test-patch-replace-values-1.json")
 
     res = client.get("/h.nt")
@@ -577,7 +598,6 @@ def test_h_turtle(client):
 
 
 def test_history_nt(client, submit_and_merge_patch):
-
     submit_and_merge_patch("test-patch-replace-values-1.json")
 
     res = client.get("/history.nt")

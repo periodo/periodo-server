@@ -16,10 +16,10 @@ repository = "https://github.com/periodo/periodo-server"
 
 [tool.black]
 line-length = 88
-target-version = ['py310']
+target-version = ['py311']
 include = '\.pyi?$'
 
 [tool.pyright]
 venv = "venv"
 venvPath = "."
-pythonVersion = "3.10"
+pythonVersion = "3.11"
