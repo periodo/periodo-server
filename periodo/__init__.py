@@ -81,15 +81,15 @@ app.config.update(
     CACHE_PURGER_URL=os.environ.get("CACHE_PURGER_URL", None),
     CSV_QUERY=os.environ.get("CSV_QUERY", "./periods-as-csv.rq"),
     SERVER_NAME=os.environ.get("SERVER_NAME", DEV_SERVER_NAME),
-    CLIENT_URL=os.environ.get("CLIENT_URL", "https://client.perio.do"),
     SERVER_VERSION=os.environ.get(
         "SERVER_VERSION", os.environ.get("SERVER_VERSION", "development")
     ),
+    CLIENT_URL=os.environ.get("CLIENT_URL", "https://client.staging.perio.do"),
     CANONICAL=json.loads(os.environ.get("CANONICAL", "false")),
     ORCID_CLIENT_ID=SECRETS["ORCID_CLIENT_ID"],
     ORCID_CLIENT_SECRET=SECRETS["ORCID_CLIENT_SECRET"],
     TRANSLATION_SERVICE=os.environ.get(
-        "TRANSLATION_SERVICE", "http://periodo-translator.flycast"
+        "TRANSLATION_SERVICE", "http://periodo-translator-dev.flycast"
     ),
 )
 app.logger.info("finished app configuration")
