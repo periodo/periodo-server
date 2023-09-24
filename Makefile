@@ -3,7 +3,7 @@ PYTHON3 := $(VENV_DIR)/bin/python3
 PYTEST := $(VENV_DIR)/bin/pytest
 FLASK := $(VENV_DIR)/bin/flask
 DB := ./db.sqlite
-SERVER_VERSION := $(shell git describe --tags)
+SERVER_VERSION := $(shell git describe | cut -c 2-)
 
 .PHONY: all
 all: $(DB)
