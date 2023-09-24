@@ -13,4 +13,5 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: >-
           TESTING=1
+          CI=1
           make test

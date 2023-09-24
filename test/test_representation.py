@@ -1,6 +1,8 @@
 import httpx
 import json
 import csv
+import os
+import pytest
 from rdflib import Graph, URIRef
 from rdflib.plugins import sparql
 from rdflib.namespace import Namespace, DCTERMS, RDF
@@ -333,6 +335,10 @@ def test_authority_json(client):
     assert "Content-Disposition" not in res.headers
 
 
+@pytest.mark.skipif(
+    os.environ["CI"] == 1,
+    reason="RDF translation tests require access to private network",
+)
 def test_authority_turtle(client):
     res = client.get("/trgkv.ttl")
     assert res.status_code == httpx.codes.OK
