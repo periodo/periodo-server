@@ -1,4 +1,4 @@
-app = "periodo-server"
+app = "periodo-server-dev"
 primary_region = "iad"
 
 [build]
@@ -7,7 +7,8 @@ primary_region = "iad"
   DATABASE = "/mnt/data/db.sqlite"
   SERVER_NAME = "data.staging.perio.do"
   CLIENT_URL = "https://client.staging.perio.do"
-  CACHE_PURGER_URL = "http://periodo-proxy.internal:8081"
+  CACHE_PURGER_URL = "http://periodo-proxy-dev.internal:8081"
+  TRANSLATION_SERVICE = "http://periodo-translator-dev.flycast"
 
 [[mounts]]
   source = "data"

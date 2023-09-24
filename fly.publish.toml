@@ -8,6 +8,7 @@ primary_region = "iad"
   SERVER_NAME = "data.perio.do"
   CLIENT_URL = "https://client.perio.do"
   CACHE_PURGER_URL = "http://periodo-proxy.internal:8081"
+  TRANSLATION_SERVICE = "http://periodo-translator.flycast"
   CANONICAL = true
 
 [[mounts]]
