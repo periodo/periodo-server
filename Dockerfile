@@ -2,8 +2,12 @@ ARG PYTHON_VERSION=3.11-slim-bookworm
 
 FROM --platform=linux/amd64 python:${PYTHON_VERSION}
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 WORKDIR /srv
 
