@@ -5,6 +5,7 @@ FROM --platform=linux/amd64 python:${PYTHON_VERSION}
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
     sqlite3 \
+    rsync \
     && rm -rf /var/lib/apt/lists/*
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
