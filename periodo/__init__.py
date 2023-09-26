@@ -1,11 +1,13 @@
 import os
+import re
 import json
 import rdflib
 import logging
 from uuid import UUID
 from logging.config import dictConfig
-from flask import Flask, make_response, g
 from flask_principal import Principal, identity_loaded
+from flask import Flask, make_response, g, request
+from werkzeug.exceptions import NotFound
 from werkzeug.http import http_date
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.routing import BaseConverter
@@ -149,6 +151,25 @@ def add_server_version_header(response):
 
 import periodo.auth  # noqa: E402
 import periodo.database  # noqa: E402
+import periodo.highlight  # noqa: E402
+
+
+@app.errorhandler(NotFound)
+def handle_not_found_error(_):
+    sanitized_path = re.sub(r"[^./a-z0-9]", r"", request.path[1:], flags=re.IGNORECASE)
+    message = {
+        "code": 404,
+        "status": "Not Found",
+        "message": f"{sanitized_path} is not a valid PeriodO identifier. Perhaps you followed a broken link?",
+    }
+    if request.accept_mimetypes.best == "application/json":
+        return make_response(
+            json.dumps(message),
+            404,
+            {"Content-Type": "application/json"},
+        )
+    else:
+        return make_response(periodo.highlight.as_json(message), 404)
 
 
 @app.errorhandler(periodo.auth.AuthenticationFailed)

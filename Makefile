@@ -4,6 +4,7 @@ PYTEST := $(VENV_DIR)/bin/pytest
 FLASK := $(VENV_DIR)/bin/flask
 DB := ./db.sqlite
 SERVER_VERSION := $(shell git describe | cut -c 2-)
+SKIP_TRANSLATION ?= false
 
 .PHONY: all
 all: $(DB)
@@ -54,7 +55,7 @@ clean:
 
 .PHONY: test
 test: | $(PYTHON3)
-	TESTING=1 $(PYTEST) test -x
+	TESTING=1 SKIP_TRANSLATION=$(SKIP_TRANSLATION) $(PYTEST) test -x
 
 .PHONY: run
 run: test
