@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import rdflib
 import logging
@@ -155,10 +156,11 @@ import periodo.highlight  # noqa: E402
 
 @app.errorhandler(NotFound)
 def handle_not_found_error(_):
+    sanitized_path = re.sub(r"[^./a-z0-9]", r"", request.path[1:], flags=re.IGNORECASE)
     message = {
         "code": 404,
         "status": "Not Found",
-        "message": f"{request.path[1:]} is not a valid PeriodO identifier. Perhaps you followed a broken link?",
+        "message": f"{sanitized_path} is not a valid PeriodO identifier. Perhaps you followed a broken link?",
     }
     if request.accept_mimetypes.best == "application/json":
         return make_response(
