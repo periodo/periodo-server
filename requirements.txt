@@ -1,5 +1,5 @@
 Flask-Principal==0.4.0
-Flask==2.3.3
+Flask==3.0.0
 Pygments==2.16.1
 Werkzeug==3.0.0
 bleach==6.0.0
