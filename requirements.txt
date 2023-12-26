@@ -3,7 +3,7 @@ Flask==3.0.0
 Pygments==2.17.2
 Werkzeug==3.0.1
 bleach==6.1.0
-feedgen==0.9.0
+feedgen==1.0.0
 gunicorn==21.2.0
 httpx==0.26.0
 jsonpatch==1.33
