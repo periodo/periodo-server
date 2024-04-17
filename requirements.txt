@@ -4,7 +4,7 @@ Pygments==2.17.2
 Werkzeug==3.0.2
 bleach==6.1.0
 feedgen==1.0.0
-gunicorn==21.2.0
+gunicorn==22.0.0
 httpx==0.27.0
 jsonpatch==1.33
 marshmallow==3.21.1
