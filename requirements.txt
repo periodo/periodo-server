@@ -7,7 +7,7 @@ feedgen==1.0.0
 gunicorn==23.0.0
 httpx==0.27.2
 jsonpatch==1.33
-marshmallow==3.22.0
+marshmallow==3.23.0
 pytest==8.3.3
 pytest-datadir==1.5.0
 rdflib==7.1.0
