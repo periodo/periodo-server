@@ -1,10 +1,11 @@
 import httpx
 import pytest
 import re
-from rdflib import ConjunctiveGraph, URIRef
+from rdflib import Dataset, Literal, URIRef
 from rdflib.namespace import Namespace, RDFS, FOAF, RDF
 from urllib.parse import urlparse
 from periodo import DEV_SERVER_NAME
+from typing import cast
 
 PERIODO = Namespace("http://n2t.net/ark:/99152/")
 PROV = Namespace("http://www.w3.org/ns/prov#")
@@ -22,7 +23,6 @@ def test_get_history(
     bearer_auth,
     load_json,
 ):
-    active_user, admin_user
     res = client.patch(
         "/d/",
         json=load_json("test-patch-adds-items.json"),
@@ -51,7 +51,7 @@ def test_get_history(
     assert res.status_code == httpx.codes.OK
     assert res.headers["Content-Type"] == "application/n-triples"
 
-    g = ConjunctiveGraph()
+    g = Dataset()
     g.parse(format="nt", data=res.text)
 
     # Initial data load
@@ -119,7 +119,8 @@ def test_get_history(
     commentCount = g.value(
         subject=HOST["h#patch-request-2-comments"], predicate=AS.totalItems
     )
-    assert commentCount.value == 2
+    assert commentCount is not None
+    assert cast(Literal, commentCount).value == 2
     assert (
         HOST["h#patch-request-2-comments"],
         AS.first,
@@ -140,8 +141,12 @@ def test_get_history(
         assert (HOST[f"h#patch-request-2-comment-{num}"], RDF.type, AS.Note) in g
         assert (HOST[f"h#patch-request-2-comment-{num}"], AS.published, None) in g
         assert (
-            g.value(
-                subject=HOST[f"h#patch-request-2-comment-{num}"], predicate=AS.mediaType
+            cast(
+                Literal,
+                g.value(
+                    subject=HOST[f"h#patch-request-2-comment-{num}"],
+                    predicate=AS.mediaType,
+                ),
             ).value
             == "text/plain"
         )
@@ -151,8 +156,12 @@ def test_get_history(
             URIRef(commenter),
         ) in g
         assert (
-            g.value(
-                subject=HOST[f"h#patch-request-2-comment-{num}"], predicate=AS.content
+            cast(
+                Literal,
+                g.value(
+                    subject=HOST[f"h#patch-request-2-comment-{num}"],
+                    predicate=AS.content,
+                ),
             ).value
             == comment
         )

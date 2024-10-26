@@ -40,7 +40,6 @@ def init_db(shared_datadir):
 
 @pytest.fixture
 def active_user(init_db):
-    init_db
     with app.app_context():
         return auth.add_user_or_update_credentials(
             {
@@ -54,7 +53,6 @@ def active_user(init_db):
 
 @pytest.fixture
 def expired_user(init_db):
-    init_db
     with app.app_context():
         return auth.add_user_or_update_credentials(
             {
@@ -68,7 +66,6 @@ def expired_user(init_db):
 
 @pytest.fixture
 def unauthorized_user(init_db):
-    init_db
     with app.app_context():
         return auth.add_user_or_update_credentials(
             {
@@ -83,7 +80,6 @@ def unauthorized_user(init_db):
 
 @pytest.fixture
 def admin_user(init_db):
-    init_db
     with app.app_context():
         return auth.add_user_or_update_credentials(
             {
@@ -110,21 +106,21 @@ def bearer_auth():
 
 @pytest.fixture
 def client(request, init_db):
-    init_db
     marker = request.node.get_closest_marker("client_auth_token")
     if marker is None:
         auth = None
     else:
         auth = BearerAuth(marker.args[0])
     with httpx.Client(
-        app=app, base_url=f"http://{DEV_SERVER_NAME}", auth=auth
+        transport=httpx.WSGITransport(app=app),
+        base_url=f"http://{DEV_SERVER_NAME}",
+        auth=auth,
     ) as client:
         yield client
 
 
 @pytest.fixture
 def submit_and_merge_patch(active_user, admin_user, client, bearer_auth, load_json):
-    active_user, admin_user
 
     def _submit_and_merge_patch(filename):
         res = client.patch(

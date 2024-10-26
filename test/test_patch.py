@@ -2,7 +2,7 @@ import httpx
 import json
 import pytest
 import re
-from rdflib import ConjunctiveGraph
+from rdflib import Dataset
 from rdflib.namespace import Namespace
 from urllib.parse import urlparse
 from periodo import app, database, identifier, cache, DEV_SERVER_NAME
@@ -13,7 +13,6 @@ HOST = Namespace(f"http://{DEV_SERVER_NAME}/")
 
 
 def test_initial_data_load_patch(init_db):
-    init_db
     with app.app_context():
         created_entities = json.loads(
             database.query_db_for_one(
@@ -36,7 +35,6 @@ def test_initial_data_load_patch(init_db):
 
 @pytest.mark.client_auth_token("this-token-has-normal-permissions")
 def test_submit_patch(active_user, client, load_json):
-    active_user
     res = client.patch("/d/", json=load_json("test-patch-replace-values-1.json"))
     assert res.status_code == httpx.codes.ACCEPTED
     patch_url = res.headers["Location"]
@@ -269,7 +267,7 @@ def test_remove_period(client, submit_and_merge_patch):
     assert res.status_code == httpx.codes.OK
 
     res = client.get("/history.nt")
-    g = ConjunctiveGraph()
+    g = Dataset()
     g.parse(format="nt", data=res.text)
 
     generated = list(g.objects(subject=HOST["h#change-2"], predicate=PROV.generated))
@@ -321,7 +319,7 @@ def test_remove_authority(client, submit_and_merge_patch):
     assert res.status_code == httpx.codes.OK
 
     res = client.get("/h.nt")
-    g = ConjunctiveGraph()
+    g = Dataset()
     g.parse(format="nt", data=res.text)
 
     generated = g.value(subject=HOST["h#change-2"], predicate=PROV.generated, any=False)
