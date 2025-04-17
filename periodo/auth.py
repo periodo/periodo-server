@@ -59,7 +59,7 @@ class UnauthenticatedIdentity(AnonymousIdentity):
         self.exception = AuthenticationFailed(*args, **kwargs)
         super().__init__()
 
-    def can(self, _):
+    def can(self, permission):
         raise self.exception
 
 
