@@ -8,7 +8,7 @@ gunicorn==23.0.0
 httpx==0.28.1
 jsonpatch==1.33
 marshmallow==4.1.0
-pytest==9.0.0
+pytest==9.0.1
 pytest-datadir==1.8.0
 rdflib==7.4.0
 webargs==8.7.1
