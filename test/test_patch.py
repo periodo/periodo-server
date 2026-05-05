@@ -2,7 +2,7 @@ import httpx
 import json
 import pytest
 import re
-from rdflib import Dataset
+from rdflib import Graph
 from rdflib.namespace import Namespace
 from urllib.parse import urlparse
 from periodo import app, database, identifier, cache, DEV_SERVER_NAME
@@ -267,7 +267,7 @@ def test_remove_period(client, submit_and_merge_patch):
     assert res.status_code == httpx.codes.OK
 
     res = client.get("/history.nt")
-    g = Dataset()
+    g = Graph()
     g.parse(format="nt", data=res.text)
 
     generated = list(g.objects(subject=HOST["h#change-2"], predicate=PROV.generated))
@@ -319,7 +319,7 @@ def test_remove_authority(client, submit_and_merge_patch):
     assert res.status_code == httpx.codes.OK
 
     res = client.get("/h.nt")
-    g = Dataset()
+    g = Graph()
     g.parse(format="nt", data=res.text)
 
     generated = g.value(subject=HOST["h#change-2"], predicate=PROV.generated, any=False)

@@ -1,7 +1,7 @@
 import httpx
 import pytest
 import re
-from rdflib import Dataset, Literal, URIRef
+from rdflib import Graph, Literal, URIRef
 from rdflib.namespace import Namespace, RDFS, FOAF, RDF
 from urllib.parse import urlparse
 from periodo import DEV_SERVER_NAME
@@ -51,7 +51,7 @@ def test_get_history(
     assert res.status_code == httpx.codes.OK
     assert res.headers["Content-Type"] == "application/n-triples"
 
-    g = Dataset()
+    g = Graph()
     g.parse(format="nt", data=res.text)
 
     # Initial data load
