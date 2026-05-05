@@ -239,4 +239,9 @@ def _get_identity(b64token):
     for r in rows:
         if r["patch_request_id"] is not None:
             identity.provides.add(UpdatePatchNeed(value=r["patch_request_id"]))
+    if accept_patch_permission.allows(identity):
+        for r in database.query_db_for_all(
+            "SELECT id FROM patch_request WHERE open = 1"
+        ):
+            identity.provides.add(UpdatePatchNeed(value=r["id"]))
     return identity
