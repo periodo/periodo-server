@@ -109,7 +109,7 @@ def test_admin_user_merge_patch(
 
 
 @pytest.mark.client_auth_token("this-token-has-admin-permissions")
-def test_noncreator_identity_update_patch(
+def test_admin_can_update_any_open_patch(
     admin_user,
     active_user,
     client,
@@ -124,20 +124,53 @@ def test_noncreator_identity_update_patch(
         auth=bearer_auth("this-token-has-normal-permissions"),
         json=load_json("test-patch-replace-values-1.json"),
     )
-
-    # now try to update the patch as a different user (admin)
     patch_url = urlparse(res.headers["Location"]).path
+    patch_id = int(res.headers["Location"].split("/")[-2])
+
+    # admin should be able to update the patch even though they didn't create it
     res = client.put(
         patch_url + "patch.jsonpatch",
         json=load_json("test-patch-replace-values-2.json"),
     )
-    assert res.status_code == httpx.codes.FORBIDDEN
-    assert res.headers["WWW-Authenticate"] == (
-        'Bearer realm="PeriodO", error="insufficient_scope", '
-        + "error_description="
-        + '"The access token does not provide sufficient privileges", '
-        + 'error_uri="http://tools.ietf.org/html/rfc6750#section-6.2.3"'
+    assert res.status_code == httpx.codes.OK
+
+    # patch metadata should be undisturbed
+    with app.app_context():
+        row = database.query_db_for_one(
+            "SELECT created_by, open, merged FROM patch_request WHERE id = ?",
+            (patch_id,),
+        )
+        assert row["created_by"] == active_user.id
+        assert row["open"] == 1
+        assert row["merged"] == 0
+
+
+@pytest.mark.client_auth_token("this-token-has-normal-permissions")
+def test_nonadmin_noncreator_cannot_update_patch(
+    admin_user,
+    active_user,
+    unauthorized_user,
+    client,
+    load_json,
+    bearer_auth,
+):
+    admin_user, active_user, unauthorized_user
+
+    # submit the patch as normal user
+    res = client.patch(
+        "/d/",
+        auth=bearer_auth("this-token-has-normal-permissions"),
+        json=load_json("test-patch-replace-values-1.json"),
     )
+    patch_url = urlparse(res.headers["Location"]).path
+
+    # a different user without accept-patch permission cannot update it
+    res = client.put(
+        patch_url + "patch.jsonpatch",
+        auth=bearer_auth("this-token-has-no-permissions"),
+        json=load_json("test-patch-replace-values-2.json"),
+    )
+    assert res.status_code == httpx.codes.FORBIDDEN
 
 
 @pytest.mark.client_auth_token("this-token-has-normal-permissions")
