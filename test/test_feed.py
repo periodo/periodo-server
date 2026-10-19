@@ -57,3 +57,20 @@ def test_feed_entry_ids_are_unique(
         "Super Admin rejected change #%s" % rejected_id,
         "Testy Testerson submitted change #%s" % rejected_id,
     ]
+
+
+@pytest.mark.client_auth_token("this-token-has-normal-permissions")
+def test_feed_comments_are_escaped(active_user, client, load_json):
+    res = client.patch("/d/", json=load_json("test-patch-adds-items.json"))
+    patch_url = urlparse(res.headers["Location"]).path
+    client.post(
+        patch_url + "messages",
+        json={"message": "<script>alert(1)</script> costs $5 $who"},
+    )
+
+    res = client.get("/feed.xml")
+    assert res.status_code == 200
+    feed = ElementTree.fromstring(res.content)
+    content = feed.find(ATOM + "entry").find(ATOM + "content").text
+    assert "<script>" not in content
+    assert "&lt;script&gt;alert(1)&lt;/script&gt; costs $5 $who" in content

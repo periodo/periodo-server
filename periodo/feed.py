@@ -1,5 +1,6 @@
 from bleach import linkify
 from feedgen.feed import FeedGenerator
+from html import escape
 from flask import url_for
 from periodo import database
 from periodo.utils import isoformat, build_client_url
@@ -80,7 +81,9 @@ def get_entry_id(row, patch_url):
 
 
 def to_link(role):
-    return Template('<a href="$id">$name</a>').substitute(role)
+    return Template('<a href="$id">$name</a>').substitute(
+        {"id": escape(role["id"]), "name": escape(role["name"])}
+    )
 
 
 comment_template = Template("<p><span>$commenter $posted_at</span><br>$message</p>")
@@ -96,20 +99,21 @@ def get_content(what, who, submitter, review_patch_url, comment=None):
     }.get(what, "")
 
     content += '<p><a href="$review_patch_url">$review_patch_url</a></p>'
+    content = Template(content).substitute(
+        {
+            "who": to_link(who),
+            "submitter": to_link(submitter),
+            "review_patch_url": review_patch_url,
+        }
+    )
+
+    # Add the comment after substitution so that "$" in it is left alone
     content += "<div>"
     if comment is not None:
         content += comment_template.substitute(comment)
     content += "</div>"
 
-    return linkify(
-        Template(content).substitute(
-            {
-                "who": to_link(who),
-                "submitter": to_link(submitter),
-                "review_patch_url": review_patch_url,
-            }
-        )
-    )
+    return linkify(content)
 
 
 def generate_activity_feed():
@@ -145,7 +149,7 @@ def generate_activity_feed():
         if row["what"] == "commented on":
             comment = {
                 "commenter": to_link(who_did_it),
-                "message": row["message"],
+                "message": escape(row["message"]),
                 "posted_at": isoformat(row["time"]),
             }
 
