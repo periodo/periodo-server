@@ -51,10 +51,11 @@ def set_permissions(orcid, permissions=None):
             )
 
 
-def compress_datasets(batch_size=10):
+def compress_datasets(batch_size=1):
     """Compress versions of the dataset stored before compression was added.
     Each batch is committed separately, so this can run while the server is
-    running. Run vacuum() afterwards to return the freed space."""
+    running. Versions are several MB each, so larger batches use much more
+    memory. Run vacuum() afterwards to return the freed space."""
     with app.app_context():
         compressed = 0
         while rows := database.query_db_for_all(
