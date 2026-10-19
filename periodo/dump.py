@@ -9,7 +9,8 @@ from periodo import app
 # Rows of these tables hold credentials, so only their schema is exported.
 EXCLUDED_TABLES = {"user"}
 
-# Rows of this table are never changed once inserted, so they can be read
+# The content of rows of this table never changes once inserted (only
+# commands.compress_datasets() changes how it is stored), so they can be read
 # after the snapshot of the other tables, without holding a read lock while
 # hundreds of large dataset versions are compressed.
 APPEND_ONLY_TABLE = "dataset"

@@ -49,3 +49,32 @@ def set_permissions(orcid, permissions=None):
                 "UPDATE user SET permissions = ? WHERE id = ?",
                 [json.dumps(list(needs)), orcid],
             )
+
+
+def compress_datasets(batch_size=10):
+    """Compress versions of the dataset stored before compression was added.
+    Each batch is committed separately, so this can run while the server is
+    running. Run vacuum() afterwards to return the freed space."""
+    with app.app_context():
+        compressed = 0
+        while rows := database.query_db_for_all(
+            "SELECT id, data FROM dataset WHERE typeof(data) = 'text' "
+            "ORDER BY id LIMIT ?",
+            (batch_size,),
+        ):
+            # Compress before writing, so the write lock is held only briefly.
+            updates = [
+                (database.compress_dataset(row["data"]), row["id"]) for row in rows
+            ]
+            with database.open_cursor(write=True) as cursor:
+                cursor.executemany("UPDATE dataset SET data = ? WHERE id = ?", updates)
+            compressed += len(rows)
+            print(f"compressed {compressed} versions", flush=True)
+
+
+def vacuum():
+    """Rebuild the database file to return free pages to the filesystem.
+    This locks the database until it finishes."""
+    with app.app_context():
+        with database.open_cursor() as cursor:
+            cursor.execute("VACUUM")
