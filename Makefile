@@ -45,6 +45,16 @@ ifneq ($(wildcard $(DB)),)
 endif
 	mv $(DB).importing $(DB)
 
+.PHONY: compress_datasets
+compress_datasets: | $(PYTHON3)
+	DATABASE=$(DB) $(PYTHON3) -c\
+	 "from periodo.commands import compress_datasets; compress_datasets()"
+
+.PHONY: vacuum
+vacuum: | $(PYTHON3)
+	DATABASE=$(DB) $(PYTHON3) -c\
+	 "from periodo.commands import vacuum; vacuum()"
+
 .PHONY: set_permissions
 set_permissions: | $(PYTHON3)
 ifeq ($(ORCID),)

@@ -88,7 +88,11 @@ def _add_new_version_of_dataset(cursor, data):
     )["now"]
     cursor.execute(
         "INSERT into DATASET (data, description, created_at) VALUES (?,?,?)",
-        (json.dumps(data, ensure_ascii=False), void.describe_dataset(data, now), now),
+        (
+            database.compress_dataset(json.dumps(data, ensure_ascii=False)),
+            void.describe_dataset(data, now),
+            now,
+        ),
     )
     return cursor.lastrowid
 

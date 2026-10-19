@@ -1,10 +1,11 @@
 import itertools
 import json
 import sqlite3
+import zlib
 from contextlib import contextmanager
 from periodo import app, identifier, auth
 from flask import g, url_for
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 
@@ -62,13 +63,28 @@ def get_user(user_id):
     return auth.User(row["id"], row["name"], row["b64token"])
 
 
-def get_dataset(version=None) -> sqlite3.Row:
+# Each version of the dataset is a complete copy of it, so versions are stored
+# compressed. Versions stored before compression was added are text.
+def compress_dataset(data: str) -> bytes:
+    return zlib.compress(data.encode("utf-8"), 6)
+
+
+def decompress_dataset(data: str | bytes) -> str:
+    if isinstance(data, bytes):
+        return zlib.decompress(data).decode("utf-8")
+    return data
+
+
+def get_dataset(version=None) -> Optional[dict]:
     if version is None:
-        return query_db_for_one("SELECT * FROM dataset ORDER BY id DESC LIMIT 1")
+        row = query_db_for_one("SELECT * FROM dataset ORDER BY id DESC LIMIT 1")
     else:
-        return query_db_for_one(
-            "SELECT * FROM dataset WHERE dataset.id = ?", (version,)
-        )
+        row = query_db_for_one("SELECT * FROM dataset WHERE dataset.id = ?", (version,))
+    if row is None:
+        return None
+    dataset = dict(row)
+    dataset["data"] = decompress_dataset(row["data"])
+    return dataset
 
 
 def get_context(version=None):
