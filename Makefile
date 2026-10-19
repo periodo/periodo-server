@@ -32,14 +32,18 @@ export.sql.gz:
 ifeq ($(IMPORT_URL),)
 	$(error No import URL provided. Run e.g. `make import IMPORT_URL=https://data.staging.perio.do/export.sql`)
 endif
-	curl -X GET -H 'Accept-Encoding: gzip' "$(IMPORT_URL)" > $@
+	curl -fsS -H 'Accept-Encoding: gzip' -o $@.tmp "$(IMPORT_URL)"
+	gzip -t $@.tmp
+	mv $@.tmp $@
 
 .PHONY: import
 import: export.sql.gz
+	rm -f $(DB).importing
+	gunzip -c $< | sqlite3 -bail $(DB).importing
 ifneq ($(wildcard $(DB)),)
 	TS=`date -u +%FT%TZ` && mv $(DB) "$(DB)-$$TS.bak"
 endif
-	cat $< | gunzip | sqlite3 $(DB)
+	mv $(DB).importing $(DB)
 
 .PHONY: set_permissions
 set_permissions: | $(PYTHON3)

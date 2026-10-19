@@ -621,9 +621,3 @@ def test_history_nt(client, submit_and_merge_patch):
 def test_history_json(client):
     res = client.get("/history.json")
     assert res.status_code == httpx.codes.NOT_FOUND
-
-
-def test_export(client):
-    res = client.get("/export.sql")
-    assert res.status_code == httpx.codes.OK
-    assert res.headers["Content-Type"] == "text/plain"

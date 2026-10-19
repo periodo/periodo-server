@@ -22,4 +22,4 @@ RUN set -ex && \
 
 COPY periodo periodo
 
-ENTRYPOINT ["/srv/venv/bin/gunicorn", "--bind=[::]:8080", "--workers=2", "periodo:app"]
+ENTRYPOINT ["/srv/venv/bin/gunicorn", "--bind=[::]:8080", "--workers=2", "--worker-class=gthread", "--threads=4", "periodo:app"]
