@@ -98,7 +98,7 @@ def process_patch_row(row):
     d = dict(row)
     d["created_from"] = make_dataset_url(row["created_from"])
     d["applied_to"] = (
-        make_dataset_url(row["created_from"]) if row["applied_to"] else None
+        make_dataset_url(row["applied_to"]) if row["applied_to"] else None
     )
     d["identifier_map"] = (
         json.loads(row["identifier_map"]) if row["identifier_map"] else None

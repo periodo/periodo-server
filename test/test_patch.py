@@ -134,6 +134,38 @@ def test_merge_patch(active_user, admin_user, client, bearer_auth, load_json):
 
 
 @pytest.mark.client_auth_token("this-token-has-normal-permissions")
+def test_merged_patches_report_applied_to(
+    active_user, admin_user, client, bearer_auth, load_json
+):
+    active_user, admin_user
+    patch_urls = []
+    # submit two patches created from the same version
+    for filename in ("test-patch-adds-items.json", "test-patch-add-period.json"):
+        res = client.patch("/d/", json=load_json(filename))
+        patch_urls.append(urlparse(res.headers["Location"]).path)
+    for patch_url in patch_urls:
+        res = client.post(
+            patch_url + "merge", auth=bearer_auth("this-token-has-admin-permissions")
+        )
+        assert res.status_code == httpx.codes.NO_CONTENT
+
+    dataset_url = f"http://{DEV_SERVER_NAME}/dataset/?version="
+    patches = [client.get(patch_url).json() for patch_url in patch_urls]
+    assert [p["created_from"] for p in patches] == [dataset_url + "1"] * 2
+    assert [p["applied_to"] for p in patches] == [
+        dataset_url + "1",
+        dataset_url + "2",
+    ]
+
+    res = client.get("/patches/", params={"merged": "true"})
+    listed = {p["url"]: p["applied_to"] for p in res.json()}
+    assert [listed[f"http://{DEV_SERVER_NAME}{u}"] for u in patch_urls] == [
+        dataset_url + "1",
+        dataset_url + "2",
+    ]
+
+
+@pytest.mark.client_auth_token("this-token-has-normal-permissions")
 def test_reject_patch(active_user, admin_user, client, bearer_auth, load_json):
     active_user, admin_user
     res = client.patch("/d/", json=load_json("test-patch-adds-items.json"))
