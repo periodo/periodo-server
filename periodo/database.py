@@ -369,10 +369,6 @@ def get_removed_entity_keys():
     )
 
 
-def dump():
-    return _get_db_connection().iterdump()
-
-
 @app.teardown_appcontext
 def close(_):
     db = getattr(g, "_database", None)

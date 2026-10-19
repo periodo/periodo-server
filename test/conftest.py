@@ -6,7 +6,7 @@ import tempfile
 from base64 import b64encode
 from urllib.parse import urlparse
 from flask_principal import ActionNeed
-from periodo import app, commands, auth, DEV_SERVER_NAME
+from periodo import app, commands, auth, dump, DEV_SERVER_NAME
 
 
 class BearerAuth(httpx.Auth):
@@ -36,6 +36,10 @@ def init_db(shared_datadir):
     # teardown
     os.close(db_fd)
     os.unlink(app.config["DATABASE"])
+    export_path = dump.path()
+    for path in (export_path, export_path + ".lock", export_path + ".tmp"):
+        if os.path.exists(path):
+            os.unlink(path)
 
 
 @pytest.fixture

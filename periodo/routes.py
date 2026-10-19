@@ -1,4 +1,6 @@
+import gzip
 import json
+import os
 import random
 import httpx
 import string
@@ -10,10 +12,10 @@ from flask import (
     session,
     abort,
     Response,
-    stream_with_context,
+    send_file,
 )
 from markupsafe import escape
-from periodo import app, database, identifier, auth, highlight
+from periodo import app, database, dump, identifier, auth, highlight
 from urllib.parse import urlencode
 from werkzeug.http import http_date
 from periodo.feed import generate_activity_feed
@@ -228,21 +230,43 @@ def registered():
 
 @app.route("/export.sql")
 def export():
-    def generate():
-        for line in database.dump():
-            if not line.startswith('INSERT INTO "user"'):
-                yield "%s\n" % line
+    # The export is too big to generate within a request, so serve the last
+    # one built, and build a new one in the background if the database has
+    # changed since then.
+    db_path = app.config["DATABASE"]
+    export_path = dump.path()
+    if not dump.is_fresh(db_path, export_path):
+        dump.build_in_background(db_path, export_path)
+    if not os.path.exists(export_path):
+        return make_response(
+            "The export is being built. Try again in a few minutes.\n",
+            503,
+            {"Content-Type": "text/plain", "Retry-After": "300"},
+        )
 
-    return Response(
-        stream_with_context(generate()),
-        status=200,
-        headers={
-            "Content-Type": "text/plain",
-            "Content-Disposition": 'attachment; filename="periodo-export-{}.sql"'.format(
-                http_date()
-            ),
-        },
-    )
+    filename = "periodo-export-{}.sql".format(http_date(os.stat(export_path).st_mtime))
+    if request.accept_encodings["gzip"]:
+        response = send_file(
+            export_path,
+            mimetype="text/plain",
+            as_attachment=True,
+            download_name=filename,
+        )
+        response.headers["Content-Encoding"] = "gzip"
+    else:
+
+        def generate():
+            with gzip.open(export_path, "rb") as f:
+                while chunk := f.read(1024 * 1024):
+                    yield chunk
+
+        response = Response(
+            generate(),
+            mimetype="text/plain",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    response.vary.add("Accept-Encoding")
+    return response
 
 
 @app.route("/feed.xml")
