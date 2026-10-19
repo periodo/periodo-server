@@ -15,8 +15,9 @@ EXCLUDED_TABLES = {"user"}
 # hundreds of large dataset versions are compressed.
 APPEND_ONLY_TABLE = "dataset"
 
-# Dataset versions are several MB each, so read only a few at a time.
-BATCH_SIZE = 10
+# Dataset versions are several MB each, so read one at a time. With 10 at a
+# time, a build used about 400 MB, too much on a machine with 512 MB of memory.
+BATCH_SIZE = 1
 
 
 def path():
