@@ -6,7 +6,7 @@ bleach==6.4.0
 feedgen==1.0.0
 gunicorn==26.2.0
 httpx==0.28.1
-jsonpatch==1.35
+jsonpatch==1.36
 marshmallow==4.3.1
 pytest==9.1.1
 pytest-datadir==1.8.0
